@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flota</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <canvas id="mar"></canvas>
+
+  <div id="hud" class="oculto">
+    <div class="panel arriba-izq">
+      <div class="fila"><b id="hud-nombre">Tu barco</b><span id="hud-zona" class="suave"></span></div>
+      <div class="barra"><i id="hud-vida"></i><span id="hud-vida-txt"></span></div>
+      <div class="barra trip"><i id="hud-trip"></i><span id="hud-trip-txt"></span></div>
+      <div class="fila"><span>Velas</span><span id="hud-velas" class="velas"></span></div>
+      <div class="fila"><span>Flota</span><span id="hud-flota"></span></div>
+    </div>
+    <div class="panel arriba-der">
+      <div class="fila"><span>Oro en bodega</span><b id="hud-bodega" class="oro">0</b></div>
+      <div class="fila"><span>Oro en puerto</span><b id="hud-puerto" class="oro">0</b></div>
+      <div class="fila"><span>Hundidos</span><b id="hud-hundidos">0</b></div>
+    </div>
+    <div id="avisos"></div>
+    <div id="pista"></div>
+    <div class="panel abajo-izq">
+      <div class="recarga"><span>Babor (Q)</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
+      <div class="recarga"><span>Estribor (E)</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
+      <div class="ayuda">W/S velas · A/D timón · clic o Q/E disparar · F abordar · P puerto</div>
+    </div>
+    <canvas id="minimapa" width="170" height="170"></canvas>
+  </div>
+
+  <div id="pantalla-astillero" class="pantalla">
+    <div class="caja ancha">
+      <h1>Flota</h1>
+      <p class="sub">Diseñá tu barco con <b id="ast-total"></b> de oro. Lo que no gastes te queda guardado en el puerto para después.</p>
+      <div class="astillero">
+        <div id="ast-opciones"></div>
+        <div class="resumen">
+          <canvas id="ast-vista" width="300" height="170"></canvas>
+          <div id="ast-barras"></div>
+          <div class="fila grande"><span>Te queda</span><b id="ast-resto" class="oro"></b></div>
+          <button id="ast-zarpar" class="boton principal">¡Zarpar!</button>
+          <p id="ast-mejor" class="suave"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pantalla-puerto" class="pantalla oculto">
+    <div class="caja">
+      <h2>Puerto</h2>
+      <p class="sub">Tu oro quedó a salvo. Oro disponible: <b id="pto-oro" class="oro"></b></p>
+      <div id="pto-lista"></div>
+      <button id="pto-salir" class="boton principal">Volver al mar</button>
+    </div>
+  </div>
+
+  <div id="pantalla-fin" class="pantalla oculto">
+    <div class="caja">
+      <h2>Te hundieron</h2>
+      <div id="fin-datos"></div>
+      <button id="fin-otra" class="boton principal">Diseñar otra flota</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
