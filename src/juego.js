@@ -181,9 +181,15 @@ export function actualizar(j, dt, entrada) {
 function controlarJugador(j, e, dt) {
   const b = j.jugador;
   if (b.hundiendo) return;
-  b.timon = (e.derecha ? 1 : 0) - (e.izquierda ? 1 : 0);
-  if (e.subirVelas) b.velas = Math.min(3, b.velas + 1);
-  if (e.bajarVelas) b.velas = Math.max(0, b.velas - 1);
+  if (e.objetivo) {
+    // el barco navega hacia el cursor: cuanto más lejos, más velas
+    const d = Math.hypot(e.objetivo.x - b.x, e.objetivo.y - b.y);
+    const cerca = b.stats.largo * 0.6 + 15;
+    if (d > cerca) b.timon = Math.max(-1, Math.min(1, difAng(Math.atan2(e.objetivo.y - b.y, e.objetivo.x - b.x), b.a) * 2.5));
+    else b.timon = 0;
+    b.velas = d <= cerca ? 0 : d < 150 ? 1 : d < 280 ? 2 : 3;
+  }
+  if (e.fuegoTodo) { disparar(j, b, -1); disparar(j, b, 1); }
   if (e.fuego) disparar(j, b, e.fuego);
   if (e.abordar) intentarAbordaje(j);
 }
@@ -232,7 +238,7 @@ function moverBarco(j, b, dt) {
         b.golpeIsla = 1;
         if (b === j.jugador) aviso(j, '¡Encallaste contra la costa!', 'malo');
       }
-      b.v *= 0.6;
+      b.v = Math.min(b.v, s.velMax * 0.45); // roza la costa y sigue, sin quedar clavado
     }
   }
   b.x = Math.max(60, Math.min(j.mundo.ancho - 60, b.x));

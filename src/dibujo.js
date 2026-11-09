@@ -262,23 +262,27 @@ export function dibujarEscena(ctx, j, vista) {
     ctx.fillRect(c.x - 1.5, c.y - 6 + sube, 3, 12);
   }
 
-  // abanico de puntería del jugador
+  // abanicos de puntería: uno por costado
   if (!yo.hundiendo && yo.diseno.canones >= 2) {
-    const rel = difAng(Math.atan2(raton.y - yo.y, raton.x - yo.x), yo.a);
-    const lado = rel >= 0 ? 1 : -1;
-    const centro = yo.a + lado * Math.PI / 2;
-    const listo = yo.recarga[lado] <= 0;
-    ctx.fillStyle = listo ? 'rgba(255,240,170,0.13)' : 'rgba(255,255,255,0.05)';
-    ctx.strokeStyle = listo ? 'rgba(255,240,170,0.5)' : 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = 1.5;
     const ab = yo.stats.perdigones > 1 ? 0.3 : 0.2;
-    ctx.beginPath();
-    ctx.moveTo(yo.x, yo.y);
-    ctx.arc(yo.x, yo.y, yo.stats.alcance + yo.stats.ancho / 2, centro - ab, centro + ab);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    vista.ladoRaton = lado;
+    for (const lado of [-1, 1]) {
+      const centro = yo.a + lado * Math.PI / 2;
+      const listo = yo.recarga[lado] <= 0;
+      ctx.fillStyle = listo ? 'rgba(255,240,170,0.11)' : 'rgba(255,255,255,0.04)';
+      ctx.strokeStyle = listo ? 'rgba(255,240,170,0.45)' : 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(yo.x, yo.y);
+      ctx.arc(yo.x, yo.y, yo.stats.alcance + yo.stats.ancho / 2, centro - ab, centro + ab);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    // marca de rumbo donde está el cursor
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(raton.x, raton.y, 9, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(raton.x, raton.y, 2, 0, TAU); ctx.stroke();
   }
 
   // barcos

@@ -92,7 +92,7 @@ $('ast-zarpar').onclick = () => {
   estado = 'mar';
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
-  aviso(partida, 'Subí las velas con W y salí a buscar mercantes', 'info');
+  aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
 };
 
 // ---------- Puerto ----------
@@ -200,19 +200,18 @@ addEventListener('keydown', (e) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
-  if (k === 'w' || k === 'arrowup') pulsos.subirVelas = true;
-  if (k === 's' || k === 'arrowdown') pulsos.bajarVelas = true;
   if (k === 'q') pulsos.fuego = -1;
   if (k === 'e') pulsos.fuego = 1;
-  if (k === ' ') pulsos.fuegoEspacio = true;
+  if (k === ' ') pulsos.fuegoTodo = true;
   if (k === 'f') pulsos.abordar = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
 });
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
-canvas.addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; });
+let ratonVisto = false;
+addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; });
 canvas.addEventListener('mousedown', (e) => {
-  if (estado === 'mar' && e.button === 0) { vista.ratonPx = { x: e.clientX, y: e.clientY }; pulsos.fuegoRaton = true; }
+  if (estado === 'mar' && e.button === 0) { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; pulsos.fuegoTodo = true; }
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -262,16 +261,7 @@ function cuadro(ahora) {
   if (partida) {
     ratonAMundo();
     if (estado === 'mar') {
-      // el costado que mira al mouse en este instante
-      const yo = partida.jugador;
-      const rel = Math.atan2(vista.raton.y - yo.y, vista.raton.x - yo.x) - yo.a;
-      vista.ladoRaton = Math.sin(rel) >= 0 ? 1 : -1;
-      if (pulsos.fuegoRaton || pulsos.fuegoEspacio) pulsos.fuego = vista.ladoRaton;
-      const entrada = {
-        izquierda: teclas.has('a') || teclas.has('arrowleft'),
-        derecha: teclas.has('d') || teclas.has('arrowright'),
-        ...pulsos,
-      };
+      const entrada = { objetivo: ratonVisto ? { ...vista.raton } : null, ...pulsos };
       pulsos = {};
       actualizar(partida, dt, entrada);
       if (partida.fin && partida.t - partida.finEn > 2.2) mostrarFin();

@@ -1,6 +1,6 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #0f3350; color: #f3ead2; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
-canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: none; }
 .oculto { display: none !important; }
 .oro { color: #ffd166; }
 .suave { color: #b9c7cf; font-size: 12px; }
