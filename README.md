@@ -1,4 +1,4 @@
-# Flota
+# Age of Navies
 
 Juego de barcos: diseñás tu flota con un presupuesto, salís al mar, hundís o abordás barcos, juntás oro y volvés al puerto a mejorar.
 

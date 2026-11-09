@@ -3,13 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Flota</title>
+  <title>Age of Navies</title>
+  <meta name="description" content="Diseñá tu flota, salí al mar, hundí y abordá barcos, y volvé al puerto con el botín.">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/icono-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="img/icono-192.png">
+  <link rel="apple-touch-icon" href="img/icono-180.png">
+  <meta name="theme-color" content="#0f3350">
+  <meta property="og:title" content="Age of Navies">
+  <meta property="og:description" content="Diseñá tu flota, salí al mar, hundí y abordá barcos, y volvé al puerto con el botín.">
+  <meta property="og:image" content="https://ageofnavies.com/img/compartir.jpg">
+  <meta property="og:url" content="https://ageofnavies.com/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
   <canvas id="mar"></canvas>
 
   <div id="hud" class="oculto">
+    <img class="logo-hud" src="img/logo.png" alt="Age of Navies">
     <div class="panel arriba-izq">
       <div class="fila"><b id="hud-nombre">Tu barco</b><span id="hud-zona" class="suave"></span></div>
       <div class="barra"><i id="hud-vida"></i><span id="hud-vida-txt"></span></div>
@@ -34,7 +47,7 @@
 
   <div id="pantalla-astillero" class="pantalla">
     <div class="caja ancha">
-      <h1>Flota</h1>
+      <h1><img class="logo-titulo" src="img/logo.png" alt="Age of Navies"></h1>
       <p class="sub">Diseñá tu barco con <b id="ast-total"></b> de oro. Lo que no gastes te queda guardado en el puerto para después.</p>
       <div class="astillero">
         <div id="ast-opciones"></div>
