@@ -250,9 +250,9 @@ function moverBarco(j, b, dt) {
       b.x = i.x + (dx / d) * lim;
       b.y = i.y + (dy / d) * lim;
       if (b.v > s.velMax * 0.4 && b.golpeIsla <= 0) {
-        b.vida -= 5;
+        b.vida -= i.tipo === 'iceberg' ? 10 : 5;
         b.golpeIsla = 1;
-        if (b === j.jugador) aviso(j, '¡Encallaste contra la costa!', 'malo');
+        if (b === j.jugador) aviso(j, i.tipo === 'iceberg' ? '¡Chocaste un iceberg!' : '¡Encallaste contra la costa!', 'malo');
       }
       b.v = Math.min(b.v, s.velMax * 0.45); // roza la costa y sigue, sin quedar clavado
     }
@@ -260,7 +260,7 @@ function moverBarco(j, b, dt) {
   // carenar: parado junto a una isla y sin recibir golpes, la tripulación repara (hasta el 75 %)
   b.reparando = false;
   if (b.bando !== 'enemigo' && b.v < 22 && b.vida < s.vidaMax * 0.75 && j.t - (b.ultimoGolpe ?? -99) > 4) {
-    if (j.mundo.islas.some((i) => Math.hypot(b.x - i.x, b.y - i.y) < i.r + 130)) {
+    if (j.mundo.islas.some((i) => i.tipo !== 'iceberg' && Math.hypot(b.x - i.x, b.y - i.y) < i.r + 130)) {
       b.vida = Math.min(s.vidaMax * 0.75, b.vida + 4 * dt);
       b.reparando = true;
     }

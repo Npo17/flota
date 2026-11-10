@@ -360,13 +360,18 @@ export function dibujarBarco(ctx, b, opciones = {}) {
   }
 }
 
-function trazarIsla(ctx, isla, escala) {
+function trazarIsla(ctx, isla, escala, recto) {
   const p = isla.puntos, n = p.length;
   const pt = (k) => {
     const q = p[(k + n) % n];
     return [isla.x + Math.cos(q.ang) * isla.r * q.f * escala, isla.y + Math.sin(q.ang) * isla.r * q.f * escala];
   };
   ctx.beginPath();
+  if (recto) {
+    for (let k = 0; k < n; k++) { const [x, y] = pt(k); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
+    ctx.closePath();
+    return;
+  }
   let [x0, y0] = pt(0), [x1, y1] = pt(1);
   ctx.moveTo((x0 + x1) / 2, (y0 + y1) / 2);
   for (let k = 1; k <= n; k++) {
@@ -376,8 +381,7 @@ function trazarIsla(ctx, isla, escala) {
   ctx.closePath();
 }
 
-const TONOS_MAR = [[0, 47, 159, 184], [0.38, 35, 124, 158], [0.68, 24, 88, 124], [1, 15, 51, 80]];
-function colorMar(f) {
+function colorMar(TONOS_MAR, f) {
   f = Math.max(0, Math.min(1, f));
   for (let k = 1; k < TONOS_MAR.length; k++) {
     const a = TONOS_MAR[k - 1], b = TONOS_MAR[k];
@@ -386,7 +390,8 @@ function colorMar(f) {
       return `rgb(${Math.round(a[1] + (b[1] - a[1]) * u)},${Math.round(a[2] + (b[2] - a[2]) * u)},${Math.round(a[3] + (b[3] - a[3]) * u)})`;
     }
   }
-  return 'rgb(15,51,80)';
+  const u = TONOS_MAR[TONOS_MAR.length - 1];
+  return `rgb(${u[1]},${u[2]},${u[3]})`;
 }
 
 export function dibujarEscena(ctx, j, vista) {
@@ -403,7 +408,7 @@ export function dibujarEscena(ctx, j, vista) {
 
   // mar: más claro cerca del puerto, más oscuro mar adentro (un solo color por cuadro, según dónde estás)
   const p = j.mundo.puerto;
-  ctx.fillStyle = colorMar(Math.hypot(camX - p.x, camY - p.y) / 3400);
+  ctx.fillStyle = colorMar(j.mundo.tema.mar, Math.hypot(camX - p.x, camY - p.y) / 3400);
   ctx.fillRect(x0 - 10, y0 - 10, vw + 20, vh + 20);
 
   // olitas: agrupadas en tres trazos según su brillo
@@ -462,40 +467,68 @@ export function dibujarEscena(ctx, j, vista) {
     }
   }
 
-  // islas
-  for (const isla of j.mundo.islas) {
-    if (!visible(isla.x, isla.y, isla.r * 1.6)) continue;
-    ctx.fillStyle = 'rgba(120,225,215,0.28)';
-    trazarIsla(ctx, isla, 1.42); ctx.fill();
-    ctx.fillStyle = 'rgba(150,235,220,0.3)';
-    trazarIsla(ctx, isla, 1.24); ctx.fill();
-    ctx.fillStyle = '#ecd9a0';
-    trazarIsla(ctx, isla, 1.1); ctx.fill();
-    ctx.fillStyle = '#d9c488';
-    trazarIsla(ctx, isla, 1.0); ctx.fill();
-    ctx.fillStyle = '#5aa552';
-    trazarIsla(ctx, isla, 0.8); ctx.fill();
-    ctx.fillStyle = '#458a44';
-    trazarIsla(ctx, isla, 0.52); ctx.fill();
+  // tierras, por capas: así las manchas que se tocan forman una sola costa
+  const tema = j.mundo.tema;
+  const aLaVista = j.mundo.islas.filter((isla) => visible(isla.x, isla.y, isla.r * 1.6));
+  const capa = (escala, color, soloTierra) => {
+    ctx.fillStyle = color;
+    for (const isla of aLaVista) {
+      if (soloTierra && isla.tipo === 'iceberg') continue;
+      trazarIsla(ctx, isla, isla.r > 300 ? 1 + (escala - 1) * (300 / isla.r) : escala);
+      ctx.fill();
+    }
+  };
+  capa(1.42, tema.bajos[0]);
+  capa(1.24, tema.bajos[1]);
+  capa(1.1, tema.arena[0], true);
+  capa(1.0, tema.arena[1], true);
+  // pasto o nieve: en las tierras grandes llega casi hasta la costa
+  ctx.fillStyle = tema.pasto[0];
+  for (const isla of aLaVista) { if (isla.tipo !== 'iceberg') { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 60 / isla.r : 0.8); ctx.fill(); } }
+  ctx.fillStyle = tema.pasto[1];
+  for (const isla of aLaVista) { if (isla.tipo !== 'iceberg') { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 150 / isla.r : 0.52); ctx.fill(); } }
+  // icebergs: bloque blanco con una cara en sombra
+  for (const isla of aLaVista) {
+    if (isla.tipo !== 'iceberg') continue;
+    ctx.fillStyle = '#cfe6f2';
+    trazarIsla(ctx, isla, 1.05, true); ctx.fill();
+    ctx.fillStyle = '#f6fcff';
+    ctx.save(); ctx.translate(-isla.r * 0.08, -isla.r * 0.1); trazarIsla(ctx, isla, 0.82, true); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = 'rgba(120,170,200,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(isla.x - isla.r * 0.3, isla.y - isla.r * 0.2); ctx.lineTo(isla.x + isla.r * 0.1, isla.y + isla.r * 0.05); ctx.lineTo(isla.x + isla.r * 0.05, isla.y + isla.r * 0.4); ctx.stroke();
+  }
+  for (const isla of aLaVista) {
+    if (isla.tipo === 'iceberg') continue;
     for (const r of isla.rocas) {
       ctx.fillStyle = '#6f6a63';
       ctx.beginPath(); ctx.arc(isla.x + r.x, isla.y + r.y, r.s, 0, TAU); ctx.fill();
       ctx.fillStyle = '#8d877f';
       ctx.beginPath(); ctx.arc(isla.x + r.x - 2, isla.y + r.y - 2, r.s * 0.6, 0, TAU); ctx.fill();
     }
-    for (const pa of isla.palmeras) {
-      const px = isla.x + pa.x, py = isla.y + pa.y;
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.beginPath(); ctx.arc(px + 4, py + 5, 9 * pa.s, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#2f6f35';
-      for (let h = 0; h < 6; h++) {
-        const ang = (h / 6) * TAU + pa.s;
-        ctx.beginPath();
-        ctx.ellipse(px + Math.cos(ang) * 6 * pa.s, py + Math.sin(ang) * 6 * pa.s, 8 * pa.s, 3.2 * pa.s, ang, 0, TAU);
-        ctx.fill();
+    if (tema.arbol !== 'ninguno') {
+      for (const pa of isla.palmeras) {
+        const px = isla.x + pa.x, py = isla.y + pa.y;
+        if (!visible(px, py, 20)) continue;
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); ctx.arc(px + 4, py + 5, 9 * pa.s, 0, TAU); ctx.fill();
+        if (tema.arbol === 'pino') {
+          ctx.fillStyle = '#2f5f3a';
+          ctx.beginPath(); ctx.arc(px, py, 9 * pa.s, 0, TAU); ctx.fill();
+          ctx.fillStyle = '#3f7a48';
+          ctx.beginPath(); ctx.arc(px - 1.5, py - 1.5, 5.5 * pa.s, 0, TAU); ctx.fill();
+        } else {
+          ctx.fillStyle = '#2f6f35';
+          for (let h = 0; h < 6; h++) {
+            const ang = (h / 6) * TAU + pa.s;
+            ctx.beginPath();
+            ctx.ellipse(px + Math.cos(ang) * 6 * pa.s, py + Math.sin(ang) * 6 * pa.s, 8 * pa.s, 3.2 * pa.s, ang, 0, TAU);
+            ctx.fill();
+          }
+          ctx.fillStyle = '#3f8f45';
+          ctx.beginPath(); ctx.arc(px, py, 3 * pa.s, 0, TAU); ctx.fill();
+        }
       }
-      ctx.fillStyle = '#3f8f45';
-      ctx.beginPath(); ctx.arc(px, py, 3 * pa.s, 0, TAU); ctx.fill();
     }
     if (isla.esPuerto) dibujarPuerto(ctx, j, isla);
   }
@@ -712,7 +745,7 @@ export function dibujarMinimapa(ctx, j, lado) {
   ctx.clearRect(0, 0, lado, lado);
   ctx.fillStyle = 'rgba(10,40,62,0.85)';
   ctx.fillRect(0, 0, lado, lado);
-  ctx.fillStyle = '#d9c488';
+  ctx.fillStyle = m.tema.mini;
   for (const i of m.islas) { ctx.beginPath(); ctx.arc(i.x * k, i.y * k, Math.max(2, i.r * k), 0, TAU); ctx.fill(); }
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
   ctx.lineWidth = 1;

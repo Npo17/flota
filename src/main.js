@@ -2,6 +2,7 @@
 import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PUERTO, ESCOLTAS_MAX } from './config.js';
 import { costoDiseno, barrasDe, crearBarco, rearmar, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
+import { MAPAS, mapaAlAzar } from './mapas.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso } from './juego.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco } from './dibujo.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
@@ -10,7 +11,10 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('mar'), ctx = canvas.getContext('2d');
 const mini = $('minimapa').getContext('2d');
 
-const mundo = crearMundo();
+let mundo = crearMundo();
+let mapaElegido = 'aleatorio';
+try { mapaElegido = localStorage.getItem('aon-mapa') || 'aleatorio'; } catch {}
+if (mapaElegido !== 'aleatorio' && !MAPAS[mapaElegido]) mapaElegido = 'aleatorio';
 let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
 let partida = null;
 let estado = 'astillero'; // astillero | mar | puerto | fin
@@ -91,12 +95,22 @@ function pintarAstillero() {
   $('ast-mejor').textContent = mejor ? `Tu mejor saqueo: ${mejor} de oro` : '';
 }
 
+// Selector de mapa: aleatorio o el que elijas
+const selMapa = $('ast-mapa');
+selMapa.innerHTML = '<option value="aleatorio">Mapa aleatorio</option>' + Object.entries(MAPAS).map(([id, m]) => `<option value="${id}">${m.nombre}</option>`).join('');
+selMapa.value = mapaElegido;
+const pintarMapa = () => { $('ast-mapa-desc').textContent = mapaElegido === 'aleatorio' ? 'Cada partida te toca un mar distinto.' : MAPAS[mapaElegido].desc; };
+selMapa.onchange = () => { mapaElegido = selMapa.value; try { localStorage.setItem('aon-mapa', mapaElegido); } catch {} pintarMapa(); };
+pintarMapa();
+
 $('ast-zarpar').onclick = () => {
+  mundo = crearMundo(mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido);
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno));
   partida.nombreJugador = cuenta.perfil?.nombre || '';
   estado = 'mar';
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
+  aviso(partida, `Mapa: ${mundo.nombre}`, 'bueno');
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
 };
 
@@ -270,7 +284,7 @@ let avisosPintados = '';
 function pintarHud() {
   const j = partida, b = j.jugador, s = b.stats;
   $('hud-nombre').textContent = `${CASCOS[b.diseno.casco].nombre} · ${(FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).nombre}`;
-  $('hud-zona').textContent = nombreZona(nivelZona(mundo, b.x, b.y));
+  $('hud-zona').textContent = `${mundo.nombre} · ${nombreZona(nivelZona(mundo, b.x, b.y))}`;
   $('hud-vida').style.width = `${Math.max(0, (b.vida / s.vidaMax) * 100)}%`;
   $('hud-vida-txt').textContent = `Casco ${Math.max(0, Math.ceil(b.vida))} / ${s.vidaMax}`;
   $('hud-trip').style.width = `${Math.max(0, (b.trip / s.tripMax) * 100)}%`;
@@ -412,4 +426,4 @@ pintarAstillero();
 requestAnimationFrame(cuadro);
 
 // Para probar desde la consola
-window.flota = { get partida() { return partida; }, mundo };
+window.flota = { get partida() { return partida; }, get mundo() { return mundo; } };

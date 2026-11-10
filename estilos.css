@@ -86,3 +86,8 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 #per-ranking .fila { padding: 5px 8px; border-radius: 6px; }
 #per-ranking .fila.yo { background: #21506e; }
 #pantalla-nombre { z-index: 5; }
+
+.mapa { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.mapa span { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #9fc3d6; }
+.mapa select.campo { font-size: 15px; padding: 8px 10px; cursor: pointer; }
+#ast-mapa-desc { margin: 6px 0 2px; min-height: 16px; }
