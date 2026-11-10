@@ -8,6 +8,7 @@ import { pintarBritanico } from './arte-britanico.js';
 import { pintarVikingo } from './arte-vikingo.js';
 import { pintarEspanol } from './arte-espanol.js';
 import { pintarPortugues } from './arte-portugues.js';
+import { pintarFrances } from './arte-frances.js';
 
 const TAU = Math.PI * 2;
 const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
@@ -141,7 +142,7 @@ function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
 const ESCALA_IMG = 2.5;
 const imagenes = new Map();
 // Civilizaciones con arte propio (ver src/arte-*.js): casco, cubierta, velas y mascarón se dibujan allí, en cuatro estados de daño.
-const ARTE = { britanicos: pintarBritanico, vikingos: pintarVikingo, espanoles: pintarEspanol, portugueses: pintarPortugues };
+const ARTE = { britanicos: pintarBritanico, vikingos: pintarVikingo, espanoles: pintarEspanol, portugueses: pintarPortugues, franceses: pintarFrances };
 function nivelDano(b) {
   const f = b.vida / b.stats.vidaMax;
   return !(f < 1) ? 0 : f > 0.75 ? 0 : f > 0.5 ? 1 : f > 0.25 ? 2 : 3;

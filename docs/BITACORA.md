@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-10 (arte de barcos, franceses) — Cristian + Claude
+
+**Estado: probado en localhost; commit con el OK de Cristian.** Sigue la entrada de abajo.
+
+- Quinta civilización con arte propio: **franceses** (`src/arte-frances.js`, enganchado en el mapa `ARTE` de `src/dibujo.js`). Casco azul con franja dorada ancha, velas cuadras con flores de lis y relinga azul, sin velas latinas ni cangreja (todo el aparejo es cuadro).
+- Mascarones: flor de lis (balandra), espada Joyeuse suelta, sin plataforma (bergantín) y sol radiante (galeón).
+- Solo dibujo: no se tocó la simulación ni `servidor/`, no hay que republicar nada.
+
 ## 2026-11-10 (arte de barcos, españoles y portugueses) — Cristian + Claude
 
 **Estado: probado en localhost; commit y push con el OK de Cristian.** Sigue la entrada de abajo (británicos y vikingos).
