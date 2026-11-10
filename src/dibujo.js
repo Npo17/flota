@@ -544,6 +544,15 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.setLineDash([]);
     }
     dibujarBarco(ctx, b, { etiqueta: true });
+    if (b === yo && j.nombreJugador && !b.hundiendo) {
+      ctx.font = '700 12px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      const ny = b.y - b.stats.largo * 0.5 - 27;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillText(j.nombreJugador, b.x + 1, ny + 1);
+      ctx.fillStyle = '#b8ffcb';
+      ctx.fillText(j.nombreJugador, b.x, ny);
+    }
   }
 
   // gancho de abordaje

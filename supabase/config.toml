@@ -1,0 +1,5 @@
+project_id = "iaglglmtemuohfhcingu"
+
+[auth]
+site_url = "https://ageofnavies.com"
+additional_redirect_urls = ["https://ageofnavies.com/**", "http://localhost:5180/**"]

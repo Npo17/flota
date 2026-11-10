@@ -48,7 +48,10 @@
 
   <div id="pantalla-astillero" class="pantalla">
     <div class="caja ancha">
-      <h1><img class="logo-titulo" src="img/logo.png" alt="Age of Navies"></h1>
+      <div class="cabecera">
+        <h1><img class="logo-titulo" src="img/logo.png" alt="Age of Navies"></h1>
+        <div id="cuenta"></div>
+      </div>
       <p class="sub">Diseñá tu barco con <b id="ast-total"></b> de oro. Lo que no gastes te queda guardado en el puerto para después.</p>
       <div class="astillero">
         <div id="ast-opciones"></div>
@@ -87,6 +90,33 @@
     </div>
   </div>
 
+  <div id="pantalla-perfil" class="pantalla oculto">
+    <div class="caja">
+      <h2>⚓ <span id="per-nombre"></span></h2>
+      <div id="per-datos" class="datos"></div>
+      <h3>Mejores saqueos</h3>
+      <div id="per-ranking"></div>
+      <div class="botones">
+        <button id="per-cambiar" class="boton">Cambiar nombre</button>
+        <button id="per-cerrar" class="boton principal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pantalla-nombre" class="pantalla oculto">
+    <form id="nom-form" class="caja chica">
+      <h2>Tu nombre de jugador</h2>
+      <p class="sub">Es el nombre que van a ver los demás. Tu mail de Google no se muestra a nadie.</p>
+      <input id="nom-input" class="campo" maxlength="16" minlength="3" placeholder="Capitán…" autocomplete="off" required>
+      <p id="nom-error" class="error"></p>
+      <div class="botones">
+        <button id="nom-cancelar" type="button" class="boton">Cancelar</button>
+        <button id="nom-guardar" class="boton principal">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="vendor/supabase.min.js" defer></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

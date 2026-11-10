@@ -4,6 +4,7 @@ import { costoDiseno, barrasDe, crearBarco, rearmar, statsDe } from './barcos.js
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso } from './juego.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco } from './dibujo.js';
+import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('mar'), ctx = canvas.getContext('2d');
@@ -89,6 +90,7 @@ function pintarAstillero() {
 
 $('ast-zarpar').onclick = () => {
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno));
+  partida.nombreJugador = cuenta.perfil?.nombre || '';
   estado = 'mar';
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
@@ -105,6 +107,7 @@ function entrarPuerto() {
   if (partida.oroBodega > 0) partida.oroPuerto += partida.oroBodega;
   partida.oroBodega = 0;
   partida.jugador.velas = 0;
+  reportar(false);
   estado = 'puerto';
   $('pantalla-puerto').classList.remove('oculto');
   pintarPuerto();
@@ -203,6 +206,7 @@ $('pto-salir').onclick = () => {
 // ---------- Fin ----------
 function mostrarFin() {
   estado = 'fin';
+  reportar(true);
   const st = partida.stats;
   const total = Math.round(st.saqueado);
   let mejor = 0;
@@ -312,6 +316,84 @@ function cuadro(ahora) {
   }
   requestAnimationFrame(cuadro);
 }
+
+
+// ---------- Cuenta, nombre de jugador y perfil ----------
+const limpiar = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function pintarCuenta() {
+  const caja = $('cuenta');
+  if (!cuenta.disponible) { caja.innerHTML = ''; return; }
+  if (cuenta.cargando) { caja.innerHTML = '<span class="suave">Cargando tu cuenta…</span>'; return; }
+  if (!cuenta.usuario) {
+    caja.innerHTML = '<button id="cta-entrar" class="boton">Entrar con Google</button><span class="suave">Para guardar tus estadísticas</span>';
+    $('cta-entrar').onclick = () => entrarConGoogle().catch((e) => alert(e.message));
+    return;
+  }
+  if (!cuenta.perfil) { // entró con Google pero todavía no eligió su nombre de jugador
+    caja.innerHTML = '<button id="cta-nombre" class="boton">Elegir nombre de jugador</button>';
+    $('cta-nombre').onclick = () => abrirNombre();
+    if (estado === 'astillero') abrirNombre();
+    return;
+  }
+  caja.innerHTML = `<button id="cta-perfil" class="boton">⚓ ${limpiar(cuenta.perfil.nombre)}</button><button id="cta-salir" class="boton enlace">Salir</button>`;
+  $('cta-perfil').onclick = () => abrirPerfil();
+  $('cta-salir').onclick = () => salir();
+}
+
+function abrirNombre() {
+  $('nom-input').value = cuenta.perfil?.nombre || '';
+  $('nom-error').textContent = '';
+  $('pantalla-nombre').classList.remove('oculto');
+  $('nom-cancelar').classList.toggle('oculto', !cuenta.perfil);
+  setTimeout(() => $('nom-input').focus(), 50);
+}
+
+$('nom-form').onsubmit = async (e) => {
+  e.preventDefault();
+  $('nom-guardar').disabled = true;
+  try {
+    await elegirNombre($('nom-input').value);
+    $('pantalla-nombre').classList.add('oculto');
+    if (!$('pantalla-perfil').classList.contains('oculto')) abrirPerfil();
+  } catch (err) { $('nom-error').textContent = err.message; }
+  $('nom-guardar').disabled = false;
+};
+$('nom-cancelar').onclick = () => $('pantalla-nombre').classList.add('oculto');
+
+async function abrirPerfil() {
+  const p = cuenta.perfil;
+  if (!p) return;
+  const h = Math.floor(p.segundos_jugados / 3600), m = Math.floor((p.segundos_jugados % 3600) / 60);
+  $('per-nombre').textContent = p.nombre;
+  const dato = (t, v) => `<div class="dato"><b>${v}</b><span>${t}</span></div>`;
+  $('per-datos').innerHTML = dato('Barcos hundidos', p.barcos_hundidos) + dato('Barcos capturados', p.barcos_capturados)
+    + dato('Jugadores eliminados', p.jugadores_eliminados) + dato('Oro saqueado', p.oro_saqueado)
+    + dato('Mejor saqueo', p.mejor_saqueo) + dato('Partidas', p.partidas) + dato('Tiempo en el mar', `${h} h ${m} min`);
+  $('per-ranking').innerHTML = '<p class="suave">Cargando…</p>';
+  $('pantalla-perfil').classList.remove('oculto');
+  const top = await ranking();
+  $('per-ranking').innerHTML = top.length
+    ? top.map((r, i) => `<div class="fila${r.nombre === p.nombre ? ' yo' : ''}"><span>${i + 1}. ${limpiar(r.nombre)}</span><b class="oro">${r.mejor_saqueo}</b></div>`).join('')
+    : '<p class="suave">Todavía no hay nadie en la tabla.</p>';
+}
+$('per-cerrar').onclick = () => $('pantalla-perfil').classList.add('oculto');
+$('per-cambiar').onclick = () => abrirNombre();
+
+// Manda al perfil lo hecho desde el último reporte (al entrar al puerto y al terminar la partida)
+function reportar(fin) {
+  if (!partida || !cuenta.perfil) return;
+  const st = partida.stats, r = partida.reportado || (partida.reportado = { hundidos: 0, capturados: 0, saqueado: 0, tiempo: 0 });
+  const d = {
+    hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, oro: Math.round(st.saqueado - r.saqueado),
+    segundos: Math.round(st.tiempo - r.tiempo), saqueoPartida: Math.round(st.saqueado), fin,
+  };
+  partida.reportado = { hundidos: st.hundidos, capturados: st.capturados, saqueado: st.saqueado, tiempo: st.tiempo };
+  registrarProgreso(d);
+}
+
+iniciarCuenta(pintarCuenta);
+pintarCuenta();
 
 pintarAstillero();
 requestAnimationFrame(cuadro);

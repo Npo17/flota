@@ -68,3 +68,21 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .opcion.elegida:disabled { opacity: 1; }
 .opcion em.caro { color: #ff8f8f; }
 #hud-velas-txt { margin-top: 2px; }
+
+/* Cuenta y perfil */
+.cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+#cuenta { display: flex; align-items: center; gap: 10px; }
+.boton.enlace { background: none; color: #b9c7cf; padding: 6px; font-weight: 500; text-decoration: underline; }
+.caja.chica { width: min(420px, 100%); }
+.campo { width: 100%; font: inherit; font-size: 18px; padding: 11px 12px; border-radius: 10px; border: 2px solid #2a5f80; background: #0c2233; color: #fff; }
+.campo:focus { outline: none; border-color: #ffd166; }
+.error { color: #ff8f8f; font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+.botones { display: flex; gap: 10px; margin-top: 12px; }
+.botones .boton { flex: 1; margin-top: 0; }
+.datos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 12px 0; }
+.dato { background: #173a52; border-radius: 10px; padding: 10px 12px; }
+.dato b { display: block; font-size: 22px; color: #ffd166; }
+.dato span { font-size: 12px; color: #b9c7cf; }
+#per-ranking .fila { padding: 5px 8px; border-radius: 6px; }
+#per-ranking .fila.yo { background: #21506e; }
+#pantalla-nombre { z-index: 5; }
