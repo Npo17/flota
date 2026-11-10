@@ -4,7 +4,7 @@ import { costoDiseno, barrasDe, crearBarco, rearmar, statsDe } from './barcos.js
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso } from './juego.js';
-import { dibujarEscena, dibujarMinimapa, dibujarBarco } from './dibujo.js';
+import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
 import { dibujarBandera } from './banderas.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
 
@@ -100,15 +100,50 @@ function pintarAstillero() {
   $('ast-mejor').textContent = mejor ? `Tu mejor saqueo: ${mejor} de oro` : '';
 }
 
-// Selector de mapa: aleatorio o el que elijas
-const selMapa = $('ast-mapa');
-selMapa.innerHTML = '<option value="aleatorio">Mapa aleatorio</option>' + Object.entries(MAPAS).map(([id, m]) => `<option value="${id}">${m.nombre} · ${m.lugar}</option>`).join('');
-selMapa.value = mapaElegido;
-const pintarMapa = () => {
+// Menú de mapas: un botón muestra el elegido y abre la grilla con vista previa y banderas de cada lugar
+const mundosVista = {};
+const mundoVista = (id) => mundosVista[id] || (mundosVista[id] = crearMundo(id));
+const banderasDe = (m) => [...new Set(m.reglas.facciones || [])].slice(0, 4);
+
+function pintarMapa() {
   const m = MAPAS[mapaElegido];
-  $('ast-mapa-desc').innerHTML = m ? `${m.desc}<br><b>${m.rasgo}</b>` : 'Cada partida te toca un lugar distinto de la historia.';
-};
-selMapa.onchange = () => { mapaElegido = selMapa.value; try { localStorage.setItem('aon-mapa', mapaElegido); } catch {} pintarMapa(); };
+  dibujarVistaMapa($('ast-mapa-vista').getContext('2d'), m ? mundoVista(mapaElegido) : null, 128);
+  $('ast-mapa-nombre').textContent = m ? m.nombre : 'Mapa aleatorio';
+  $('ast-mapa-lugar').textContent = m ? m.lugar : 'Cada partida, un lugar distinto de la historia';
+  $('ast-mapa-desc').innerHTML = m ? `${m.desc}<br><b>${m.rasgo}</b>` : '';
+}
+
+function elegirMapa(id) {
+  mapaElegido = id;
+  try { localStorage.setItem('aon-mapa', id); } catch {}
+  pintarMapa();
+  $('pantalla-mapas').classList.add('oculto');
+}
+
+function abrirMapas() {
+  const grilla = $('map-grilla');
+  if (!grilla.children.length) {
+    const tarjeta = (id, m) => {
+      const b = document.createElement('button');
+      b.className = 'mapa-carta';
+      b.dataset.id = id;
+      const flags = m ? banderasDe(m).map(() => '<canvas width="36" height="24"></canvas>').join('') : '';
+      b.innerHTML = `<canvas class="vista" width="220" height="220"></canvas><div class="flags">${flags}</div>`
+        + `<b>${m ? m.nombre : 'Mapa aleatorio'}</b><span>${m ? m.lugar : 'Sorpresa'}</span>`
+        + `<small>${m ? m.rasgo : 'Cada partida te toca un lugar distinto de la historia.'}</small>`;
+      dibujarVistaMapa(b.querySelector('.vista').getContext('2d'), m ? mundoVista(id) : null, 220);
+      if (m) b.querySelectorAll('.flags canvas').forEach((c, q) => dibujarBandera(c.getContext('2d'), banderasDe(m)[q], 36, 24));
+      b.onclick = () => elegirMapa(id);
+      grilla.appendChild(b);
+    };
+    tarjeta('aleatorio', null);
+    for (const [id, m] of Object.entries(MAPAS)) tarjeta(id, m);
+  }
+  for (const b of grilla.children) b.classList.toggle('elegida', b.dataset.id === mapaElegido);
+  $('pantalla-mapas').classList.remove('oculto');
+}
+$('ast-mapa-btn').onclick = abrirMapas;
+$('map-cerrar').onclick = () => $('pantalla-mapas').classList.add('oculto');
 pintarMapa();
 
 $('ast-zarpar').onclick = () => {

@@ -60,7 +60,7 @@ export const MAPAS = {
     islas: 2, radio: [60, 110], arrecifes: 22, remolinos: 6, reglas: { facciones: ['espanoles', 'britanicos', 'holandeses'], guerra: 2, comercio: 0.4 } },
   oresund: { nombre: 'Estrecho de Øresund', lugar: 'Dinamarca y Suecia, 1658', tema: FRIO, semilla: 1658,
     desc: 'La llave del Báltico: desde 1429 todo barco que pasaba le pagaba peaje al rey de Dinamarca.',
-    rasgo: 'Aguas frías con hielo a la deriva y mucho mercante cargado. Daneses, suecos y hanseáticos.',
+    rasgo: 'Aguas frías con hielo a la deriva y mucho mercante cargado. Daneses, suecos y alemanes de la Hansa.',
     masas: [...O, ...E, [1900, 2300, 430], [1500, 4300, 380], [4700, 1500, 300], [4600, 4900, 330]],
     islas: 6, radio: [60, 150], icebergs: 12, remolinos: 5, reglas: { facciones: ['daneses', 'suecos', 'hanseaticos', 'holandeses'], comercio: 1.8 } },
   bosforo: { nombre: 'Bósforo', lugar: 'Constantinopla, 1453', tema: MEDITERRANEO, semilla: 1453,

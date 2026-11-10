@@ -812,3 +812,70 @@ export function dibujarMinimapa(ctx, j, lado) {
   ctx.strokeStyle = 'rgba(255,255,255,0.35)';
   ctx.strokeRect(0.5, 0.5, lado - 1, lado - 1);
 }
+
+// Vista previa redonda de un mapa, para el menú de mapas. Si no hay mundo, dibuja el "aleatorio".
+export function dibujarVistaMapa(ctx, mundo, lado) {
+  const r = lado / 2;
+  ctx.clearRect(0, 0, lado, lado);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(r, r, r - 5, 0, TAU); ctx.clip();
+  if (!mundo) {
+    const g = ctx.createRadialGradient(r, r, 4, r, r, r);
+    g.addColorStop(0, '#2f9fb8'); g.addColorStop(1, '#12405e');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, lado, lado);
+    ctx.fillStyle = '#ffe9a8';
+    ctx.font = `800 ${lado * 0.5}px Georgia, serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('?', r, r + lado * 0.03);
+  } else {
+    const t = mundo.tema, k = lado / mundo.ancho;
+    const g = ctx.createRadialGradient(r, r, 4, r, r, r);
+    const c = (q) => `rgb(${q[1]},${q[2]},${q[3]})`;
+    g.addColorStop(0, c(t.mar[0])); g.addColorStop(1, c(t.mar[t.mar.length - 1]));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, lado, lado);
+    // el mundo es cuadrado y la vista redonda: se achica un poco para que las costas de los bordes entren
+    const E = 0.8;
+    ctx.save();
+    ctx.translate(r * (1 - E), r * (1 - E));
+    ctx.scale(k * E, k * E);
+    const tierras = mundo.islas.filter((i) => !ESCOLLO[i.tipo]);
+    const capa = (escala, color, px) => { ctx.fillStyle = color; for (const i of tierras) { trazarIsla(ctx, i, px ? Math.max(0.3, 1 - px / i.r) : escala); ctx.fill(); } };
+    capa(1.2, t.bajos[1]);
+    capa(1.04, t.arena[0]);
+    capa(0, t.pasto[0], 55);
+    capa(0, t.pasto[1], 260);
+    for (const i of mundo.islas) {
+      if (!ESCOLLO[i.tipo]) continue;
+      ctx.fillStyle = i.tipo === 'iceberg' ? '#f6fcff' : t.arena[0];
+      ctx.beginPath(); ctx.arc(i.x, i.y, Math.max(i.r, 1.4 / k), 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.2 / k;
+    for (const w of mundo.remolinos) { ctx.beginPath(); ctx.arc(w.x, w.y, 2.6 / k, 0, TAU); ctx.stroke(); }
+    ctx.restore();
+    // el puerto
+    ctx.fillStyle = '#ffe89a'; ctx.strokeStyle = '#3d2310'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(r + (mundo.puerto.x * k - r) * E, r + (mundo.puerto.y * k - r) * E, Math.max(2.5, lado * 0.028), 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  // sombra interior para dar profundidad
+  const som = ctx.createRadialGradient(r, r, r * 0.6, r, r, r);
+  som.addColorStop(0, 'rgba(0,0,0,0)'); som.addColorStop(1, 'rgba(0,10,25,0.32)');
+  ctx.fillStyle = som; ctx.fillRect(0, 0, lado, lado);
+  ctx.restore();
+  // aro de bronce con los cuatro rumbos
+  const aro = ctx.createLinearGradient(0, 0, lado, lado);
+  aro.addColorStop(0, '#f3d98b'); aro.addColorStop(0.5, '#a67c2e'); aro.addColorStop(1, '#e8c770');
+  ctx.strokeStyle = aro; ctx.lineWidth = Math.max(3, lado * 0.045);
+  ctx.beginPath(); ctx.arc(r, r, r - 4, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = 'rgba(40,25,5,0.7)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(r, r, r - 4 - Math.max(1.5, lado * 0.022), 0, TAU); ctx.stroke();
+  ctx.fillStyle = '#f3d98b';
+  for (let q = 0; q < 4; q++) {
+    const ang = -Math.PI / 2 + (q * Math.PI) / 2, t = Math.max(3, lado * 0.045) * (q === 0 ? 1.5 : 1);
+    ctx.beginPath();
+    ctx.moveTo(r + Math.cos(ang) * (r - 0.5), r + Math.sin(ang) * (r - 0.5));
+    ctx.lineTo(r + Math.cos(ang + 0.09) * (r - 4 - t), r + Math.sin(ang + 0.09) * (r - 4 - t));
+    ctx.lineTo(r + Math.cos(ang - 0.09) * (r - 4 - t), r + Math.sin(ang - 0.09) * (r - 4 - t));
+    ctx.fill();
+  }
+}

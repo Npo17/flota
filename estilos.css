@@ -105,3 +105,24 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 @media (max-width: 800px) { .opciones.civs { grid-template-columns: repeat(2, 1fr); } }
 #hud-bandera { width: 24px; height: 16px; flex: none; }
 #hud-nombre { flex: 1; }
+
+/* Menú de mapas */
+.mapa-boton { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 6px; padding: 8px 12px 8px 8px; background: #173a52; border: 2px solid rgba(255, 236, 170, 0.35); border-radius: 12px; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.mapa-boton:hover { background: #1d4763; border-color: #ffd166; }
+.mapa-boton canvas { width: 64px; height: 64px; flex: none; }
+.mapa-boton span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mapa-boton small { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9fc3d6; }
+.mapa-boton b { font-size: 16px; color: #ffe9a8; }
+.mapa-boton em { font-style: normal; font-size: 12px; color: #b9c7cf; }
+.mapa-boton i { font-style: normal; font-weight: 700; font-size: 12px; color: #2a1c08; background: #ffd166; border-radius: 999px; padding: 5px 10px; }
+#map-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.mapa-carta { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 10px 12px; background: linear-gradient(#1a405a, #143247); border: 2px solid transparent; border-radius: 14px; color: inherit; font: inherit; cursor: pointer; text-align: center; transition: transform 0.12s, border-color 0.12s; }
+.mapa-carta:hover { transform: translateY(-3px); border-color: rgba(255, 209, 102, 0.6); }
+.mapa-carta.elegida { border-color: #ffd166; background: linear-gradient(#245674, #1b4560); }
+.mapa-carta .vista { width: 132px; height: 132px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45)); }
+.mapa-carta .flags { display: flex; gap: 4px; justify-content: center; min-height: 18px; margin: 6px 0 2px; }
+.mapa-carta .flags canvas { width: 26px; height: 17px; border-radius: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+.mapa-carta b { font-size: 15px; color: #ffe9a8; }
+.mapa-carta span { font-size: 12px; color: #9fc3d6; }
+.mapa-carta small { font-size: 11.5px; color: #cfdbe2; line-height: 1.3; margin-top: 4px; }
+#pantalla-mapas { z-index: 4; align-items: flex-start; }

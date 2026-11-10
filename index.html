@@ -60,7 +60,11 @@
           <canvas id="ast-vista" width="300" height="170"></canvas>
           <div id="ast-barras"></div>
           <div class="fila grande"><span>Te queda</span><b id="ast-resto" class="oro"></b></div>
-          <label class="mapa"><span>Mapa</span><select id="ast-mapa" class="campo"></select></label>
+          <button id="ast-mapa-btn" class="mapa-boton" type="button">
+            <canvas id="ast-mapa-vista" width="128" height="128"></canvas>
+            <span><small>Mapa</small><b id="ast-mapa-nombre"></b><em id="ast-mapa-lugar"></em></span>
+            <i>Cambiar</i>
+          </button>
           <p id="ast-mapa-desc" class="suave"></p>
           <button id="ast-zarpar" class="boton principal">¡Zarpar!</button>
           <p id="ast-mejor" class="suave"></p>
@@ -90,6 +94,17 @@
       <h2>Te hundieron</h2>
       <div id="fin-datos"></div>
       <button id="fin-otra" class="boton principal">Diseñar otra flota</button>
+    </div>
+  </div>
+
+  <div id="pantalla-mapas" class="pantalla oculto">
+    <div class="caja ancha">
+      <div class="cabecera">
+        <h2>¿Dónde vas a navegar?</h2>
+        <button id="map-cerrar" class="boton" type="button">Cerrar</button>
+      </div>
+      <p class="sub">Veinte lugares de la era de la vela. Las banderas muestran quiénes navegan en cada uno.</p>
+      <div id="map-grilla"></div>
     </div>
   </div>
 
