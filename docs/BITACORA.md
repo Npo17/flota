@@ -10,7 +10,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 **Contexto compartido**
 - El otro socio ya tiene invitación al repo con permiso de escritura.
 - `CLAUDE.md` tiene una regla nueva para los dos Claudes: en cada cambio se actualizan la bitácora y `CLAUDE.md`, en el mismo commit que el código.
-- Los dos socios usan gstack; si no está instalado, `CLAUDE.md` dice cómo bajarlo.
+- gstack es obligatorio para los dos socios: si el Claude no tiene esos skills, no toca nada hasta instalarlo. `CLAUDE.md` dice cómo bajarlo y qué skill usar en cada momento (`/qa`, `/review`, `/investigate`, etc.).
 - El servidor del mar vive en la cuenta de Cloudflare de Nicolás: por ahora lo republica él.
 
 **Idiomas y pantalla clara u oscura**

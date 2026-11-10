@@ -8,7 +8,7 @@ Lo hacen dos socios, cada uno con su Claude. Este archivo y `docs/BITACORA.md` s
 1. `git pull --rebase origin main` — el otro socio puede haber subido cambios.
 2. Leer las últimas entradas de `docs/BITACORA.md`.
 3. Una sola vez por compu: `git config core.hooksPath .githooks` (sella la versión sola en cada commit).
-4. Una sola vez por compu: tener instalado gstack (ver "Herramientas de Claude" más abajo).
+4. **Comprobar que gstack está instalado. Sin gstack no se trabaja en este repo** (ver "gstack es obligatorio" más abajo).
 
 ## Regla para el Claude de cada socio: mantener estos .md al día
 
@@ -21,15 +21,30 @@ Vale para los dos Claudes, en **cada cambio**, sin que el socio lo pida:
 
 Lo que no quede escrito acá, el Claude del otro socio no lo sabe.
 
-## Herramientas de Claude
+## gstack es obligatorio
 
-Los dos socios usan [gstack](https://github.com/garrytan/gstack), un paquete de skills para Claude Code (`/review`, `/qa`, `/investigate`, `/ship`, etc.). Si al empezar no aparecen esos skills, instalarlo antes de trabajar (necesita Git, [Bun](https://bun.sh/) y Node.js):
+Este proyecto se trabaja con [gstack](https://github.com/garrytan/gstack), el paquete de skills y subagentes para Claude Code. Los dos socios trabajan igual, con las mismas herramientas.
+
+**Instrucción para Claude, al empezar cada sesión:** fijate si tenés disponibles los skills de gstack (`/review`, `/qa`, `/investigate`, `/plan-ceo-review`). **Si no están, no hagas nada en este repo:** no edites archivos, no commitees, no publiques. Decile al socio que falta gstack, instalalo con el comando de abajo (necesita Git, [Bun](https://bun.sh/) y Node.js) y recién después seguí.
 
 ```bash
 git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
 ```
 
-Se instala en la compu de cada uno, no en este repo. Ojo con `/ship` y `/land-and-deploy`: acá se sigue publicando solo con el OK del socio y con los pasos de "Publicar".
+Se clona en la compu de cada socio (`~/.claude/skills/gstack`), no adentro de este repo. Si después de instalarlo los skills siguen sin aparecer, reiniciar Claude Code.
+
+**Cómo se usa en cada cambio** (no es opcional):
+
+| Momento | Skill |
+|---|---|
+| Proponer una mejora o decidir qué hacer | `/plan-ceo-review` (y `/plan-eng-review` si el cambio es grande) |
+| Un bug que no se entiende | `/investigate`, antes de tocar código |
+| Probar el cambio en el navegador (localhost) | `/qa` |
+| Antes de commitear | `/review` sobre el diff |
+| Cambios de login, base de datos o servidor | `/cso` |
+| Cambios visuales | `/design-review` |
+
+Lo que encuentren `/qa` y `/review` se arregla antes de mostrarle el cambio al socio. `/ship` y `/land-and-deploy` no reemplazan las reglas de este archivo: acá se publica solo con el OK del socio y con los pasos de "Publicar".
 
 ## Cómo se trabaja
 
