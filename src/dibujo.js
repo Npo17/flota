@@ -374,7 +374,7 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillText(b.nombre, b.x + 1, y - 4);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = b.esJugador ? '#ffd166' : '#fff';
     ctx.fillText(b.nombre, b.x, y - 5);
     const mitad = ctx.measureText(b.nombre).width / 2;
     ctx.save();
@@ -792,9 +792,11 @@ export function dibujarMinimapa(ctx, j, lado) {
   const yo = j.jugador;
   for (const b of j.barcos) {
     if (b.hundiendo || b === yo) continue;
-    if (b.bando === 'enemigo' && Math.hypot(b.x - yo.x, b.y - yo.y) > 1500) continue;
-    ctx.fillStyle = b.bando === 'enemigo' ? '#ff6b6b' : '#7dff9b';
-    ctx.fillRect(b.x * k - 1.5, b.y * k - 1.5, 3, 3);
+    // los bots solo se ven de cerca; los otros jugadores, siempre
+    if (b.bando === 'enemigo' && !b.esJugador && Math.hypot(b.x - yo.x, b.y - yo.y) > 1500) continue;
+    ctx.fillStyle = b.esJugador ? '#ffd166' : b.bando === 'enemigo' ? '#ff6b6b' : '#7dff9b';
+    const t = b.esJugador ? 4 : 3;
+    ctx.fillRect(b.x * k - t / 2, b.y * k - t / 2, t, t);
   }
   for (const b of j.barcos) {
     if (!b.convoy || b.hundiendo || b.bando !== 'enemigo') continue;

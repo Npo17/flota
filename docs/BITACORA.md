@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-10 — Nicolás + Claude
+
+**Juego en línea (mar compartido)**
+- `src/juego.js` se reescribió para manejar varios capitanes; el modo solo es el caso de uno. Las compras del puerto pasaron a `src/puerto.js`.
+- Servidor nuevo en `servidor/` (Cloudflare Workers + Durable Object) y cliente en `src/red.js`.
+- Entre jugadores: se pueden hundir y abordar; el oro de la bodega del que pierde queda flotando; el puerto es zona segura.
+- Botones nuevos en la pantalla de inicio: "Jugar en línea" y "Jugar solo contra bots".
+- Pendiente: mostrar la soga del gancho ajeno, y más de una sala si se llena.
+
 ## 2026-11-09 — Nicolás + Claude
 
 **Contexto compartido y publicación automática**

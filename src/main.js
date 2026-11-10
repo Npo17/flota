@@ -1,9 +1,11 @@
 // Pega todo: pantallas (astillero, puerto, fin), teclado y el ciclo del juego.
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PUERTO, ESCOLTAS_MAX } from './config.js';
-import { costoDiseno, barrasDe, crearBarco, rearmar, statsDe } from './barcos.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON } from './config.js';
+import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
-import { crearPartida, actualizar, candidatoAbordaje, aviso } from './juego.js';
+import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar } from './juego.js';
+import { catalogoPuerto, comprar } from './puerto.js';
+import { conectar, estadoDelMar } from './red.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
 import { dibujarBandera } from './banderas.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
@@ -18,6 +20,7 @@ try { mapaElegido = localStorage.getItem('aon-mapa') || 'aleatorio'; } catch {}
 if (mapaElegido !== 'aleatorio' && !MAPAS[mapaElegido]) mapaElegido = 'aleatorio';
 let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
 let partida = null;
+let red = null; // conexión al mar compartido cuando se juega en línea
 let estado = 'astillero'; // astillero | mar | puerto | fin
 const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x: 0, y: 0 }, ladoRaton: 1 };
 const teclas = new Set();
@@ -79,7 +82,9 @@ function pintarAstillero() {
   $('ast-resto').textContent = `${resto} oro`;
   $('ast-resto').style.color = resto < 0 ? '#ff6b6b' : '';
   $('ast-zarpar').disabled = resto < 0;
-  $('ast-zarpar').textContent = resto < 0 ? 'Te pasaste del presupuesto' : '¡Zarpar!';
+  $('ast-zarpar').textContent = resto < 0 ? 'Te pasaste del presupuesto' : 'Jugar solo contra bots';
+  if (resto < 0) $('ast-linea').disabled = true;
+  else if (!red) $('ast-linea').disabled = false;
   const barras = barrasDe(diseno);
   $('ast-barras').innerHTML = Object.entries(barras).map(([k, v]) =>
     `<div class="stat"><span>${k}</span><div><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></div></div>`).join('');
@@ -146,16 +151,57 @@ $('ast-mapa-btn').onclick = abrirMapas;
 $('map-cerrar').onclick = () => $('pantalla-mapas').classList.add('oculto');
 pintarMapa();
 
+function empezar() {
+  estado = 'mar';
+  $('pantalla-astillero').classList.add('oculto');
+  $('hud').classList.remove('oculto');
+  $('hud-linea').classList.toggle('oculto', !partida.enLinea);
+}
+
+// Modo solo: vos contra los bots, en el mapa que elijas
 $('ast-zarpar').onclick = () => {
   mundo = crearMundo(mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido);
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno));
   partida.nombreJugador = cuenta.perfil?.nombre || '';
-  estado = 'mar';
-  $('pantalla-astillero').classList.add('oculto');
-  $('hud').classList.remove('oculto');
+  empezar();
   aviso(partida, `${mundo.nombre} · ${mundo.lugar}`, 'bueno');
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
 };
+
+// En línea: todos en el mismo mar
+function volverAlAstillero(mensaje) {
+  if (red) { red.cerrar(); red = null; }
+  partida = null;
+  estado = 'astillero';
+  for (const id of ['pantalla-puerto', 'pantalla-fin']) $(id).classList.add('oculto');
+  $('hud').classList.add('oculto');
+  $('pantalla-astillero').classList.remove('oculto');
+  $('ast-linea').disabled = false;
+  pintarAstillero();
+  pintarLinea(mensaje);
+}
+
+$('ast-linea').onclick = () => {
+  $('ast-linea').disabled = true;
+  $('ast-linea-info').textContent = 'Conectando con el mar…';
+  const nombre = cuenta.perfil?.nombre || `Capitán ${Math.floor(100 + Math.random() * 900)}`;
+  red = conectar({
+    nombre, diseno,
+    alEntrar: (p) => { partida = p; mundo = p.mundo; empezar(); },
+    alCerrar: (motivo) => { if (estado !== 'fin') volverAlAstillero(motivo); },
+    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); },
+  });
+};
+
+async function pintarLinea(mensaje) {
+  const info = $('ast-linea-info');
+  if (mensaje) info.textContent = mensaje;
+  const e = await estadoDelMar();
+  if (estado !== 'astillero' || $('ast-linea').disabled) return;
+  const base = e ? `${e.jugadores === 1 ? '1 capitán' : e.jugadores + ' capitanes'} en ${e.nombre} · el mapa cambia cada día` : 'El mar compartido no responde ahora. Podés jugar solo.';
+  info.textContent = mensaje ? `${mensaje} ${e ? '' : base}`.trim() : base;
+  $('ast-linea').disabled = !e;
+}
 
 // ---------- Puerto ----------
 function cercaDelPuerto() {
@@ -164,57 +210,24 @@ function cercaDelPuerto() {
 }
 
 function entrarPuerto() {
-  if (partida.oroBodega > 0) partida.oroPuerto += partida.oroBodega;
-  partida.oroBodega = 0;
-  partida.jugador.velas = 0;
+  if (partida.enLinea) { red.atracar(); return; } // el servidor confirma y recién ahí se abre
+  if (atracar(partida, partida.yo)) abrirPuerto();
+}
+
+function abrirPuerto() {
   reportar(false);
   estado = 'puerto';
+  oroPuertoPintado = -1;
   $('pantalla-puerto').classList.remove('oculto');
   pintarPuerto();
 }
 
+let oroPuertoPintado = -1, clavePuerto = '';
 function pintarPuerto() {
   const j = partida, b = j.jugador, s = b.stats, d = b.diseno;
-  const escoltas = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo);
-  const grupos = [];
-
-  // Reparar y tripular
-  const dano = Math.ceil(s.vidaMax - b.vida), faltan = s.tripMax - b.trip;
-  const danoEsc = escoltas.reduce((a, e) => a + Math.ceil(e.stats.vidaMax - e.vida) + (e.stats.tripMax - e.trip) * 3, 0);
-  const arreglos = [
-    { t: 'Reparar el casco', d: dano ? `Te faltan ${dano} puntos de casco.` : 'El casco está entero.', costo: dano * PUERTO.repararPorPunto, ok: dano > 0, parcial: true, listo: 'Casco entero',
-      hacer: (oro) => { b.vida = Math.min(s.vidaMax, b.vida + Math.floor(oro / PUERTO.repararPorPunto)); } },
-    { t: 'Reclutar marineros', d: `Tenés ${b.trip} de ${s.tripMax}. Más gente recarga más rápido y gana abordajes.`, costo: faltan * PUERTO.marinero, ok: faltan > 0, parcial: true, listo: 'Tripulación completa',
-      hacer: (oro) => { b.trip = Math.min(s.tripMax, b.trip + Math.floor(oro / PUERTO.marinero)); } },
-  ];
-  if (escoltas.length) arreglos.push({ t: 'Arreglar la flota', d: `Repara y llena de gente tus ${escoltas.length} barcos capturados.`, costo: danoEsc, ok: danoEsc > 0,
-    hacer: () => { for (const e of escoltas) { e.vida = e.stats.vidaMax; e.trip = e.stats.tripMax; } } });
-  grupos.push(['Reparar y tripular', arreglos]);
-
-  // Cañones
-  const nivel = (d.nivelCanones || 0) + 1;
-  grupos.push(['Cañones', [
-    { t: 'Sumar 2 cañones', d: `Tenés ${d.canones} de ${s.maxCanones} que entran en este casco. Pegás más, pero vas un poco más lento.`, costo: PUERTO.parCanones, ok: d.canones < s.maxCanones, listo: 'Casco lleno',
-      hacer: () => { d.canones += 2; } },
-    { t: `Cañones nivel ${nivel}`, d: 'Cada bala hace 15 % más de daño.', costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: 'Al máximo',
-      hacer: () => { d.nivelCanones = nivel; } },
-  ]]);
-
-  // Munición y velas: se ve cuál tenés puesta
-  grupos.push(['Munición', Object.entries(MUNICIONES).map(([id, m]) => ({
-    t: m.nombre, d: m.desc, costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: 'La que usás',
-    hacer: () => { d.municion = id; },
-  }))]);
-  grupos.push(['Velas', Object.entries(VELAS).map(([id, v]) => ({
-    t: v.nombre, d: v.desc, costo: Math.max(60, v.costo), ok: id !== d.velas, elegida: id === d.velas, listo: 'Las que usás',
-    hacer: () => { d.velas = id; },
-  }))]);
-
-  // Flota
-  grupos.push(['Flota', [
-    { t: 'Agrandar la flota', d: `Hoy podés llevar ${j.escoltasMax} barcos capturados (tenés ${escoltas.length}). Suma un lugar más.`, costo: PUERTO.escolta(j.escoltasMax + 1), ok: j.escoltasMax < ESCOLTAS_MAX, listo: 'Al máximo',
-      hacer: () => { j.escoltasMax++; } },
-  ]]);
+  const grupos = catalogoPuerto(j, j.yo);
+  oroPuertoPintado = j.oroPuerto;
+  clavePuerto = clavePuertoDe();
 
   const cont = $('pto-opciones');
   cont.innerHTML = '';
@@ -231,10 +244,8 @@ function pintarPuerto() {
       btn.innerHTML = `<b>${it.t}</b><small>${it.d}</small><em class="${it.ok && !alcanza ? 'caro' : ''}">${precio}</em>`;
       btn.disabled = !it.ok || !alcanza;
       btn.onclick = () => {
-        const paga = it.parcial ? Math.min(it.costo, j.oroPuerto) : it.costo;
-        it.hacer(paga);
-        j.oroPuerto -= paga;
-        rearmar(b);
+        if (j.enLinea) { btn.disabled = true; red.comprar(it.id); return; } // se repinta cuando el servidor confirma
+        comprar(j, j.yo, it.id);
         pintarPuerto();
       };
       caja.appendChild(btn);
@@ -258,6 +269,12 @@ function pintarPuerto() {
   cx.restore();
 }
 
+// En línea, el puerto se repinta cuando cambia algo que mandó el servidor (oro, casco, gente, diseño)
+function clavePuertoDe() {
+  const b = partida.jugador;
+  return [partida.oroPuerto, Math.ceil(b.vida), b.trip, partida.escoltasMax, JSON.stringify(b.diseno)].join('|');
+}
+
 $('pto-salir').onclick = () => {
   estado = 'mar';
   $('pantalla-puerto').classList.add('oculto');
@@ -279,19 +296,16 @@ function mostrarFin() {
     <div class="fila"><span>Oro saqueado</span><b class="oro">${total}</b></div>
     <div class="fila"><span>Barcos hundidos</span><b>${st.hundidos}</b></div>
     <div class="fila"><span>Barcos capturados</span><b>${st.capturados}</b></div>
+    ${partida.enLinea ? `<div class="fila"><span>Jugadores eliminados</span><b>${st.eliminados || 0}</b></div>` : ''}
     <div class="fila"><span>Tiempo en el mar</span><b>${min}:${String(seg).padStart(2, '0')}</b></div>
     <p class="suave">${total > mejor ? '¡Nuevo récord!' : `Tu récord: ${mejor} de oro`}</p>`;
+  $('fin-titulo').textContent = partida.enLinea && partida.causa ? `Te hundió ${partida.causa}` : 'Te hundieron';
+  $('pantalla-puerto').classList.add('oculto');
   $('pantalla-fin').classList.remove('oculto');
   $('hud').classList.add('oculto');
 }
 
-$('fin-otra').onclick = () => {
-  $('pantalla-fin').classList.add('oculto');
-  $('pantalla-astillero').classList.remove('oculto');
-  estado = 'astillero';
-  partida = null;
-  pintarAstillero();
-};
+$('fin-otra').onclick = () => volverAlAstillero();
 
 // ---------- Entrada ----------
 addEventListener('keydown', (e) => {
@@ -306,6 +320,7 @@ addEventListener('keydown', (e) => {
   if (k === 'f') pulsos.abordar = true;
   if (k === 'g') pulsos.ordenFlota = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
+  if (k === 'tab') e.preventDefault();
 });
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
@@ -325,6 +340,7 @@ function ratonAMundo() {
 // ---------- HUD ----------
 let avisosPintados = '';
 let banderaHud = '';
+let tablaPintada = '';
 function pintarHud() {
   const j = partida, b = j.jugador, s = b.stats;
   $('hud-nombre').textContent = `${CASCOS[b.diseno.casco].nombre} · ${(FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).nombre}`;
@@ -341,6 +357,16 @@ function pintarHud() {
   $('hud-bodega').textContent = j.oroBodega;
   $('hud-puerto').textContent = j.oroPuerto;
   $('hud-hundidos').textContent = j.stats.hundidos;
+  if (j.enLinea) {
+    $('hud-eliminados').textContent = j.stats.eliminados || 0;
+    const top = [...j.jugadores].sort((a, c) => c[2] - a[2]).slice(0, 5);
+    const clave = top.map((x) => x[1] + x[2]).join('|') + j.jugadores.length;
+    if (clave !== tablaPintada) {
+      tablaPintada = clave;
+      $('hud-tabla').innerHTML = `<div class="fila"><b>En el mar</b><span>${j.jugadores.length}</span></div>`
+        + top.map((x, q) => `<div class="fila${x[0] === j.yo.id ? ' yo' : ''}"><span>${q + 1}. ${limpiar(x[1])}</span><b class="oro">${x[2]}</b></div>`).join('');
+    }
+  }
   const total = (lado) => (b.recargaTotal && b.recargaTotal[lado]) || s.recarga;
   $('hud-rec-izq').style.width = `${100 - Math.min(100, (b.recarga['-1'] / total('-1')) * 100)}%`;
   $('hud-rec-der').style.width = `${100 - Math.min(100, (b.recarga['1'] / total('1')) * 100)}%`;
@@ -354,7 +380,8 @@ function pintarHud() {
   }
   let pista = '';
   const cand = candidatoAbordaje(j);
-  if (cercaDelPuerto()) pista = j.oroBodega ? `P: entrar al puerto y guardar ${j.oroBodega} de oro` : 'P: entrar al puerto';
+  if (j.fin) pista = '';
+  else if (cercaDelPuerto()) pista = j.oroBodega ? `P: entrar al puerto y guardar ${j.oroBodega} de oro` : 'P: entrar al puerto';
   else if (j.gancho && j.gancho.fase === 'enganchado') pista = `Tirando de la soga del ${j.gancho.obj.nombre}…`;
   else if (b.reparando) pista = 'Reparando el casco en la costa (hasta el 75 %)';
   else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = `F: apuntá con el cursor y tirá el gancho al ${cand.b.nombre} · tu gente ${b.trip} contra ${cand.b.trip} (${cand.ventaja})`;
@@ -381,8 +408,16 @@ function cuadro(ahora) {
     if (estado === 'mar') {
       const entrada = { objetivo: ratonVisto ? { ...vista.raton } : null, ...pulsos };
       pulsos = {};
-      actualizar(partida, dt, entrada);
+      if (partida.enLinea) red.cuadro(dt, entrada);
+      else actualizar(partida, dt, entrada);
       if (partida.fin && partida.t - partida.finEn > 2.2) mostrarFin();
+    } else if (partida.enLinea && (estado === 'puerto' || estado === 'fin')) {
+      // en línea el mar no se detiene: el barco queda quieto en el puerto, que es zona segura
+      red.cuadro(dt, { quieto: true });
+      if (estado === 'puerto') {
+        if (partida.fin) mostrarFin();
+        else if (clavePuertoDe() !== clavePuerto) pintarPuerto();
+      }
     }
     dibujarEscena(ctx, partida, vista);
     if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 170); }
@@ -456,12 +491,12 @@ $('per-cambiar').onclick = () => abrirNombre();
 // Manda al perfil lo hecho desde el último reporte (al entrar al puerto y al terminar la partida)
 function reportar(fin) {
   if (!partida || !cuenta.perfil) return;
-  const st = partida.stats, r = partida.reportado || (partida.reportado = { hundidos: 0, capturados: 0, saqueado: 0, tiempo: 0 });
+  const st = partida.stats, r = partida.reportado || (partida.reportado = { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 });
   const d = {
-    hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, oro: Math.round(st.saqueado - r.saqueado),
+    hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, eliminados: (st.eliminados || 0) - (r.eliminados || 0), oro: Math.round(st.saqueado - r.saqueado),
     segundos: Math.round(st.tiempo - r.tiempo), saqueoPartida: Math.round(st.saqueado), fin,
   };
-  partida.reportado = { hundidos: st.hundidos, capturados: st.capturados, saqueado: st.saqueado, tiempo: st.tiempo };
+  partida.reportado = { hundidos: st.hundidos, capturados: st.capturados, eliminados: st.eliminados || 0, saqueado: st.saqueado, tiempo: st.tiempo };
   registrarProgreso(d);
 }
 
@@ -469,7 +504,8 @@ iniciarCuenta(pintarCuenta);
 pintarCuenta();
 
 pintarAstillero();
+pintarLinea();
 requestAnimationFrame(cuadro);
 
 // Para probar desde la consola
-window.flota = { get partida() { return partida; }, get mundo() { return mundo; } };
+window.flota = { get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; } };

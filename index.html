@@ -16,8 +16,8 @@
   <meta property="og:url" content="https://ageofnavies.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="importmap">{"imports":{"/src/banderas.js":"/src/banderas.js?v=35fbef4e","/src/barcos.js":"/src/barcos.js?v=35fbef4e","/src/config.js":"/src/config.js?v=35fbef4e","/src/cuenta.js":"/src/cuenta.js?v=35fbef4e","/src/dibujo.js":"/src/dibujo.js?v=35fbef4e","/src/juego.js":"/src/juego.js?v=35fbef4e","/src/main.js":"/src/main.js?v=35fbef4e","/src/mapas.js":"/src/mapas.js?v=35fbef4e","/src/mundo.js":"/src/mundo.js?v=35fbef4e","/src/rng.js":"/src/rng.js?v=35fbef4e"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=35fbef4e">
+  <script type="importmap">{"imports":{"/src/banderas.js":"/src/banderas.js?v=d708c6c1","/src/barcos.js":"/src/barcos.js?v=d708c6c1","/src/config.js":"/src/config.js?v=d708c6c1","/src/cuenta.js":"/src/cuenta.js?v=d708c6c1","/src/dibujo.js":"/src/dibujo.js?v=d708c6c1","/src/juego.js":"/src/juego.js?v=d708c6c1","/src/main.js":"/src/main.js?v=d708c6c1","/src/mapas.js":"/src/mapas.js?v=d708c6c1","/src/mundo.js":"/src/mundo.js?v=d708c6c1","/src/puerto.js":"/src/puerto.js?v=d708c6c1","/src/red.js":"/src/red.js?v=d708c6c1","/src/rng.js":"/src/rng.js?v=d708c6c1"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=d708c6c1">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -37,6 +37,10 @@
       <div class="fila"><span>Oro en bodega</span><b id="hud-bodega" class="oro">0</b></div>
       <div class="fila"><span>Oro en puerto</span><b id="hud-puerto" class="oro">0</b></div>
       <div class="fila"><span>Hundidos</span><b id="hud-hundidos">0</b></div>
+      <div id="hud-linea" class="oculto">
+        <div class="fila"><span>Jugadores eliminados</span><b id="hud-eliminados">0</b></div>
+        <div id="hud-tabla"></div>
+      </div>
     </div>
     <div id="avisos"></div>
     <div id="pista"></div>
@@ -67,7 +71,9 @@
             <i>Cambiar</i>
           </button>
           <p id="ast-mapa-desc" class="suave"></p>
-          <button id="ast-zarpar" class="boton principal">¡Zarpar!</button>
+          <button id="ast-linea" class="boton principal linea" type="button">⚔ Jugar en línea</button>
+          <p id="ast-linea-info" class="suave centro"></p>
+          <button id="ast-zarpar" class="boton secundario">Jugar solo contra bots</button>
           <p id="ast-mejor" class="suave"></p>
         </div>
       </div>
@@ -92,7 +98,7 @@
 
   <div id="pantalla-fin" class="pantalla oculto">
     <div class="caja">
-      <h2>Te hundieron</h2>
+      <h2 id="fin-titulo">Te hundieron</h2>
       <div id="fin-datos"></div>
       <button id="fin-otra" class="boton principal">Diseñar otra flota</button>
     </div>
@@ -135,7 +141,7 @@
     </form>
   </div>
 
-  <script src="vendor/supabase.min.js?v=35fbef4e" defer></script>
-  <script type="module" src="src/main.js?v=35fbef4e"></script>
+  <script src="vendor/supabase.min.js?v=d708c6c1" defer></script>
+  <script type="module" src="src/main.js?v=d708c6c1"></script>
 </body>
 </html>

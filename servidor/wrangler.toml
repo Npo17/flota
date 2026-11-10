@@ -1,0 +1,13 @@
+# Servidor del mar compartido. Publicar: cd servidor && npx wrangler deploy
+name = "age-of-navies-mar"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+routes = [{ pattern = "mar.ageofnavies.com", custom_domain = true }]
+
+[[durable_objects.bindings]]
+name = "MAR"
+class_name = "Mar"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Mar"]
