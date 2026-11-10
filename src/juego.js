@@ -200,7 +200,7 @@ function controlarJugador(j, e, dt) {
   }
   if (e.fuegoTodo) { disparar(j, b, -1); disparar(j, b, 1); }
   if (e.fuego) disparar(j, b, e.fuego);
-  if (e.abordar) lanzarGancho(j);
+  if (e.abordar) lanzarGancho(j, e.objetivo);
   if (e.ordenFlota) {
     j.ordenFlota = j.ordenFlota === 'formacion' ? 'ataque' : 'formacion';
     aviso(j, j.ordenFlota === 'ataque' ? 'Flota: ¡al ataque!' : 'Flota: en formación, a tu lado', 'info');
@@ -214,7 +214,7 @@ function moverBarco(j, b, dt) {
   const pocaGente = b.trip < s.tripMax * 0.25 ? 0.65 : 1;
   // casco roto = barco lento: por debajo del 70 % de vida va perdiendo hasta la mitad de velocidad
   const averia = 0.5 + 0.5 * Math.min(1, b.vida / (s.vidaMax * 0.7));
-  const frenoGancho = j.gancho && j.gancho.fase === 'enganchado' && j.gancho.obj === b ? 0.3 : 1;
+  const frenoGancho = j.gancho && j.gancho.fase === 'enganchado' && j.gancho.obj === b ? 0.3 + 0.55 * Math.min(1, b.vida / s.vidaMax) : 1;
   const objetivo = (s.velMax * b.velas) / 3 * pocaGente * averia * frenoGancho;
   b.v += (objetivo - b.v) * Math.min(1, dt * (objetivo > b.v ? 0.7 : 1.1));
   const agarre = 0.3 + 0.7 * Math.min(1, b.v / (s.velMax * 0.45));
@@ -233,9 +233,9 @@ function moverBarco(j, b, dt) {
       if (d < 55) {
         b.vida -= 16 * dt;
         if (Math.random() < dt * 0.6 && b.trip > 1) b.trip -= 1;
-        if (b === j.jugador && Math.random() < dt) aviso(j, '¡Caribdis te está tragando!', 'malo');
+        if (b === j.jugador && Math.random() < dt) aviso(j, '¡El remolino te está tragando!', 'malo');
       }
-      if (b === j.jugador && !b.enRemolino) { b.enRemolino = true; aviso(j, '¡Caribdis! Alejá el cursor y salí de costado', 'malo'); }
+      if (b === j.jugador && !b.enRemolino) { b.enRemolino = true; aviso(j, '¡Remolino! Alejá el cursor y salí de costado', 'malo'); }
     } else if (b === j.jugador && d > w.radio + 60 && b.enRemolino && cercaDeRemolino(j, b) === null) b.enRemolino = false;
   }
   b.x += vx * dt;
@@ -269,11 +269,12 @@ function moverBarco(j, b, dt) {
   b.y = Math.max(60, Math.min(j.mundo.alto - 60, b.y));
 
   // estela
-  if (b.v > 30 && Math.random() < dt * 22) {
+  const aLaVista = Math.abs(b.x - j.jugador.x) < 1300 && Math.abs(b.y - j.jugador.y) < 1000;
+  if (aLaVista && b.v > 30 && Math.random() < dt * 22) {
     const ca = Math.cos(b.a), sa = Math.sin(b.a);
     j.particulas.push({ tipo: 'estela', x: b.x - ca * s.largo * 0.5 + azar.rango(-4, 4), y: b.y - sa * s.largo * 0.5 + azar.rango(-4, 4), t: 0, vida: 1.6, r: s.ancho * 0.25 });
   }
-  if (b.vida < s.vidaMax * 0.45 && Math.random() < dt * 6) {
+  if (aLaVista && b.vida < s.vidaMax * 0.45 && Math.random() < dt * 6) {
     j.particulas.push({ tipo: 'humoNegro', x: b.x + azar.rango(-10, 10), y: b.y + azar.rango(-6, 6), vx: azar.rango(-8, 8), vy: azar.rango(-18, -6), t: 0, vida: 1.8, r: azar.rango(4, 8) });
   }
   if (b.vida <= 0) hundir(j, b);
@@ -421,13 +422,13 @@ function actualizarParticulas(j, dt) {
 }
 
 // ---------- Abordaje con gancho ----------
-const ALCANCE_GANCHO = 270;
+export const ALCANCE_GANCHO = 250;
 
 // El enemigo más cercano al que le llega el gancho, con una idea de cómo viene la pelea
 export function candidatoAbordaje(j) {
   const yo = j.jugador;
   if (yo.hundiendo) return null;
-  let mejor = null, mejorD = ALCANCE_GANCHO;
+  let mejor = null, mejorD = ALCANCE_GANCHO + 60;
   for (const b of j.barcos) {
     if (b.bando !== 'enemigo' || b.hundiendo) continue;
     const d = Math.hypot(b.x - yo.x, b.y - yo.y);
@@ -438,11 +439,12 @@ export function candidatoAbordaje(j) {
   return { b: mejor, debil: true, ventaja: r > 1.3 ? 'ventaja' : r > 0.8 ? 'parejo' : 'desventaja' };
 }
 
-function lanzarGancho(j) {
-  if (j.gancho || j.cdAbordaje > 0) return;
-  const c = candidatoAbordaje(j);
-  if (!c) { aviso(j, 'Acercate más a un barco para tirarle el gancho', 'info'); j.cdAbordaje = 1; return; }
-  j.gancho = { fase: 'vuelo', x: j.jugador.x, y: j.jugador.y, obj: c.b, t: 0 };
+// El gancho sale recto hacia el cursor: hay que apuntarle al casco
+function lanzarGancho(j, objetivo) {
+  if (j.gancho || j.cdAbordaje > 0 || !objetivo) return;
+  const yo = j.jugador;
+  const a = Math.atan2(objetivo.y - yo.y, objetivo.x - yo.x);
+  j.gancho = { fase: 'vuelo', x: yo.x, y: yo.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, lejos: 0, obj: null, t: 0 };
 }
 
 function soltarGancho(j, espera, texto) {
@@ -454,22 +456,32 @@ function soltarGancho(j, espera, texto) {
 function actualizarGancho(j, dt) {
   const g = j.gancho;
   if (!g) return;
-  const yo = j.jugador, e = g.obj;
+  const yo = j.jugador;
   g.t += dt;
-  if (yo.hundiendo || e.hundiendo || e.bando !== 'enemigo') return soltarGancho(j, 2);
-  const d = Math.hypot(e.x - yo.x, e.y - yo.y);
   if (g.fase === 'vuelo') {
-    const dx = e.x - g.x, dy = e.y - g.y, dd = Math.hypot(dx, dy) || 1;
-    g.x += (dx / dd) * 700 * dt;
-    g.y += (dy / dd) * 700 * dt;
-    if (dd < e.stats.ancho) { g.fase = 'enganchado'; g.t = 0; aviso(j, `¡Enganchado! Tu gente tira de la soga del ${e.nombre}`, 'bueno'); }
-    else if (g.t > 0.8) soltarGancho(j, 3, 'El gancho cayó al agua');
+    if (yo.hundiendo) return soltarGancho(j, 2);
+    g.x += g.vx * dt;
+    g.y += g.vy * dt;
+    g.lejos += 520 * dt;
+    for (const b of j.barcos) {
+      if (b.bando !== 'enemigo' || b.hundiendo || !dentroDelCasco(b, g.x, g.y, 5)) continue;
+      g.fase = 'enganchado';
+      g.obj = b;
+      g.t = 0;
+      aviso(j, `¡Enganchado! Tu gente tira de la soga del ${b.nombre}`, 'bueno');
+      return;
+    }
+    if (g.lejos > ALCANCE_GANCHO || j.mundo.islas.some((i) => Math.hypot(i.x - g.x, i.y - g.y) < i.r)) soltarGancho(j, 4, 'Erraste el gancho');
     return;
   }
-  if (d > 430 || g.t > 16) return soltarGancho(j, 5, 'Se cortó la soga');
+  const e = g.obj;
+  if (yo.hundiendo || e.hundiendo || e.bando !== 'enemigo') return soltarGancho(j, 2);
+  const d = Math.hypot(e.x - yo.x, e.y - yo.y);
+  if (d > 400 || g.t > 14) return soltarGancho(j, 6, 'Se cortó la soga: el barco estaba muy entero y se soltó');
   // la soga acerca los dos barcos; el más chico se mueve más
   const mYo = yo.stats.largo ** 2, mEl = e.stats.largo ** 2;
-  const tiron = 95 * dt, nx = (e.x - yo.x) / (d || 1), ny = (e.y - yo.y) / (d || 1);
+  const entero = Math.max(0, Math.min(1, e.vida / e.stats.vidaMax));
+  const tiron = (95 - 55 * entero) * dt, nx = (e.x - yo.x) / (d || 1), ny = (e.y - yo.y) / (d || 1);
   e.x -= nx * tiron * (mYo / (mYo + mEl));
   e.y -= ny * tiron * (mYo / (mYo + mEl));
   yo.x += nx * tiron * (mEl / (mYo + mEl));

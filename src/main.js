@@ -18,13 +18,16 @@ const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x:
 const teclas = new Set();
 let pulsos = {}; // acciones de un solo toque
 
+// Si el equipo no llega a 60 cuadros por segundo, se baja la resolución del dibujo en dos escalones
+let calidad = 1;
 function ajustar() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(2, window.devicePixelRatio || 1) * calidad;
   canvas.width = Math.round(innerWidth * dpr);
   canvas.height = Math.round(innerHeight * dpr);
   vista.ancho = canvas.width;
   vista.alto = canvas.height;
   vista.zoom = dpr * Math.max(0.7, Math.min(1.15, innerHeight / 800));
+  canvas.style.imageRendering = 'auto';
 }
 addEventListener('resize', ajustar);
 ajustar();
@@ -294,15 +297,25 @@ function pintarHud() {
   if (cercaDelPuerto()) pista = j.oroBodega ? `P: entrar al puerto y guardar ${j.oroBodega} de oro` : 'P: entrar al puerto';
   else if (j.gancho && j.gancho.fase === 'enganchado') pista = `Tirando de la soga del ${j.gancho.obj.nombre}…`;
   else if (b.reparando) pista = 'Reparando el casco en la costa (hasta el 75 %)';
-  else if (cand && j.cdAbordaje <= 0) pista = `F: tirar el gancho al ${cand.b.nombre} · tu gente ${b.trip} contra ${cand.b.trip} (${cand.ventaja})`;
+  else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = `F: apuntá con el cursor y tirá el gancho al ${cand.b.nombre} · tu gente ${b.trip} contra ${cand.b.trip} (${cand.ventaja})`;
   if ($('pista').textContent !== pista) $('pista').textContent = pista;
 }
 
 // ---------- Ciclo ----------
 let anterior = performance.now();
+let cuadros = 0, lentos = 0, medidos = 0;
 function cuadro(ahora) {
-  const dt = Math.min(0.05, (ahora - anterior) / 1000);
+  const real = ahora - anterior;
+  const dt = Math.min(0.05, real / 1000);
   anterior = ahora;
+  if (estado === 'mar' && !document.hidden && real < 250) {
+    medidos++;
+    if (real > 21) lentos++;
+    if (medidos >= 120) {
+      if (lentos > 70 && calidad > 0.6) { calidad = calidad > 0.8 ? 0.8 : 0.6; ajustar(); }
+      medidos = 0; lentos = 0;
+    }
+  }
   if (partida) {
     ratonAMundo();
     if (estado === 'mar') {
@@ -312,7 +325,7 @@ function cuadro(ahora) {
       if (partida.fin && partida.t - partida.finEn > 2.2) mostrarFin();
     }
     dibujarEscena(ctx, partida, vista);
-    if (estado === 'mar') { pintarHud(); dibujarMinimapa(mini, partida, 170); }
+    if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 170); }
   }
   requestAnimationFrame(cuadro);
 }

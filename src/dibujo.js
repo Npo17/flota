@@ -1,7 +1,7 @@
 // Todo lo que se pinta en el canvas.
 import { hash2 } from './rng.js';
 import { FACCIONES } from './config.js';
-import { candidatoAbordaje, difAng } from './juego.js';
+import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
 
 const TAU = Math.PI * 2;
 
@@ -119,19 +119,21 @@ function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
   ctx.beginPath(); ctx.moveTo(mx, -h / 2 - 1); ctx.lineTo(mx, h / 2 + 1); ctx.stroke();
 }
 
-export function dibujarBarco(ctx, b, opciones = {}) {
+// La parte fija del barco (casco, cubierta, cañones, palos y velas) se pinta una vez y se reutiliza.
+const ESCALA_IMG = 2.5;
+const imagenes = new Map();
+function imagenBarco(b, e) {
+  const d = b.diseno;
+  const clave = `${d.faccion}|${d.casco}|${d.canones}|${d.municion}|${b.velas}|${b.colorVela || ''}`;
+  let img = imagenes.get(clave);
+  if (img) return img;
   const s = b.stats, L = s.largo, W = s.ancho;
-  const e = (FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).estilo;
-  const T = performance.now() / 1000;
-  ctx.save();
-  ctx.translate(b.x, b.y);
-  ctx.rotate(b.a);
-  if (b.hundiendo) {
-    const f = Math.min(1, b.hundiendo / 3);
-    ctx.globalAlpha = 1 - f;
-    ctx.scale(1 - f * 0.35, 1 - f * 0.35);
-    ctx.rotate(f * 0.6);
-  }
+  img = document.createElement('canvas');
+  img.width = Math.ceil((L * 1.5 + 24) * ESCALA_IMG);
+  img.height = Math.ceil((W * 2.2 + 24) * ESCALA_IMG);
+  const ctx = img.getContext('2d');
+  ctx.translate(img.width / 2, img.height / 2);
+  ctx.scale(ESCALA_IMG, ESCALA_IMG);
   ctx.lineJoin = 'round';
 
   // sombra en el agua
@@ -139,23 +141,6 @@ export function dibujarBarco(ctx, b, opciones = {}) {
   ctx.translate(4, 5);
   cascoEscalado(ctx, L, W, e.forma, 1.04, 1.12, 'rgba(0,20,40,0.26)');
   ctx.restore();
-
-  // remos
-  if (e.remos) {
-    const n = Math.max(4, Math.round(L / 11));
-    const rema = b.v > 12 ? Math.sin(T * 5 + b.id) * 0.32 : 0.1;
-    ctx.strokeStyle = '#c8a877';
-    ctx.lineWidth = 1.3;
-    for (let i = 0; i < n; i++) {
-      const x = -L * 0.34 + (L * 0.6 * i) / (n - 1);
-      for (const lado of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(x, lado * W * 0.36);
-        ctx.lineTo(x - Math.sin(rema) * W * 0.5, lado * (W * 0.36 + Math.cos(rema) * W * 0.55));
-        ctx.stroke();
-      }
-    }
-  }
 
   // casco: tablazón oscura, franja de color y cubierta
   cascoEscalado(ctx, L, W, e.forma, 1, 1, e.casco);
@@ -300,6 +285,44 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     }
   }
 
+  if (imagenes.size > 400) imagenes.clear();
+  imagenes.set(clave, img);
+  return img;
+}
+
+export function dibujarBarco(ctx, b, opciones = {}) {
+  const s = b.stats, L = s.largo, W = s.ancho;
+  const e = (FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).estilo;
+  const T = performance.now() / 1000;
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(b.a);
+  if (b.hundiendo) {
+    const f = Math.min(1, b.hundiendo / 3);
+    ctx.globalAlpha = 1 - f;
+    ctx.scale(1 - f * 0.35, 1 - f * 0.35);
+    ctx.rotate(f * 0.6);
+  }
+  const img = imagenBarco(b, e);
+  // remos
+  if (e.remos) {
+    const n = Math.max(4, Math.round(L / 11));
+    const rema = b.v > 12 ? Math.sin(T * 5 + b.id) * 0.32 : 0.1;
+    ctx.strokeStyle = '#c8a877';
+    ctx.lineWidth = 1.3;
+    for (let i = 0; i < n; i++) {
+      const x = -L * 0.34 + (L * 0.6 * i) / (n - 1);
+      for (const lado of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(x, lado * W * 0.36);
+        ctx.lineTo(x - Math.sin(rema) * W * 0.5, lado * (W * 0.36 + Math.cos(rema) * W * 0.55));
+        ctx.stroke();
+      }
+    }
+  }
+
+  ctx.drawImage(img, -img.width / (2 * ESCALA_IMG), -img.height / (2 * ESCALA_IMG), img.width / ESCALA_IMG, img.height / ESCALA_IMG);
+
   // farol y bandera del bando, flameando en popa
   ctx.fillStyle = '#ffd98a';
   ctx.beginPath(); ctx.arc(-L * 0.47, 0, 1.6, 0, TAU); ctx.fill();
@@ -353,6 +376,19 @@ function trazarIsla(ctx, isla, escala) {
   ctx.closePath();
 }
 
+const TONOS_MAR = [[0, 47, 159, 184], [0.38, 35, 124, 158], [0.68, 24, 88, 124], [1, 15, 51, 80]];
+function colorMar(f) {
+  f = Math.max(0, Math.min(1, f));
+  for (let k = 1; k < TONOS_MAR.length; k++) {
+    const a = TONOS_MAR[k - 1], b = TONOS_MAR[k];
+    if (f <= b[0]) {
+      const u = (f - a[0]) / (b[0] - a[0]);
+      return `rgb(${Math.round(a[1] + (b[1] - a[1]) * u)},${Math.round(a[2] + (b[2] - a[2]) * u)},${Math.round(a[3] + (b[3] - a[3]) * u)})`;
+    }
+  }
+  return 'rgb(15,51,80)';
+}
+
 export function dibujarEscena(ctx, j, vista) {
   const { ancho, alto, raton } = vista;
   const yo = j.jugador;
@@ -360,39 +396,39 @@ export function dibujarEscena(ctx, j, vista) {
   const sx = (Math.random() - 0.5) * (j.sacudon || 0), sy = (Math.random() - 0.5) * (j.sacudon || 0);
   const camX = yo.x + sx, camY = yo.y + sy;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = '#12405e';
-  ctx.fillRect(0, 0, ancho, alto);
   ctx.setTransform(zoom, 0, 0, zoom, ancho / 2 - camX * zoom, alto / 2 - camY * zoom);
   const vw = ancho / zoom, vh = alto / zoom;
   const x0 = camX - vw / 2, y0 = camY - vh / 2;
   const visible = (x, y, m) => x > x0 - m && x < x0 + vw + m && y > y0 - m && y < y0 + vh + m;
 
-  // mar: más claro cerca del puerto, más oscuro mar adentro
+  // mar: más claro cerca del puerto, más oscuro mar adentro (un solo color por cuadro, según dónde estás)
   const p = j.mundo.puerto;
-  const g = ctx.createRadialGradient(p.x, p.y, 100, p.x, p.y, 3400);
-  g.addColorStop(0, '#2f9fb8');
-  g.addColorStop(0.38, '#237c9e');
-  g.addColorStop(0.68, '#18587c');
-  g.addColorStop(1, '#0f3350');
-  ctx.fillStyle = g;
+  ctx.fillStyle = colorMar(Math.hypot(camX - p.x, camY - p.y) / 3400);
   ctx.fillRect(x0 - 10, y0 - 10, vw + 20, vh + 20);
 
-  // olitas
+  // olitas: agrupadas en tres trazos según su brillo
   const C = 110;
   ctx.lineWidth = 1.6;
   ctx.lineCap = 'round';
+  const grupos = [[], [], []];
   for (let gx = Math.floor(x0 / C); gx <= Math.floor((x0 + vw) / C); gx++) {
     for (let gy = Math.floor(y0 / C); gy <= Math.floor((y0 + vh) / C); gy++) {
       const h = hash2(gx, gy), h2 = hash2(gy + 91, gx - 17);
-      const a = 0.05 + 0.12 * (0.5 + 0.5 * Math.sin(j.t * 1.3 + h * 20));
-      const wx = gx * C + h * C + Math.sin(j.t * 0.6 + h * 9) * 8, wy = gy * C + h2 * C;
-      ctx.strokeStyle = `rgba(255,255,255,${a})`;
-      ctx.beginPath();
+      const brillo = 0.5 + 0.5 * Math.sin(j.t * 1.3 + h * 20);
+      grupos[Math.min(2, Math.floor(brillo * 3))].push(gx * C + h * C + Math.sin(j.t * 0.6 + h * 9) * 8, gy * C + h2 * C);
+    }
+  }
+  for (let g = 0; g < 3; g++) {
+    const pts = grupos[g];
+    ctx.strokeStyle = `rgba(255,255,255,${0.06 + g * 0.05})`;
+    ctx.beginPath();
+    for (let q = 0; q < pts.length; q += 2) {
+      const wx = pts[q], wy = pts[q + 1];
       ctx.moveTo(wx, wy);
       ctx.quadraticCurveTo(wx + 8, wy - 5, wx + 16, wy);
       ctx.quadraticCurveTo(wx + 24, wy + 5, wx + 32, wy);
-      ctx.stroke();
     }
+    ctx.stroke();
   }
 
   // borde del mundo
@@ -423,18 +459,6 @@ export function dibujarEscena(ctx, j, vista) {
         if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
-    }
-    // las fauces de Caribdis
-    ctx.fillStyle = '#050d18';
-    ctx.beginPath(); ctx.arc(w.x, w.y, 30, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#e9e4d0';
-    for (let d = 0; d < 12; d++) {
-      const ang = (d / 12) * TAU + j.t * 0.5 * w.giro, largo = 9 + 3 * Math.sin(j.t * 3 + d);
-      ctx.beginPath();
-      ctx.moveTo(w.x + Math.cos(ang - 0.13) * 30, w.y + Math.sin(ang - 0.13) * 30);
-      ctx.lineTo(w.x + Math.cos(ang) * (30 - largo), w.y + Math.sin(ang) * (30 - largo));
-      ctx.lineTo(w.x + Math.cos(ang + 0.13) * 30, w.y + Math.sin(ang + 0.13) * 30);
-      ctx.closePath(); ctx.fill();
     }
   }
 
@@ -486,6 +510,7 @@ export function dibujarEscena(ctx, j, vista) {
   // partículas bajo los barcos
   for (const pt of j.particulas) {
     if (pt.tipo !== 'estela' && pt.tipo !== 'salpicon') continue;
+    if (!visible(pt.x, pt.y, 30)) continue;
     const f = pt.t / pt.vida;
     if (pt.tipo === 'estela') {
       ctx.fillStyle = `rgba(255,255,255,${0.32 * (1 - f)})`;
@@ -524,6 +549,15 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+    }
+    // hasta dónde llega el gancho, hacia el cursor
+    if (!j.gancho && j.cdAbordaje <= 0 && candidatoAbordaje(j)) {
+      const ag = Math.atan2(raton.y - yo.y, raton.x - yo.x);
+      ctx.strokeStyle = 'rgba(217,192,138,0.75)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 7]);
+      ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.lineTo(yo.x + Math.cos(ag) * ALCANCE_GANCHO, yo.y + Math.sin(ag) * ALCANCE_GANCHO); ctx.stroke();
+      ctx.setLineDash([]);
     }
     // marca de rumbo donde está el cursor
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
@@ -583,6 +617,7 @@ export function dibujarEscena(ctx, j, vista) {
 
   // balas
   for (const bl of j.balas) {
+    if (!visible(bl.x, bl.y, 20)) continue;
     const f = 1 - bl.vida / bl.vidaTotal;
     const altura = Math.sin(f * Math.PI) * 14;
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -593,6 +628,7 @@ export function dibujarEscena(ctx, j, vista) {
 
   // partículas sobre los barcos
   for (const pt of j.particulas) {
+    if (pt.tipo === 'estela' || pt.tipo === 'salpicon' || !visible(pt.x, pt.y, 30)) continue;
     const f = pt.t / pt.vida;
     if (pt.tipo === 'humo') {
       ctx.fillStyle = `rgba(235,235,235,${0.55 * (1 - f)})`;
