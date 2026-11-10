@@ -94,3 +94,14 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 
 #ast-mapa-desc b { color: #ffe9a8; font-weight: 600; }
 .mapa select.campo { min-width: 0; flex: 1; }
+
+/* Civilizaciones */
+.opciones.civs { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.opciones.civs .opcion { padding: 7px 8px; }
+.civ { display: flex; align-items: center; gap: 7px; }
+.civ canvas { width: 30px; height: 20px; flex: none; border-radius: 2px; }
+.opciones.civs .opcion b { font-size: 13px; }
+.opciones.civs .opcion em { display: block; font-size: 11px; margin-top: 4px; line-height: 1.25; }
+@media (max-width: 800px) { .opciones.civs { grid-template-columns: repeat(2, 1fr); } }
+#hud-bandera { width: 24px; height: 16px; flex: none; }
+#hud-nombre { flex: 1; }

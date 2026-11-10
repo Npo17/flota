@@ -1,6 +1,7 @@
 // Todo lo que se pinta en el canvas.
 import { hash2 } from './rng.js';
 import { FACCIONES } from './config.js';
+import { dibujarBandera } from './banderas.js';
 import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
 
 const TAU = Math.PI * 2;
@@ -68,6 +69,11 @@ function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
     if (e.patron === 'rayas') {
       ctx.fillStyle = e.colorPatron;
       for (let x = mx - alto * 0.4; x < mx + alto * 0.45; x += alto * 0.24) ctx.fillRect(x, -2, alto * 0.11, abre * 1.3);
+    } else if (e.patron === 'cruzRecta' && abiertas > 0.3) {
+      ctx.fillStyle = e.colorPatron;
+      const cx = mx + alto * 0.03, cy = abre * 0.42, t = Math.max(1.6, alto * 0.05), l = Math.min(abre * 0.3, alto * 0.16);
+      ctx.fillRect(cx - t / 2, cy - l, t, l * 2);
+      ctx.fillRect(cx - l, cy - t / 2, l * 2, t);
     }
     ctx.restore();
     ctx.strokeStyle = '#3d2310';
@@ -101,6 +107,12 @@ function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
     ctx.moveTo(mx, -h * 0.26); ctx.lineTo(mx + g * 1.4, h * 0.26);
     ctx.moveTo(mx, h * 0.26); ctx.lineTo(mx + g * 1.4, -h * 0.26);
     ctx.stroke();
+  } else if (e.patron === 'banda') {
+    ctx.fillStyle = e.colorPatron;
+    ctx.fillRect(mx - 2, -h * 0.11, g * 2.4, h * 0.22);
+  } else if (e.patron === 'puntos') {
+    ctx.fillStyle = e.colorPatron;
+    for (const py of [-0.27, 0, 0.27]) { ctx.beginPath(); ctx.arc(mx + g * 0.6, h * py, Math.min(1.9, g * 0.22), 0, TAU); ctx.fill(); }
   } else if (e.patron === 'sables') {
     ctx.strokeStyle = e.colorPatron;
     ctx.lineWidth = 1.1;
@@ -279,6 +291,12 @@ function imagenBarco(b, e) {
     dibujarVela(ctx, e, mx, alto, abiertas, colorVela, principal);
     ctx.fillStyle = '#3d2310';
     ctx.beginPath(); ctx.arc(mx, 0, 2.8, 0, TAU); ctx.fill();
+    if (principal) { // bandera de la civilización, flameando hacia popa
+      ctx.save();
+      ctx.translate(mx - 15, -4.5);
+      dibujarBandera(ctx, b.diseno.faccion, 13, 9);
+      ctx.restore();
+    }
     if (principal) { // cofa
       ctx.strokeStyle = '#8a5a2b';
       ctx.lineWidth = 1.4;
@@ -358,6 +376,11 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     ctx.fillText(b.nombre, b.x + 1, y - 4);
     ctx.fillStyle = '#fff';
     ctx.fillText(b.nombre, b.x, y - 5);
+    const mitad = ctx.measureText(b.nombre).width / 2;
+    ctx.save();
+    ctx.translate(b.x - mitad - 16, y - 13.5);
+    dibujarBandera(ctx, b.diseno.faccion, 12, 8.5);
+    ctx.restore();
   }
 }
 

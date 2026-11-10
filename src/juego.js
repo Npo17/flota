@@ -405,9 +405,10 @@ function actualizarCofres(j, dt) {
     c.t += dt;
     const juntador = j.barcos.find((b) => b.bando !== 'enemigo' && !b.hundiendo && Math.hypot(b.x - c.x, b.y - c.y) < b.stats.largo * 0.5 + 22);
     if (juntador) {
-      j.oroBodega += c.oro;
-      j.stats.saqueado += c.oro;
-      textoFlotante(j, c.x, c.y, `+${c.oro} oro`, '#ffd166');
+      const oro = Math.round(c.oro * j.jugador.stats.oro);
+      j.oroBodega += oro;
+      j.stats.saqueado += oro;
+      textoFlotante(j, c.x, c.y, `+${oro} oro`, '#ffd166');
       continue;
     }
     if (c.t < 75) quedan.push(c);
@@ -503,9 +504,10 @@ function resolverAbordaje(j, e) {
   if (mio > suyo) {
     const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(e.trip * azar.rango(0.3, 0.6))));
     yo.trip -= bajas;
-    j.oroBodega += e.oro;
-    j.stats.saqueado += e.oro;
-    if (e.oro) textoFlotante(j, e.x, e.y, `+${e.oro} oro`, '#ffd166');
+    const botin = Math.round(e.oro * yo.stats.oro);
+    j.oroBodega += botin;
+    j.stats.saqueado += botin;
+    if (botin) textoFlotante(j, e.x, e.y, `+${botin} oro`, '#ffd166');
     const escoltas = j.barcos.filter((b) => b.bando === 'escolta' && !b.hundiendo).length;
     if (escoltas < j.escoltasMax) {
       e.bando = 'escolta';
