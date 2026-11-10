@@ -3,6 +3,7 @@ import { hash2 } from './rng.js';
 import { FACCIONES } from './config.js';
 import { dibujarBandera } from './banderas.js';
 import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
+import { t as tx } from './idioma.js';
 
 const TAU = Math.PI * 2;
 const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
@@ -373,10 +374,11 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     ctx.font = '600 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(b.nombre, b.x + 1, y - 4);
+    const rotulo = tx(b.nombre);
+    ctx.fillText(rotulo, b.x + 1, y - 4);
     ctx.fillStyle = b.esJugador ? '#ffd166' : '#fff';
-    ctx.fillText(b.nombre, b.x, y - 5);
-    const mitad = ctx.measureText(b.nombre).width / 2;
+    ctx.fillText(rotulo, b.x, y - 5);
+    const mitad = ctx.measureText(rotulo).width / 2;
     ctx.save();
     ctx.translate(b.x - mitad - 16, y - 13.5);
     dibujarBandera(ctx, b.diseno.faccion, 12, 8.5);
@@ -724,9 +726,10 @@ export function dibujarEscena(ctx, j, vista) {
   for (const t of j.textos) {
     ctx.globalAlpha = Math.min(1, t.t);
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(t.texto, t.x + 1, t.y + 1);
+    const escrito = tx(t.texto, t.datos);
+    ctx.fillText(escrito, t.x + 1, t.y + 1);
     ctx.fillStyle = t.color;
-    ctx.fillText(t.texto, t.x, t.y);
+    ctx.fillText(escrito, t.x, t.y);
   }
   ctx.globalAlpha = 1;
 
@@ -745,7 +748,7 @@ export function dibujarEscena(ctx, j, vista) {
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255,236,170,0.95)';
-    ctx.fillText(`Puerto ${Math.round(Math.hypot(p.x - yo.x, p.y - yo.y) / 10)} m`, fx - Math.cos(ang) * 34, fy - Math.sin(ang) * 34 + 4);
+    ctx.fillText(tx('Puerto {n} m', { n: Math.round(Math.hypot(p.x - yo.x, p.y - yo.y) / 10) }), fx - Math.cos(ang) * 34, fy - Math.sin(ang) * 34 + 4);
   }
 }
 
@@ -772,9 +775,9 @@ function dibujarPuerto(ctx, j, isla) {
   ctx.font = '700 14px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillText('PUERTO', p.x + 1, p.y - 52);
+  ctx.fillText(tx('PUERTO'), p.x + 1, p.y - 52);
   ctx.fillStyle = '#fff3c4';
-  ctx.fillText('PUERTO', p.x, p.y - 53);
+  ctx.fillText(tx('PUERTO'), p.x, p.y - 53);
 }
 
 export function dibujarMinimapa(ctx, j, lado) {

@@ -80,9 +80,10 @@ export function crearPartida(mundo, diseno, oroInicial) {
 }
 
 // Aviso para un capitán, o para todos si se pasa el mar entero
-export function aviso(quien, texto, tipo = 'info') {
-  if (quien.capitanes) { for (const c of quien.capitanes) aviso(c, texto, tipo); return; }
-  quien.avisos.push({ texto, tipo, t: 3.2 });
+// El texto va en español y puede llevar huecos {así}; los datos van aparte en p. La pantalla lo traduce.
+export function aviso(quien, texto, tipo = 'info', p) {
+  if (quien.capitanes) { for (const c of quien.capitanes) aviso(c, texto, tipo, p); return; }
+  quien.avisos.push({ texto, tipo, p, t: 3.2 });
   if (quien.avisos.length > 4) quien.avisos.shift();
 }
 
@@ -120,12 +121,12 @@ export function efecto(j, ev) {
     }
   } else if (ev.k === 's') P.push({ tipo: 'salpicon', x: ev.x, y: ev.y, t: 0, vida: 0.7, r: ev.r });
   else if (ev.k === 'p') P.push({ tipo: 'polvo', x: ev.x, y: ev.y, t: 0, vida: 0.6, r: 8 });
-  else if (ev.k === 't') j.textos.push({ x: ev.x, y: ev.y, texto: ev.s, color: ev.c, t: 1.6 });
+  else if (ev.k === 't') j.textos.push({ x: ev.x, y: ev.y, texto: ev.s, datos: ev.q, color: ev.c, t: 1.6 });
 }
 
 // Texto flotante. Con "para" solo lo ve ese capitán.
-function textoFlotante(j, x, y, texto, color, para) {
-  emitir(j, { k: 't', x: Math.round(x), y: Math.round(y), s: texto, c: color, p: para ? para.id : undefined });
+function textoFlotante(j, x, y, texto, color, para, datos) {
+  emitir(j, { k: 't', x: Math.round(x), y: Math.round(y), s: texto, q: datos, c: color, p: para ? para.id : undefined });
 }
 
 // Estela y humo de un barco en movimiento (solo cosmético)
@@ -464,10 +465,10 @@ function hundir(j, b) {
     if (agresor) agresor.stats.hundidos++;
     soltarOro(j, b.x, b.y, b.oro, b.convoy ? 110 : 25, b.convoy ? 9 : 0);
     if (b.convoy) aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno');
-    else if (agresor && b.oro > 0) aviso(agresor, `¡Hundiste un ${b.nombre}! Juntá el botín`, 'bueno');
+    else if (agresor && b.oro > 0) aviso(agresor, '¡Hundiste un {barco}! Juntá el botín', 'bueno', { barco: b.nombre });
   } else if (!esInsignia(b)) {
     if (agresor) agresor.stats.hundidos++;
-    aviso(b.cap, `Perdiste tu ${b.nombre}`, 'malo');
+    aviso(b.cap, 'Perdiste tu {barco}', 'malo', { barco: b.nombre });
   } else {
     perderInsignia(j, b.cap, agresor, true);
   }
@@ -487,8 +488,8 @@ function perderInsignia(j, cap, agresor, hundido) {
     relevo.bandera = VERDE;
     if (hundido) viejo.bando = 'escolta';
     cap.barco = relevo;
-    aviso(cap, `¡${hundido ? 'Te hundieron' : 'Te capturaron el barco'}! Tomás el mando del ${relevo.nombre}. Se perdieron ${perdido} de oro`, 'malo');
-    if (agresor) { agresor.stats.hundidos++; aviso(agresor, `¡Le ${hundido ? 'hundiste' : 'capturaste'} el barco insignia a ${cap.nombre}!`, 'bueno'); }
+    aviso(cap, hundido ? '¡Te hundieron! Tomás el mando del {barco}. Se perdieron {oro} de oro' : '¡Te capturaron el barco! Tomás el mando del {barco}. Se perdieron {oro} de oro', 'malo', { barco: relevo.nombre, oro: perdido });
+    if (agresor) { agresor.stats.hundidos++; aviso(agresor, hundido ? '¡Le hundiste el barco insignia a {nombre}!' : '¡Le capturaste el barco insignia a {nombre}!', 'bueno', { nombre: cap.nombre }); }
   } else {
     if (hundido) soltarOro(j, viejo.x, viejo.y, cap.oroBodega, 45);
     else if (agresor) ganarOro(j, agresor, cap.oroBodega, viejo.x, viejo.y);
@@ -496,7 +497,7 @@ function perderInsignia(j, cap, agresor, hundido) {
     cap.fin = true;
     cap.finEn = j.t;
     cap.causa = agresor ? agresor.nombre : null;
-    if (agresor) { agresor.stats.eliminados++; aviso(agresor, `¡Eliminaste a ${cap.nombre}!`, 'bueno'); }
+    if (agresor) { agresor.stats.eliminados++; aviso(agresor, '¡Eliminaste a {nombre}!', 'bueno', { nombre: cap.nombre }); }
   }
 }
 
@@ -505,7 +506,7 @@ function ganarOro(j, cap, base, x, y) {
   if (oro <= 0) return;
   cap.oroBodega += oro;
   cap.stats.saqueado += oro;
-  textoFlotante(j, x, y, `+${oro} oro`, '#ffd166', cap);
+  textoFlotante(j, x, y, '+{n} oro', '#ffd166', cap, { n: oro });
 }
 
 function actualizarHundidos(j, dt) {
@@ -581,8 +582,8 @@ function actualizarGancho(j, cap, dt) {
       g.fase = 'enganchado';
       g.obj = b;
       g.t = 0;
-      aviso(cap, `¡Enganchado! Tu gente tira de la soga del ${b.nombre}`, 'bueno');
-      if (esInsignia(b)) aviso(b.cap, `¡${cap.nombre} te enganchó! Alejate o bajale gente a cañonazos`, 'malo');
+      aviso(cap, '¡Enganchado! Tu gente tira de la soga del {barco}', 'bueno', { barco: b.nombre });
+      if (esInsignia(b)) aviso(b.cap, '¡{nombre} te enganchó! Alejate o bajale gente a cañonazos', 'malo', { nombre: cap.nombre });
       return;
     }
     if (g.lejos > ALCANCE_GANCHO || j.mundo.islas.some((i) => Math.hypot(i.x - g.x, i.y - g.y) < i.r)) soltarGancho(cap, 4, 'Erraste el gancho');
@@ -617,8 +618,8 @@ function resolverAbordaje(j, cap, e) {
     const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(yo.trip * azar.rango(0.35, 0.55))));
     yo.trip -= bajas;
     e.trip = Math.max(1, e.trip - Math.round(e.trip * 0.3));
-    aviso(cap, `¡Abordaje rechazado! Perdiste ${bajas} marineros. Bajales gente a cañonazos y probá de nuevo`, 'malo');
-    if (dueno) aviso(dueno, `¡Rechazaste el abordaje de ${cap.nombre}!`, 'bueno');
+    aviso(cap, '¡Abordaje rechazado! Perdiste {n} marineros. Bajales gente a cañonazos y probá de nuevo', 'malo', { n: bajas });
+    if (dueno) aviso(dueno, '¡Rechazaste el abordaje de {nombre}!', 'bueno', { nombre: cap.nombre });
     return;
   }
   const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(e.trip * azar.rango(0.3, 0.6))));
@@ -629,7 +630,7 @@ function resolverAbordaje(j, cap, e) {
   if (escoltas < cap.escoltasMax) {
     // el barco cambia de dueño
     if (dueno && esInsignia(e)) perderInsignia(j, dueno, cap, false);
-    else if (dueno) aviso(dueno, `${cap.nombre} te capturó el ${e.nombre}`, 'malo');
+    else if (dueno) aviso(dueno, '{nombre} te capturó el {barco}', 'malo', { nombre: cap.nombre, barco: e.nombre });
     e.cap = cap;
     e.bando = 'escolta';
     e.convoy = false;
@@ -639,11 +640,11 @@ function resolverAbordaje(j, cap, e) {
     e.ia = { estado: 'sigue' };
     e.ultimoAgresor = null;
     cap.stats.capturados++;
-    aviso(cap, `¡Abordaje ganado! El ${e.nombre} se suma a tu flota (−${bajas} marineros)`, 'bueno');
+    aviso(cap, '¡Abordaje ganado! El {barco} se suma a tu flota (−{n} marineros)', 'bueno', { barco: e.nombre, n: bajas });
   } else {
     e.ultimoAgresor = cap;
     hundir(j, e);
-    aviso(cap, `¡Abordaje ganado! Flota llena: lo saqueaste y lo hundiste (−${bajas} marineros)`, 'bueno');
+    aviso(cap, '¡Abordaje ganado! Flota llena: lo saqueaste y lo hundiste (−{n} marineros)', 'bueno', { n: bajas });
   }
 }
 
@@ -840,7 +841,7 @@ function actualizarTritones(j, dt) {
       const ang = azar.rango(0, TAU), d = azar.rango(420, 560);
       j.tritones.push({ x: yo.x + Math.cos(ang) * d, y: yo.y + Math.sin(ang) * d, a: 0, t: azar.rango(0, 3), muerto: false });
     }
-    aviso(cap, `¡Tritones! ${n} vienen a abordarte. Bajalos a cañonazos`, 'malo');
+    aviso(cap, '¡Tritones! {n} vienen a abordarte. Bajalos a cañonazos', 'malo', { n });
   }
   const quedan = [];
   for (const tr of j.tritones) {
@@ -863,7 +864,7 @@ function actualizarTritones(j, dt) {
     if (dentroDelCasco(obj, tr.x, tr.y, 6)) {
       const bajas = Math.max(0, Math.min(obj.trip - 1, azar.entero(1, 3)));
       obj.trip -= bajas;
-      textoFlotante(j, tr.x, tr.y, `-${bajas} marineros`, '#ff6b6b', obj.cap);
+      textoFlotante(j, tr.x, tr.y, '-{n} marineros', '#ff6b6b', obj.cap, { n: bajas });
       if (esInsignia(obj)) obj.cap.sacudon = 4;
       continue;
     }

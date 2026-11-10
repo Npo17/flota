@@ -185,7 +185,7 @@ export class Mar {
         yo: {
           b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota,
           rec: [+bq.recarga['-1'].toFixed(2), +bq.recarga['1'].toFixed(2)], recT: bq.recargaTotal ? [bq.recargaTotal['-1'] || 0, bq.recargaTotal['1'] || 0] : null,
-          av: cap.avisos.map((a) => [a.texto, a.tipo]), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,
+          av: cap.avisos.map((a) => (a.p ? [a.texto, a.tipo, a.p] : [a.texto, a.tipo])), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,
         },
       };
       if (alta.length) msg.alta = alta;

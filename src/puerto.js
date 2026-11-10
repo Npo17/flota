@@ -2,6 +2,7 @@
 // Lo usan la pantalla del puerto (para mostrar) y la simulación (para cobrar y aplicar), también en el servidor.
 import { MUNICIONES, VELAS, PUERTO, ESCOLTAS_MAX } from './config.js';
 import { rearmar } from './barcos.js';
+import { t } from './idioma.js';
 
 // Devuelve [[título del grupo, [ítems]]]. Cada ítem: id, t (título), d (descripción), costo, ok (se puede comprar),
 // parcial (se paga hasta donde alcance el oro), listo (texto cuando ya no hace falta), elegida, hacer(oro).
@@ -13,33 +14,33 @@ export function catalogoPuerto(j, cap) {
   const nivel = (d.nivelCanones || 0) + 1;
 
   const arreglos = [
-    { id: 'casco', t: 'Reparar el casco', d: dano ? `Te faltan ${dano} puntos de casco.` : 'El casco está entero.', costo: dano * PUERTO.repararPorPunto, ok: dano > 0, parcial: true, listo: 'Casco entero',
+    { id: 'casco', t: t('Reparar el casco'), d: dano ? t('Te faltan {n} puntos de casco.', { n: dano }) : t('El casco está entero.'), costo: dano * PUERTO.repararPorPunto, ok: dano > 0, parcial: true, listo: t('Casco entero'),
       hacer: (oro) => { b.vida = Math.min(s.vidaMax, b.vida + Math.floor(oro / PUERTO.repararPorPunto)); } },
-    { id: 'marineros', t: 'Reclutar marineros', d: `Tenés ${b.trip} de ${s.tripMax}. Más gente recarga más rápido y gana abordajes.`, costo: faltan * PUERTO.marinero, ok: faltan > 0, parcial: true, listo: 'Tripulación completa',
+    { id: 'marineros', t: t('Reclutar marineros'), d: t('Tenés {a} de {b}. Más gente recarga más rápido y gana abordajes.', { a: b.trip, b: s.tripMax }), costo: faltan * PUERTO.marinero, ok: faltan > 0, parcial: true, listo: t('Tripulación completa'),
       hacer: (oro) => { b.trip = Math.min(s.tripMax, b.trip + Math.floor(oro / PUERTO.marinero)); } },
   ];
-  if (escoltas.length) arreglos.push({ id: 'flota', t: 'Arreglar la flota', d: `Repara y llena de gente tus ${escoltas.length} barcos capturados.`, costo: danoEsc, ok: danoEsc > 0,
+  if (escoltas.length) arreglos.push({ id: 'flota', t: t('Arreglar la flota'), d: t('Repara y llena de gente tus {n} barcos capturados.', { n: escoltas.length }), costo: danoEsc, ok: danoEsc > 0,
     hacer: () => { for (const e of escoltas) { e.vida = e.stats.vidaMax; e.trip = e.stats.tripMax; } } });
 
   return [
-    ['Reparar y tripular', arreglos],
-    ['Cañones', [
-      { id: 'canones', t: 'Sumar 2 cañones', d: `Tenés ${d.canones} de ${s.maxCanones} que entran en este casco. Pegás más, pero vas un poco más lento.`, costo: PUERTO.parCanones, ok: d.canones < s.maxCanones, listo: 'Casco lleno',
+    [t('Reparar y tripular'), arreglos],
+    [t('Cañones'), [
+      { id: 'canones', t: t('Sumar 2 cañones'), d: t('Tenés {a} de {b} que entran en este casco. Pegás más, pero vas un poco más lento.', { a: d.canones, b: s.maxCanones }), costo: PUERTO.parCanones, ok: d.canones < s.maxCanones, listo: t('Casco lleno'),
         hacer: () => { d.canones += 2; } },
-      { id: 'nivel', t: `Cañones nivel ${nivel}`, d: 'Cada bala hace 15 % más de daño.', costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: 'Al máximo',
+      { id: 'nivel', t: t('Cañones nivel {n}', { n: nivel }), d: t('Cada bala hace 15 % más de daño.'), costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: t('Al máximo'),
         hacer: () => { d.nivelCanones = nivel; } },
     ]],
     // munición y velas: se ve cuál tenés puesta
-    ['Munición', Object.entries(MUNICIONES).map(([id, m]) => ({
-      id: 'mun:' + id, t: m.nombre, d: m.desc, costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: 'La que usás',
+    [t('Munición'), Object.entries(MUNICIONES).map(([id, m]) => ({
+      id: 'mun:' + id, t: t(m.nombre), d: t(m.desc), costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: t('La que usás'),
       hacer: () => { d.municion = id; },
     }))],
-    ['Velas', Object.entries(VELAS).map(([id, v]) => ({
-      id: 'vela:' + id, t: v.nombre, d: v.desc, costo: Math.max(60, v.costo), ok: id !== d.velas, elegida: id === d.velas, listo: 'Las que usás',
+    [t('Velas'), Object.entries(VELAS).map(([id, v]) => ({
+      id: 'vela:' + id, t: t(v.nombre), d: t(v.desc), costo: Math.max(60, v.costo), ok: id !== d.velas, elegida: id === d.velas, listo: t('Las que usás'),
       hacer: () => { d.velas = id; },
     }))],
-    ['Flota', [
-      { id: 'escolta', t: 'Agrandar la flota', d: `Hoy podés llevar ${cap.escoltasMax} barcos capturados (tenés ${escoltas.length}). Suma un lugar más.`, costo: PUERTO.escolta(cap.escoltasMax + 1), ok: cap.escoltasMax < ESCOLTAS_MAX, listo: 'Al máximo',
+    [t('Flota'), [
+      { id: 'escolta', t: t('Agrandar la flota'), d: t('Hoy podés llevar {a} barcos capturados (tenés {b}). Suma un lugar más.', { a: cap.escoltasMax, b: escoltas.length }), costo: PUERTO.escolta(cap.escoltasMax + 1), ok: cap.escoltasMax < ESCOLTAS_MAX, listo: t('Al máximo'),
         hacer: () => { cap.escoltasMax++; } },
     ]],
   ];

@@ -47,14 +47,23 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
 | `src/banderas.js` | Banderas históricas de cada civilización |
 | `src/cuenta.js` | Login con Google, nombre de jugador y estadísticas (Supabase) |
+| `src/idioma.js`, `src/textos.js`, `src/textos-historia.js` | Idiomas: la función `t()` y las traducciones (una fila por texto, una columna por idioma) |
 | `src/puerto.js` | Qué se compra en el puerto y qué hace cada compra (lo usan la pantalla y el servidor) |
 | `src/red.js` | Juego en línea: se conecta al mar compartido y arma una partida con lo que manda el servidor |
 | `servidor/` | Servidor del mar compartido (Cloudflare Workers + Durable Object). Corre la misma `juego.js` |
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
 | `supabase/migrations/` | Tablas y funciones de la base |
-| `scripts/` | `version.mjs` (sello de versión) y `publicar.mjs` (publicación manual de respaldo) |
+| `scripts/` | `version.mjs` (sello de versión), `publicar.mjs` (publicación manual de respaldo) y las pruebas `probar-sim`, `probar-red` y `probar-textos` |
 
 La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrada y avanza un paso. Mantenerlo así, porque es lo que va a permitir pasarla a un servidor cuando llegue el multijugador.
+
+## Idiomas y pantalla clara
+
+- El juego está en 8 idiomas (ES, EN, PT, FR, PL, IT, DE, TR). En el código los textos se escriben **en español** y se muestran con `t('texto')`; los huecos van `{así}` y los datos aparte: `t('{n} oro', { n: 50 })`.
+- Cada texto nuevo necesita su fila en `src/textos.js` (o `src/textos-historia.js` si es de civilizaciones o mapas) con las 7 traducciones. `node scripts/probar-textos.mjs` avisa si falta alguna.
+- Los textos fijos de `index.html` llevan el atributo `data-t`.
+- La simulación no traduce: manda el texto en español y los datos (`aviso(cap, 'Perdiste tu {barco}', 'malo', { barco })`) y la pantalla lo traduce. Así en línea cada jugador lo ve en su idioma.
+- Los colores están en variables al principio de `estilos.css`; la pantalla clara (`data-tema="claro"`) las redefine. No escribir colores fijos en reglas nuevas.
 
 ## Juego en línea
 
@@ -86,3 +95,4 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - En línea: mostrar la soga del gancho de otros jugadores; salas adicionales si se llena el mar (24 jugadores).
 - Habilidades especiales (por ejemplo, el ancla para girar en el lugar).
 - Sonido y controles para celular.
+- Revisión de las traducciones por hablantes nativos; botón de ajustes durante la partida.

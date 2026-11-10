@@ -1,6 +1,8 @@
 // Cuenta del jugador: login con Google (Supabase), nombre de jugador y estadísticas.
 // El nombre de jugador es público y lo elige cada uno; el mail de Google nunca se muestra ni se guarda en el perfil.
-const SB_URL = 'https://iaglglmtemuohfhcingu.supabase.co';
+import { t } from './idioma.js';
+
+const SB_URL ='https://iaglglmtemuohfhcingu.supabase.co';
 const SB_KEY = 'sb_publishable_xfHdoqpl4fo92C4I8vk-Wg_mU1nSwxA'; // clave pública, pensada para ir en el navegador
 
 let sb = null;
@@ -33,7 +35,7 @@ async function cargar(sesion) {
 export async function entrarConGoogle() {
   if (!sb) return;
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
-  if (error) throw new Error('No se pudo abrir el inicio de sesión de Google.');
+  if (error) throw new Error(t('No se pudo abrir el inicio de sesión de Google.'));
 }
 
 export async function salir() {
@@ -46,7 +48,7 @@ export async function salir() {
 
 export async function elegirNombre(nombre) {
   const { data, error } = await sb.rpc('elegir_nombre', { p_nombre: nombre });
-  if (error) throw new Error(error.message || 'No se pudo guardar el nombre.');
+  if (error) throw new Error(t(error.message || 'No se pudo guardar el nombre.'));
   cuenta.perfil = data;
   alCambiar();
   return data;

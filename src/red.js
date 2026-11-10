@@ -4,6 +4,7 @@
 import { crearMundo } from './mundo.js';
 import { crearBarco, statsDe } from './barcos.js';
 import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng } from './juego.js';
+import { t } from './idioma.js';
 
 // En la compu se usa el servidor publicado, salvo que la dirección lleve ?mar=local (servidor de prueba con wrangler dev)
 const LOCAL = new URLSearchParams(location.search).get('mar') === 'local';
@@ -34,11 +35,11 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     nombreJugador: nombre, jugadores: [],
   };
 
-  try { ws = new WebSocket(WS); } catch { setTimeout(() => alCerrar('No se pudo conectar con el mar.'), 0); }
+  try { ws = new WebSocket(WS); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
   if (ws) {
     ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno })); };
     ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } recibir(m); };
-    ws.onclose = () => { if (!cerradaAProposito) alCerrar(miId ? 'Se cortó la conexión con el mar.' : 'No se pudo conectar con el mar. Probá de nuevo en un rato.'); };
+    ws.onclose = () => { if (!cerradaAProposito) alCerrar(t(miId ? 'Se cortó la conexión con el mar.' : 'No se pudo conectar con el mar. Probá de nuevo en un rato.')); };
     ws.onerror = () => {};
   }
 
@@ -49,7 +50,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     } else if (m.t === 'no') {
       cerradaAProposito = true;
       try { ws.close(); } catch {}
-      alCerrar(m.motivo);
+      alCerrar(t(m.motivo));
     } else if (m.t === 'puerto') alPuerto(m.ok);
     else if (m.t === 's') foto(m);
   }
@@ -80,7 +81,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
         b.cap = yo; b.bando = tipo === 'j' ? 'jugador' : 'escolta'; b.bandera = VERDE; b.esJugador = false; b.nombre = b.nombreBot;
       } else if (capId) {
         b.cap = { id: capId }; b.bando = 'enemigo'; b.bandera = RIVAL; b.esJugador = true;
-        b.nombre = tipo === 'j' ? (nombres.get(capId) || 'Capitán') : `Flota de ${nombres.get(capId) || 'otro capitán'}`;
+        b.nombre = tipo === 'j' ? (nombres.get(capId) || t('Capitán')) : t('Flota de {nombre}', { nombre: nombres.get(capId) || t('otro capitán') });
       } else { b.cap = null; b.bando = 'enemigo'; b.bandera = b.banderaBot; b.esJugador = false; b.nombre = b.nombreBot; }
       lista.push(b);
     }
@@ -99,7 +100,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     }
     j.oroBodega = yo.oroBodega = y.ob; j.oroPuerto = yo.oroPuerto = y.op; j.escoltasMax = yo.escoltasMax = y.em;
     j.stats = y.st; j.cdAbordaje = y.cd; j.ordenFlota = y.of;
-    j.avisos = y.av.map(([texto, tipo]) => ({ texto, tipo }));
+    j.avisos = y.av.map(([texto, tipo, p]) => ({ texto, tipo, p }));
     j.sacudon = Math.max(j.sacudon, y.sac);
     if (y.fin && !j.fin) { j.fin = true; j.finEn = j.t; j.causa = y.causa; }
 

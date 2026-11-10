@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-tema="oscuro">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,8 +16,9 @@
   <meta property="og:url" content="https://ageofnavies.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <script type="importmap">{"imports":{"/src/banderas.js":"/src/banderas.js?v=d708c6c1","/src/barcos.js":"/src/barcos.js?v=d708c6c1","/src/config.js":"/src/config.js?v=d708c6c1","/src/cuenta.js":"/src/cuenta.js?v=d708c6c1","/src/dibujo.js":"/src/dibujo.js?v=d708c6c1","/src/juego.js":"/src/juego.js?v=d708c6c1","/src/main.js":"/src/main.js?v=d708c6c1","/src/mapas.js":"/src/mapas.js?v=d708c6c1","/src/mundo.js":"/src/mundo.js?v=d708c6c1","/src/puerto.js":"/src/puerto.js?v=d708c6c1","/src/red.js":"/src/red.js?v=d708c6c1","/src/rng.js":"/src/rng.js?v=d708c6c1"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=d708c6c1">
+  <script>try { if (localStorage.getItem('aon-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}</script>
+  <script type="importmap">{"imports":{"/src/banderas.js":"/src/banderas.js?v=723ed524","/src/barcos.js":"/src/barcos.js?v=723ed524","/src/config.js":"/src/config.js?v=723ed524","/src/cuenta.js":"/src/cuenta.js?v=723ed524","/src/dibujo.js":"/src/dibujo.js?v=723ed524","/src/idioma.js":"/src/idioma.js?v=723ed524","/src/juego.js":"/src/juego.js?v=723ed524","/src/main.js":"/src/main.js?v=723ed524","/src/mapas.js":"/src/mapas.js?v=723ed524","/src/mundo.js":"/src/mundo.js?v=723ed524","/src/puerto.js":"/src/puerto.js?v=723ed524","/src/red.js":"/src/red.js?v=723ed524","/src/rng.js":"/src/rng.js?v=723ed524","/src/textos-historia.js":"/src/textos-historia.js?v=723ed524","/src/textos.js":"/src/textos.js?v=723ed524"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=723ed524">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -29,25 +30,25 @@
       <div id="hud-mapa" class="suave"></div>
       <div class="barra"><i id="hud-vida"></i><span id="hud-vida-txt"></span></div>
       <div class="barra trip"><i id="hud-trip"></i><span id="hud-trip-txt"></span></div>
-      <div class="fila"><span>Velas</span><span id="hud-velas" class="velas"></span></div>
+      <div class="fila"><span data-t>Velas</span><span id="hud-velas" class="velas"></span></div>
       <div id="hud-velas-txt" class="suave"></div>
-      <div class="fila"><span>Flota</span><span id="hud-flota"></span></div>
+      <div class="fila"><span data-t>Flota</span><span id="hud-flota"></span></div>
     </div>
     <div class="panel arriba-der">
-      <div class="fila"><span>Oro en bodega</span><b id="hud-bodega" class="oro">0</b></div>
-      <div class="fila"><span>Oro en puerto</span><b id="hud-puerto" class="oro">0</b></div>
-      <div class="fila"><span>Hundidos</span><b id="hud-hundidos">0</b></div>
+      <div class="fila"><span data-t>Oro en bodega</span><b id="hud-bodega" class="oro">0</b></div>
+      <div class="fila"><span data-t>Oro en puerto</span><b id="hud-puerto" class="oro">0</b></div>
+      <div class="fila"><span data-t>Hundidos</span><b id="hud-hundidos">0</b></div>
       <div id="hud-linea" class="oculto">
-        <div class="fila"><span>Jugadores eliminados</span><b id="hud-eliminados">0</b></div>
+        <div class="fila"><span data-t>Jugadores eliminados</span><b id="hud-eliminados">0</b></div>
         <div id="hud-tabla"></div>
       </div>
     </div>
     <div id="avisos"></div>
     <div id="pista"></div>
     <div class="panel abajo-izq">
-      <div class="recarga"><span>Babor (Q)</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
-      <div class="recarga"><span>Estribor (E)</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
-      <div class="ayuda">El barco sigue al cursor · clic dispara · F gancho (apuntá con el cursor) · G orden a la flota · P puerto<br>Cursor cerca = velas de combate (recarga rápida) · parado junto a una isla reparás</div>
+      <div class="recarga"><span data-t>Babor (Q)</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
+      <div class="recarga"><span data-t>Estribor (E)</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
+      <div class="ayuda"><span data-t>El barco sigue al cursor · clic dispara · F gancho (apuntá con el cursor) · G orden a la flota · P puerto</span><br><span data-t>Cursor cerca = velas de combate (recarga rápida) · parado junto a una isla reparás</span></div>
     </div>
     <canvas id="minimapa" width="170" height="170"></canvas>
   </div>
@@ -56,22 +57,22 @@
     <div class="caja ancha">
       <div class="cabecera">
         <h1><img class="logo-titulo" src="img/logo.png" alt="Age of Navies"></h1>
-        <div id="cuenta"></div>
+        <div class="cabecera-der"><div id="cuenta"></div><button id="aj-abrir" class="boton icono" type="button" title="Ajustes" aria-label="Ajustes">⚙</button></div>
       </div>
-      <p class="sub">Diseñá tu barco con <b id="ast-total"></b> de oro. Lo que no gastes te queda guardado en el puerto para después.</p>
+      <p id="ast-sub" class="sub"></p>
       <div class="astillero">
         <div id="ast-opciones"></div>
         <div class="resumen">
           <canvas id="ast-vista" width="300" height="170"></canvas>
           <div id="ast-barras"></div>
-          <div class="fila grande"><span>Te queda</span><b id="ast-resto" class="oro"></b></div>
+          <div class="fila grande"><span data-t>Te queda</span><b id="ast-resto" class="oro"></b></div>
           <button id="ast-mapa-btn" class="mapa-boton" type="button">
             <canvas id="ast-mapa-vista" width="128" height="128"></canvas>
-            <span><small>Mapa</small><b id="ast-mapa-nombre"></b><em id="ast-mapa-lugar"></em></span>
-            <i>Cambiar</i>
+            <span><small data-t>Mapa</small><b id="ast-mapa-nombre"></b><em id="ast-mapa-lugar"></em></span>
+            <i data-t>Cambiar</i>
           </button>
           <p id="ast-mapa-desc" class="suave"></p>
-          <button id="ast-linea" class="boton principal linea" type="button">⚔ Jugar online</button>
+          <button id="ast-linea" class="boton principal linea" type="button" data-t>⚔ Jugar online</button>
           <p id="ast-linea-info" class="suave centro"></p>
           <button id="ast-zarpar" class="boton secundario">Jugar solo contra bots</button>
           <p id="ast-mejor" class="suave"></p>
@@ -82,15 +83,15 @@
 
   <div id="pantalla-puerto" class="pantalla oculto">
     <div class="caja ancha">
-      <h2>Puerto</h2>
-      <p class="sub">Tu oro quedó a salvo. Tocá lo que quieras comprar: cada tarjeta dice qué hace y cuánto cuesta.</p>
+      <h2 data-t>Puerto</h2>
+      <p class="sub" data-t>Tu oro quedó a salvo. Tocá lo que quieras comprar: cada tarjeta dice qué hace y cuánto cuesta.</p>
       <div class="astillero">
         <div id="pto-opciones"></div>
         <div class="resumen">
           <canvas id="pto-vista" width="300" height="170"></canvas>
           <div id="pto-barras"></div>
-          <div class="fila grande"><span>Tu oro</span><b id="pto-oro" class="oro"></b></div>
-          <button id="pto-salir" class="boton principal">Volver al mar</button>
+          <div class="fila grande"><span data-t>Tu oro</span><b id="pto-oro" class="oro"></b></div>
+          <button id="pto-salir" class="boton principal" data-t>Volver al mar</button>
         </div>
       </div>
     </div>
@@ -100,17 +101,17 @@
     <div class="caja">
       <h2 id="fin-titulo">Te hundieron</h2>
       <div id="fin-datos"></div>
-      <button id="fin-otra" class="boton principal">Diseñar otra flota</button>
+      <button id="fin-otra" class="boton principal" data-t>Diseñar otra flota</button>
     </div>
   </div>
 
   <div id="pantalla-mapas" class="pantalla oculto">
     <div class="caja ancha">
       <div class="cabecera">
-        <h2>¿Dónde vas a navegar?</h2>
-        <button id="map-cerrar" class="boton" type="button">Cerrar</button>
+        <h2 data-t>¿Dónde vas a navegar?</h2>
+        <button id="map-cerrar" class="boton" type="button" data-t>Cerrar</button>
       </div>
-      <p class="sub">Veinte lugares de la era de la vela. Las banderas muestran quiénes navegan en cada uno.</p>
+      <p class="sub" data-t>Veinte lugares de la era de la vela. Las banderas muestran quiénes navegan en cada uno.</p>
       <div id="map-grilla"></div>
     </div>
   </div>
@@ -119,29 +120,45 @@
     <div class="caja">
       <h2>⚓ <span id="per-nombre"></span></h2>
       <div id="per-datos" class="datos"></div>
-      <h3>Mejores saqueos</h3>
+      <h3 data-t>Mejores saqueos</h3>
       <div id="per-ranking"></div>
       <div class="botones">
-        <button id="per-cambiar" class="boton">Cambiar nombre</button>
-        <button id="per-cerrar" class="boton principal">Cerrar</button>
+        <button id="per-cambiar" class="boton" data-t>Cambiar nombre</button>
+        <button id="per-cerrar" class="boton principal" data-t>Cerrar</button>
       </div>
     </div>
   </div>
 
   <div id="pantalla-nombre" class="pantalla oculto">
     <form id="nom-form" class="caja chica">
-      <h2>Tu nombre de jugador</h2>
-      <p class="sub">Es el nombre que van a ver los demás. Tu mail de Google no se muestra a nadie.</p>
-      <input id="nom-input" class="campo" maxlength="16" minlength="3" placeholder="Capitán…" autocomplete="off" required>
+      <h2 data-t>Tu nombre de jugador</h2>
+      <p class="sub" data-t>Es el nombre que van a ver los demás. Tu mail de Google no se muestra a nadie.</p>
+      <input id="nom-input" class="campo" maxlength="16" minlength="3" placeholder="Capitán…" data-t-ph autocomplete="off" required>
       <p id="nom-error" class="error"></p>
       <div class="botones">
-        <button id="nom-cancelar" type="button" class="boton">Cancelar</button>
-        <button id="nom-guardar" class="boton principal">Guardar</button>
+        <button id="nom-cancelar" type="button" class="boton" data-t>Cancelar</button>
+        <button id="nom-guardar" class="boton principal" data-t>Guardar</button>
       </div>
     </form>
   </div>
 
-  <script src="vendor/supabase.min.js?v=d708c6c1" defer></script>
-  <script type="module" src="src/main.js?v=d708c6c1"></script>
+  <div id="pantalla-ajustes" class="pantalla oculto">
+    <div class="caja chica">
+      <h2 data-t>Ajustes</h2>
+      <h3><span data-t>Idioma</span> · <span id="aj-idioma-nombre"></span></h3>
+      <div id="aj-idiomas" class="chips"></div>
+      <h3 data-t>Pantalla</h3>
+      <div id="aj-temas" class="chips dos">
+        <button type="button" class="chip" data-id="oscuro">🌙 <span data-t>Oscura</span></button>
+        <button type="button" class="chip" data-id="claro">☀️ <span data-t>Clara</span></button>
+      </div>
+      <div class="botones">
+        <button id="aj-cerrar" type="button" class="boton principal" data-t>Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/supabase.min.js?v=723ed524" defer></script>
+  <script type="module" src="src/main.js?v=723ed524"></script>
 </body>
 </html>
