@@ -3,8 +3,9 @@ import { MUNDO } from './config.js';
 import { crearRng } from './rng.js';
 import { MAPAS } from './mapas.js';
 
-export function crearMundo(idMapa = 'caribe') {
-  const mapa = MAPAS[idMapa] || MAPAS.caribe;
+export function crearMundo(idMapa) {
+  if (!MAPAS[idMapa]) idMapa = Object.keys(MAPAS)[0];
+  const mapa = MAPAS[idMapa];
   const rng = crearRng(mapa.semilla);
   const puerto = { x: MUNDO.ancho / 2, y: MUNDO.alto / 2, radio: 240 };
   const islas = [];
@@ -32,7 +33,7 @@ export function crearMundo(idMapa = 'caribe') {
 
   // Icebergs: chicos, filosos y por todos lados
   intentos = 0; puestas = 0;
-  while (puestas < mapa.icebergs && intentos < 6000) {
+  while (puestas < (mapa.icebergs || 0) && intentos < 6000) {
     intentos++;
     const r = rng.rango(22, 58);
     const x = rng.rango(200, MUNDO.ancho - 200);
@@ -40,6 +41,19 @@ export function crearMundo(idMapa = 'caribe') {
     if (Math.hypot(x - puerto.x, y - puerto.y) < 520 + r) continue;
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 130)) continue;
     islas.push(crearIsla(rng, x, y, r, 'iceberg'));
+    puestas++;
+  }
+
+  // Arrecifes y bancos de arena: escollos chicos donde se encalla
+  intentos = 0; puestas = 0;
+  while (puestas < (mapa.arrecifes || 0) && intentos < 6000) {
+    intentos++;
+    const r = rng.rango(20, 42);
+    const x = rng.rango(250, MUNDO.ancho - 250);
+    const y = rng.rango(250, MUNDO.alto - 250);
+    if (Math.hypot(x - puerto.x, y - puerto.y) < 560 + r) continue;
+    if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 110)) continue;
+    islas.push(crearIsla(rng, x, y, r, 'arrecife'));
     puestas++;
   }
 
@@ -55,11 +69,11 @@ export function crearMundo(idMapa = 'caribe') {
     remolinos.push({ x, y, radio: rng.rango(150, 210), giro: rng.next() < 0.5 ? 1 : -1 });
   }
 
-  return { id: idMapa in MAPAS ? idMapa : 'caribe', nombre: mapa.nombre, tema: mapa.tema, puerto, islas, remolinos, ancho: MUNDO.ancho, alto: MUNDO.alto };
+  return { id: idMapa, nombre: mapa.nombre, lugar: mapa.lugar, tema: mapa.tema, reglas: mapa.reglas || {}, puerto, islas, remolinos, ancho: MUNDO.ancho, alto: MUNDO.alto };
 }
 
 function crearIsla(rng, x, y, r, tipo) {
-  const iceberg = tipo === 'iceberg';
+  const iceberg = tipo === 'iceberg' || tipo === 'arrecife'; // escollos: chicos, sin árboles
   const n = iceberg ? rng.entero(6, 8) : Math.min(22, rng.entero(9, 14) + Math.floor(r / 120));
   const amp = Math.min(0.15, 45 / r); // las tierras grandes tienen la costa más pareja, para que coincida con donde chocás
   const puntos = [];

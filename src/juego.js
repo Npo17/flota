@@ -37,7 +37,7 @@ export function crearPartida(mundo, diseno, oroInicial) {
     cdAbordaje: 0,
     gancho: null,
     ordenFlota: 'formacion', // 'formacion' | 'ataque'
-    proxConvoy: azar.rango(70, 100),
+    proxConvoy: azar.rango(70, 100) * (mundo.reglas.convoy || 1),
     fin: false,
   };
   for (let i = 0; i < ENEMIGOS_VIVOS; i++) spawnEnemigo(j, true);
@@ -63,9 +63,9 @@ function spawnEnemigo(j, inicial) {
     if (dj < (inicial ? 1100 : 1300)) continue;
     if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 80)) continue;
     const nivel = nivelZona(mundo, x, y);
-    const tipo = elegirTipo(nivel);
+    const tipo = elegirTipo(nivel, mundo.reglas);
     const e = ENEMIGOS[tipo];
-    const b = crearBarco(disenoEnemigo(tipo, nivel), 'enemigo', x, y, {
+    const b = crearBarco(disenoEnemigo(tipo, nivel, mundo.reglas.facciones), 'enemigo', x, y, {
       a: azar.rango(0, TAU), velas: 1, bandera: e.color, color: tipo === 'tesoro' ? '#f6e7b0' : '#e9e1cc',
       nombre: e.nombre, tipo, colorVela: tipo === 'tesoro' ? '#f3d98b' : null, oro: Math.round(azar.rango(e.oro[0], e.oro[1]) * (1 + nivel * 0.25)),
     });
@@ -75,12 +75,15 @@ function spawnEnemigo(j, inicial) {
   }
 }
 
-function elegirTipo(nivel) {
+function elegirTipo(nivel, reglas = {}) {
   const pesos = nivel === 0
     ? { mercante: 6, balandro: 4 }
     : nivel === 1
       ? { mercante: 3, balandro: 3, corsario: 4, tesoro: 1 }
       : { balandro: 1, corsario: 3, cazador: 3, galeonGuerra: 3, tesoro: 1.5 };
+  // cada mapa inclina la balanza: más comercio, más guerra o más piratas
+  const mult = { mercante: reglas.comercio, tesoro: reglas.comercio, balandro: reglas.piratas, corsario: reglas.guerra, cazador: reglas.guerra, galeonGuerra: reglas.guerra };
+  for (const k of Object.keys(pesos)) pesos[k] *= mult[k] ?? 1;
   const total = Object.values(pesos).reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
   for (const [k, w] of Object.entries(pesos)) { r -= w; if (r <= 0) return k; }
@@ -252,7 +255,7 @@ function moverBarco(j, b, dt) {
       if (b.v > s.velMax * 0.4 && b.golpeIsla <= 0) {
         b.vida -= i.tipo === 'iceberg' ? 10 : 5;
         b.golpeIsla = 1;
-        if (b === j.jugador) aviso(j, i.tipo === 'iceberg' ? '¡Chocaste un iceberg!' : '¡Encallaste contra la costa!', 'malo');
+        if (b === j.jugador) aviso(j, i.tipo === 'iceberg' ? '¡Chocaste un iceberg!' : i.tipo === 'arrecife' ? '¡Encallaste en un banco!' : '¡Encallaste contra la costa!', 'malo');
       }
       b.v = Math.min(b.v, s.velMax * 0.45); // roza la costa y sigue, sin quedar clavado
     }
@@ -260,7 +263,7 @@ function moverBarco(j, b, dt) {
   // carenar: parado junto a una isla y sin recibir golpes, la tripulación repara (hasta el 75 %)
   b.reparando = false;
   if (b.bando !== 'enemigo' && b.v < 22 && b.vida < s.vidaMax * 0.75 && j.t - (b.ultimoGolpe ?? -99) > 4) {
-    if (j.mundo.islas.some((i) => i.tipo !== 'iceberg' && Math.hypot(b.x - i.x, b.y - i.y) < i.r + 130)) {
+    if (j.mundo.islas.some((i) => i.tipo !== 'iceberg' && i.tipo !== 'arrecife' && Math.hypot(b.x - i.x, b.y - i.y) < i.r + 130)) {
       b.vida = Math.min(s.vidaMax * 0.75, b.vida + 4 * dt);
       b.reparando = true;
     }
@@ -672,7 +675,7 @@ function actualizarConvoy(j, dt) {
   if (j.barcos.some((b) => b.convoy && !b.hundiendo && b.bando === 'enemigo')) return;
   j.proxConvoy -= dt;
   if (j.proxConvoy > 0) return;
-  j.proxConvoy = azar.rango(200, 260);
+  j.proxConvoy = azar.rango(200, 260) * (j.mundo.reglas.convoy || 1);
   const { mundo, jugador } = j;
   for (let intento = 0; intento < 80; intento++) {
     const x = azar.rango(500, mundo.ancho - 500), y = azar.rango(500, mundo.alto - 500);
@@ -680,7 +683,7 @@ function actualizarConvoy(j, dt) {
     if (nivel < 1 || Math.hypot(x - jugador.x, y - jugador.y) < 1300) continue;
     if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 200)) continue;
     const a = azar.rango(0, TAU);
-    const d = disenoEnemigo('tesoro', nivel);
+    const d = disenoEnemigo('tesoro', nivel, mundo.reglas.facciones);
     d.refuerzo = 160;
     const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: Math.round(azar.rango(1000, 1400)) });
     tesoro.nivel = nivel;
@@ -688,7 +691,7 @@ function actualizarConvoy(j, dt) {
     j.barcos.push(tesoro);
     const guardia = nivel >= 2 ? 'galeonGuerra' : 'corsario';
     for (const lado of [-1, 1]) {
-      const g = crearBarco(disenoEnemigo(guardia, nivel), 'enemigo', x - Math.sin(a) * 110 * lado, y + Math.cos(a) * 110 * lado, {
+      const g = crearBarco(disenoEnemigo(guardia, nivel, mundo.reglas.facciones), 'enemigo', x - Math.sin(a) * 110 * lado, y + Math.cos(a) * 110 * lado, {
         a, velas: 1, bandera: ENEMIGOS[guardia].color, color: '#e9e1cc', nombre: 'Guardia del tesoro', tipo: guardia,
         oro: Math.round(azar.rango(ENEMIGOS[guardia].oro[0], ENEMIGOS[guardia].oro[1])),
       });
@@ -706,7 +709,7 @@ function actualizarConvoy(j, dt) {
 function actualizarTritones(j, dt) {
   const yo = j.jugador;
   const zona = nivelZona(j.mundo, yo.x, yo.y);
-  if (zona >= 1) j.proxTritones -= dt * (zona === 2 ? 1 : 0.35);
+  if (zona >= 1) j.proxTritones -= dt * (zona === 2 ? 1 : 0.35) * (j.mundo.reglas.tritones || 1);
   if (j.proxTritones <= 0 && !yo.hundiendo) {
     j.proxTritones = azar.rango(40, 70);
     const n = 3 + zona + Math.floor(j.stats.tiempo / 240);

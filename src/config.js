@@ -44,7 +44,7 @@ export const MUNICIONES = {
 export const TRIPULACIONES = {
   moderada: { nombre: 'Moderada', desc: 'Lo justo para navegar.', costo: 0, mult: 1.0, abordaje: 1.0 },
   curtida: { nombre: 'Curtida', desc: 'Más gente, recarga más rápido.', costo: 120, mult: 1.5, abordaje: 1.2 },
-  sanconcha: { nombre: 'De la sanconcha', desc: 'Una banda de bestias. Ganan cualquier abordaje.', costo: 260, mult: 2.1, abordaje: 1.5 },
+  elite: { nombre: 'Veteranos de élite', desc: 'Lobos de mar curtidos en mil combates. Temibles al abordaje.', costo: 260, mult: 2.1, abordaje: 1.5 },
 };
 
 // Precios del puerto

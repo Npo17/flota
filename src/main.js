@@ -11,7 +11,7 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('mar'), ctx = canvas.getContext('2d');
 const mini = $('minimapa').getContext('2d');
 
-let mundo = crearMundo();
+let mundo = null;
 let mapaElegido = 'aleatorio';
 try { mapaElegido = localStorage.getItem('aon-mapa') || 'aleatorio'; } catch {}
 if (mapaElegido !== 'aleatorio' && !MAPAS[mapaElegido]) mapaElegido = 'aleatorio';
@@ -97,9 +97,12 @@ function pintarAstillero() {
 
 // Selector de mapa: aleatorio o el que elijas
 const selMapa = $('ast-mapa');
-selMapa.innerHTML = '<option value="aleatorio">Mapa aleatorio</option>' + Object.entries(MAPAS).map(([id, m]) => `<option value="${id}">${m.nombre}</option>`).join('');
+selMapa.innerHTML = '<option value="aleatorio">Mapa aleatorio</option>' + Object.entries(MAPAS).map(([id, m]) => `<option value="${id}">${m.nombre} · ${m.lugar}</option>`).join('');
 selMapa.value = mapaElegido;
-const pintarMapa = () => { $('ast-mapa-desc').textContent = mapaElegido === 'aleatorio' ? 'Cada partida te toca un mar distinto.' : MAPAS[mapaElegido].desc; };
+const pintarMapa = () => {
+  const m = MAPAS[mapaElegido];
+  $('ast-mapa-desc').innerHTML = m ? `${m.desc}<br><b>${m.rasgo}</b>` : 'Cada partida te toca un lugar distinto de la historia.';
+};
 selMapa.onchange = () => { mapaElegido = selMapa.value; try { localStorage.setItem('aon-mapa', mapaElegido); } catch {} pintarMapa(); };
 pintarMapa();
 
@@ -110,7 +113,7 @@ $('ast-zarpar').onclick = () => {
   estado = 'mar';
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
-  aviso(partida, `Mapa: ${mundo.nombre}`, 'bueno');
+  aviso(partida, `${mundo.nombre} · ${mundo.lugar}`, 'bueno');
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
 };
 
@@ -284,7 +287,8 @@ let avisosPintados = '';
 function pintarHud() {
   const j = partida, b = j.jugador, s = b.stats;
   $('hud-nombre').textContent = `${CASCOS[b.diseno.casco].nombre} · ${(FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).nombre}`;
-  $('hud-zona').textContent = `${mundo.nombre} · ${nombreZona(nivelZona(mundo, b.x, b.y))}`;
+  $('hud-zona').textContent = nombreZona(nivelZona(mundo, b.x, b.y));
+  $('hud-mapa').textContent = mundo.nombre;
   $('hud-vida').style.width = `${Math.max(0, (b.vida / s.vidaMax) * 100)}%`;
   $('hud-vida-txt').textContent = `Casco ${Math.max(0, Math.ceil(b.vida))} / ${s.vidaMax}`;
   $('hud-trip').style.width = `${Math.max(0, (b.trip / s.tripMax) * 100)}%`;

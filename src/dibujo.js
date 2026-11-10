@@ -4,6 +4,7 @@ import { FACCIONES } from './config.js';
 import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
 
 const TAU = Math.PI * 2;
+const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
 
 // ---------- Barcos ----------
 // Cada facción tiene su forma de casco, sus velas y sus detalles. El barco se dibuja mirando hacia +x.
@@ -473,7 +474,7 @@ export function dibujarEscena(ctx, j, vista) {
   const capa = (escala, color, soloTierra) => {
     ctx.fillStyle = color;
     for (const isla of aLaVista) {
-      if (soloTierra && isla.tipo === 'iceberg') continue;
+      if (soloTierra && ESCOLLO[isla.tipo]) continue;
       trazarIsla(ctx, isla, isla.r > 300 ? 1 + (escala - 1) * (300 / isla.r) : escala);
       ctx.fill();
     }
@@ -484,9 +485,22 @@ export function dibujarEscena(ctx, j, vista) {
   capa(1.0, tema.arena[1], true);
   // pasto o nieve: en las tierras grandes llega casi hasta la costa
   ctx.fillStyle = tema.pasto[0];
-  for (const isla of aLaVista) { if (isla.tipo !== 'iceberg') { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 60 / isla.r : 0.8); ctx.fill(); } }
+  for (const isla of aLaVista) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 60 / isla.r : 0.8); ctx.fill(); } }
   ctx.fillStyle = tema.pasto[1];
-  for (const isla of aLaVista) { if (isla.tipo !== 'iceberg') { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 150 / isla.r : 0.52); ctx.fill(); } }
+  for (const isla of aLaVista) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 150 / isla.r : 0.52); ctx.fill(); } }
+  // arrecifes y bancos: arena a flor de agua con algunas piedras
+  for (const isla of aLaVista) {
+    if (isla.tipo !== 'arrecife') continue;
+    ctx.fillStyle = tema.arena[0];
+    trazarIsla(ctx, isla, 0.95); ctx.fill();
+    ctx.fillStyle = tema.arena[1];
+    trazarIsla(ctx, isla, 0.6); ctx.fill();
+    ctx.fillStyle = '#6f6a63';
+    for (let q = 0; q < 3; q++) {
+      const ang = isla.puntos[q].ang + q * 2.1, d = isla.r * 0.45;
+      ctx.beginPath(); ctx.arc(isla.x + Math.cos(ang) * d, isla.y + Math.sin(ang) * d, 3 + isla.r * 0.08, 0, TAU); ctx.fill();
+    }
+  }
   // icebergs: bloque blanco con una cara en sombra
   for (const isla of aLaVista) {
     if (isla.tipo !== 'iceberg') continue;
@@ -499,7 +513,7 @@ export function dibujarEscena(ctx, j, vista) {
     ctx.beginPath(); ctx.moveTo(isla.x - isla.r * 0.3, isla.y - isla.r * 0.2); ctx.lineTo(isla.x + isla.r * 0.1, isla.y + isla.r * 0.05); ctx.lineTo(isla.x + isla.r * 0.05, isla.y + isla.r * 0.4); ctx.stroke();
   }
   for (const isla of aLaVista) {
-    if (isla.tipo === 'iceberg') continue;
+    if (ESCOLLO[isla.tipo]) continue;
     for (const r of isla.rocas) {
       ctx.fillStyle = '#6f6a63';
       ctx.beginPath(); ctx.arc(isla.x + r.x, isla.y + r.y, r.s, 0, TAU); ctx.fill();

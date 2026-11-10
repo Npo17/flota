@@ -81,15 +81,15 @@ export function rearmar(b) {
   b.trip = Math.min(b.trip, b.stats.tripMax);
 }
 
-function faccionAlAzar() {
-  const ids = Object.keys(FACCIONES);
+function faccionAlAzar(lista) {
+  const ids = lista && lista.length ? lista : Object.keys(FACCIONES);
   return ids[Math.floor(Math.random() * ids.length)];
 }
 
-export function disenoEnemigo(tipo, nivel) {
+export function disenoEnemigo(tipo, nivel, facciones) {
   const e = ENEMIGOS[tipo];
   return {
-    faccion: faccionAlAzar(), casco: e.casco, velas: e.velas, canones: e.canones, municion: e.municion, trip: e.trip,
+    faccion: faccionAlAzar(facciones), casco: e.casco, velas: e.velas, canones: e.canones, municion: e.municion, trip: e.trip,
     nivelCanones: Math.max(0, nivel - e.minNivel), refuerzo: nivel * 15,
   };
 }

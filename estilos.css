@@ -91,3 +91,6 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .mapa span { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #9fc3d6; }
 .mapa select.campo { font-size: 15px; padding: 8px 10px; cursor: pointer; }
 #ast-mapa-desc { margin: 6px 0 2px; min-height: 16px; }
+
+#ast-mapa-desc b { color: #ffe9a8; font-weight: 600; }
+.mapa select.campo { min-width: 0; flex: 1; }
