@@ -1,11 +1,128 @@
 // Todo lo que se pinta en el canvas.
 import { hash2 } from './rng.js';
+import { FACCIONES } from './config.js';
 import { candidatoAbordaje, difAng } from './juego.js';
 
 const TAU = Math.PI * 2;
 
+// ---------- Barcos ----------
+// Cada facción tiene su forma de casco, sus velas y sus detalles. El barco se dibuja mirando hacia +x.
+function rutaCasco(ctx, L, W, forma) {
+  ctx.beginPath();
+  if (forma === 'drakkar') { // dos puntas, fino
+    ctx.moveTo(L * 0.54, 0);
+    ctx.bezierCurveTo(L * 0.25, W * 0.6, -L * 0.25, W * 0.6, -L * 0.54, 0);
+    ctx.bezierCurveTo(-L * 0.25, -W * 0.6, L * 0.25, -W * 0.6, L * 0.54, 0);
+  } else if (forma === 'galera') { // larga, con espolón
+    ctx.moveTo(L * 0.58, 0);
+    ctx.lineTo(L * 0.3, W * 0.4);
+    ctx.lineTo(-L * 0.4, W * 0.42);
+    ctx.quadraticCurveTo(-L * 0.52, W * 0.3, -L * 0.52, 0);
+    ctx.quadraticCurveTo(-L * 0.52, -W * 0.3, -L * 0.4, -W * 0.42);
+    ctx.lineTo(L * 0.3, -W * 0.4);
+  } else if (forma === 'caja') { // casco recto con proa corta
+    ctx.moveTo(L * 0.52, 0);
+    ctx.lineTo(L * 0.3, W * 0.5);
+    ctx.lineTo(-L * 0.5, W * 0.5);
+    ctx.lineTo(-L * 0.5, -W * 0.5);
+    ctx.lineTo(L * 0.3, -W * 0.5);
+  } else if (forma === 'tortuga') { // ovalado y ancho
+    ctx.ellipse(0, 0, L * 0.5, W * 0.54, 0, 0, TAU);
+  } else { // galeón
+    ctx.moveTo(L / 2, 0);
+    ctx.quadraticCurveTo(L * 0.3, W / 2, L * 0.05, W / 2);
+    ctx.lineTo(-L * 0.42, W * 0.44);
+    ctx.quadraticCurveTo(-L / 2, W * 0.3, -L / 2, 0);
+    ctx.quadraticCurveTo(-L / 2, -W * 0.3, -L * 0.42, -W * 0.44);
+    ctx.lineTo(L * 0.05, -W / 2);
+    ctx.quadraticCurveTo(L * 0.3, -W / 2, L / 2, 0);
+  }
+  ctx.closePath();
+}
+
+function cascoEscalado(ctx, L, W, forma, kx, ky, color) {
+  ctx.save();
+  ctx.scale(kx, ky);
+  rutaCasco(ctx, L, W, forma);
+  ctx.restore();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
+  const g = 3 + abiertas * 9; // cuánto se infla
+  ctx.save();
+  if (e.tipoVela === 'latina') {
+    // vela triangular que se abre hacia un costado
+    const abre = 4 + abiertas * alto * 0.42;
+    ctx.beginPath();
+    ctx.moveTo(mx + alto * 0.42, -1);
+    ctx.quadraticCurveTo(mx + alto * 0.1, abre * 1.15, mx - alto * 0.4, 2);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.translate(3, 3); ctx.fill(); ctx.translate(-3, -3);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.clip();
+    if (e.patron === 'rayas') {
+      ctx.fillStyle = e.colorPatron;
+      for (let x = mx - alto * 0.4; x < mx + alto * 0.45; x += alto * 0.24) ctx.fillRect(x, -2, alto * 0.11, abre * 1.3);
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#3d2310';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(mx + alto * 0.44, -1.5); ctx.lineTo(mx - alto * 0.42, 1.5); ctx.stroke();
+    return;
+  }
+  const h = alto;
+  const ruta = () => {
+    ctx.beginPath();
+    ctx.moveTo(mx, -h / 2);
+    ctx.quadraticCurveTo(mx + g * 2.1, 0, mx, h / 2);
+    ctx.quadraticCurveTo(mx + g * 0.35, 0, mx, -h / 2);
+    ctx.closePath();
+  };
+  ctx.translate(3, 3); ruta(); ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fill(); ctx.translate(-3, -3);
+  ruta();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.clip();
+  if (e.patron === 'rayas') {
+    ctx.fillStyle = e.colorPatron;
+    for (let y = -h / 2; y < h / 2; y += h / 3.5) ctx.fillRect(mx - 2, y, g * 2.4, h / 7);
+  } else if (e.patron === 'sol' && principal) {
+    ctx.fillStyle = e.colorPatron;
+    ctx.beginPath(); ctx.arc(mx + g * 0.62, 0, Math.min(h * 0.2, g * 0.55), 0, TAU); ctx.fill();
+  } else if (e.patron === 'cruz' && principal) {
+    ctx.strokeStyle = e.colorPatron;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(mx, -h * 0.26); ctx.lineTo(mx + g * 1.4, h * 0.26);
+    ctx.moveTo(mx, h * 0.26); ctx.lineTo(mx + g * 1.4, -h * 0.26);
+    ctx.stroke();
+  } else if (e.patron === 'sables') {
+    ctx.strokeStyle = e.colorPatron;
+    ctx.lineWidth = 1.1;
+    for (let y = -h / 2 + h / 8; y < h / 2; y += h / 6) { ctx.beginPath(); ctx.moveTo(mx - 2, y); ctx.lineTo(mx + g * 2.4, y); ctx.stroke(); }
+  }
+  // sombra suave hacia el mástil para dar volumen
+  const sombra = ctx.createLinearGradient(mx, 0, mx + g * 1.3, 0);
+  sombra.addColorStop(0, 'rgba(60,40,20,0.28)');
+  sombra.addColorStop(1, 'rgba(60,40,20,0)');
+  ctx.fillStyle = sombra;
+  ctx.fillRect(mx - 2, -h / 2, g * 2.4, h);
+  ctx.restore();
+  // verga
+  ctx.strokeStyle = '#3d2310';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(mx, -h / 2 - 1); ctx.lineTo(mx, h / 2 + 1); ctx.stroke();
+}
+
 export function dibujarBarco(ctx, b, opciones = {}) {
   const s = b.stats, L = s.largo, W = s.ancho;
+  const e = (FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).estilo;
+  const T = performance.now() / 1000;
   ctx.save();
   ctx.translate(b.x, b.y);
   ctx.rotate(b.a);
@@ -15,59 +132,189 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     ctx.scale(1 - f * 0.35, 1 - f * 0.35);
     ctx.rotate(f * 0.6);
   }
+  ctx.lineJoin = 'round';
+
   // sombra en el agua
-  ctx.fillStyle = 'rgba(0,20,40,0.25)';
-  casco(ctx, L * 1.04, W * 1.15, 4, 5);
-  ctx.fill();
-  // casco
-  ctx.fillStyle = '#5b3518';
-  casco(ctx, L, W, 0, 0);
-  ctx.fill();
-  ctx.fillStyle = '#b07a44';
-  casco(ctx, L * 0.9, W * 0.74, 0, 0);
-  ctx.fill();
-  // tablas de cubierta
-  ctx.strokeStyle = 'rgba(70,40,15,0.35)';
-  ctx.lineWidth = 1;
-  for (let x = -L * 0.36; x < L * 0.3; x += 7) {
-    ctx.beginPath(); ctx.moveTo(x, -W * 0.3); ctx.lineTo(x, W * 0.3); ctx.stroke();
+  ctx.save();
+  ctx.translate(4, 5);
+  cascoEscalado(ctx, L, W, e.forma, 1.04, 1.12, 'rgba(0,20,40,0.26)');
+  ctx.restore();
+
+  // remos
+  if (e.remos) {
+    const n = Math.max(4, Math.round(L / 11));
+    const rema = b.v > 12 ? Math.sin(T * 5 + b.id) * 0.32 : 0.1;
+    ctx.strokeStyle = '#c8a877';
+    ctx.lineWidth = 1.3;
+    for (let i = 0; i < n; i++) {
+      const x = -L * 0.34 + (L * 0.6 * i) / (n - 1);
+      for (const lado of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(x, lado * W * 0.36);
+        ctx.lineTo(x - Math.sin(rema) * W * 0.5, lado * (W * 0.36 + Math.cos(rema) * W * 0.55));
+        ctx.stroke();
+      }
+    }
   }
-  // cañones
+
+  // casco: tablazón oscura, franja de color y cubierta
+  cascoEscalado(ctx, L, W, e.forma, 1, 1, e.casco);
+  cascoEscalado(ctx, L, W, e.forma, 0.95, 0.88, e.franja);
+  cascoEscalado(ctx, L, W, e.forma, 0.91, 0.76, e.cubierta);
+  // tablas de la cubierta, a lo largo
+  ctx.save();
+  ctx.scale(0.91, 0.76);
+  rutaCasco(ctx, L, W, e.forma);
+  ctx.restore();
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(70,40,15,0.3)';
+  ctx.lineWidth = 0.8;
+  for (let y = -W * 0.36; y < W * 0.38; y += 3.4) { ctx.beginPath(); ctx.moveTo(-L / 2, y); ctx.lineTo(L / 2, y); ctx.stroke(); }
+  // castillo de popa y de proa: cubiertas más altas
+  if (e.forma === 'galeon' || e.forma === 'galera') {
+    ctx.fillStyle = 'rgba(60,32,10,0.33)';
+    ctx.fillRect(-L / 2, -W / 2, L * 0.2, W);
+    ctx.fillRect(L * 0.3, -W / 2, L * 0.25, W);
+    ctx.strokeStyle = 'rgba(40,22,8,0.7)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-L * 0.3, -W / 2); ctx.lineTo(-L * 0.3, W / 2); ctx.moveTo(L * 0.3, -W / 2); ctx.lineTo(L * 0.3, W / 2); ctx.stroke();
+  }
+  ctx.restore();
+
+  if (e.techo) {
+    // barco tortuga: techo blindado con púas
+    cascoEscalado(ctx, L, W, e.forma, 0.86, 0.72, e.techo);
+    ctx.fillStyle = 'rgba(15,25,15,0.75)';
+    for (let x = -L * 0.34; x <= L * 0.34; x += 7.5) {
+      const fila = Math.round(x / 7.5);
+      for (let y = -W * 0.26 + (fila % 2 ? 3 : 0); y <= W * 0.27; y += 6) {
+        if ((x * x) / (L * L * 0.17) + (y * y) / (W * W * 0.11) > 1) continue;
+        ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill();
+      }
+    }
+    ctx.strokeStyle = 'rgba(20,35,20,0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-L * 0.4, 0); ctx.lineTo(L * 0.4, 0); ctx.stroke();
+  } else if (e.torre) {
+    // castillo de madera en el centro
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(-L * 0.3 + 2, -W * 0.33 + 2, L * 0.56, W * 0.66);
+    ctx.fillStyle = e.torre;
+    ctx.fillRect(-L * 0.3, -W * 0.33, L * 0.56, W * 0.66);
+    ctx.strokeStyle = '#2a1c12';
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(-L * 0.3, -W * 0.33, L * 0.56, W * 0.66);
+    ctx.lineWidth = 0.8;
+    for (let x = -L * 0.3 + 6; x < L * 0.26; x += 6) { ctx.beginPath(); ctx.moveTo(x, -W * 0.33); ctx.lineTo(x, -W * 0.33 + 3); ctx.moveTo(x, W * 0.33); ctx.lineTo(x, W * 0.33 - 3); ctx.stroke(); }
+  } else {
+    // escotilla con enjaretado y cabrestante
+    const ex = -L * 0.08;
+    ctx.fillStyle = '#4a2e14';
+    ctx.fillRect(ex - 6, -4, 12, 8);
+    ctx.strokeStyle = 'rgba(210,170,110,0.55)';
+    ctx.lineWidth = 0.7;
+    for (let k = -4; k <= 4; k += 4) { ctx.beginPath(); ctx.moveTo(ex + k, -4); ctx.lineTo(ex + k, 4); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(ex - 6, 0); ctx.lineTo(ex + 6, 0); ctx.stroke();
+    ctx.fillStyle = '#6b4320';
+    ctx.beginPath(); ctx.arc(L * 0.36, 0, 2.6, 0, TAU); ctx.fill();
+  }
+
+  // escudos en las bordas
+  if (e.escudos) {
+    const n = Math.max(4, Math.round(L / 9));
+    for (let i = 0; i < n; i++) {
+      const f = -0.36 + (0.72 * i) / (n - 1), x = f * L;
+      const y = W * 0.5 * Math.sqrt(Math.max(0, 1 - (f / 0.56) ** 2)) * 0.98;
+      for (const lado of [-1, 1]) {
+        ctx.fillStyle = e.escudos[i % e.escudos.length];
+        ctx.beginPath(); ctx.arc(x, lado * y, 3, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#d9d2c0';
+        ctx.beginPath(); ctx.arc(x, lado * y, 1, 0, TAU); ctx.fill();
+      }
+    }
+  }
+
+  // cañones: tubo oscuro con boca más clara
   const porLado = b.diseno.canones / 2;
-  ctx.fillStyle = '#1d1d1f';
+  const grosor = b.diseno.municion === 'pesada' ? 4.6 : 3.2;
   for (let i = 0; i < porLado; i++) {
     const off = porLado === 1 ? 0 : (-0.32 + (0.64 * i) / (porLado - 1)) * L;
-    const grosor = b.diseno.municion === 'pesada' ? 4.4 : 3;
-    ctx.fillRect(off - grosor / 2, -W * 0.5 - 3, grosor, 7);
-    ctx.fillRect(off - grosor / 2, W * 0.5 - 4, grosor, 7);
+    for (const lado of [-1, 1]) {
+      const y0 = lado * W * 0.3, y1 = lado * (W * 0.5 + 3.5);
+      ctx.fillStyle = '#6b4320';
+      ctx.fillRect(off - grosor / 2 - 1, Math.min(y0, lado * W * 0.38), grosor + 2, W * 0.08);
+      ctx.fillStyle = '#1b1b1f';
+      ctx.fillRect(off - grosor / 2, Math.min(y0, y1), grosor, Math.abs(y1 - y0));
+      ctx.fillStyle = '#55555c';
+      ctx.fillRect(off - grosor / 2, y1 - (lado > 0 ? 1.6 : 0), grosor, 1.6);
+    }
   }
-  // mástiles y velas
-  const n = s.mastiles;
+
+  // bauprés y foque
   const abiertas = b.velas / 3;
-  for (let m = 0; m < n; m++) {
-    const mx = n === 1 ? L * 0.05 : (-0.26 + (0.5 * m) / (n - 1)) * L;
-    const alto = W * (m === Math.floor(n / 2) ? 1.5 : 1.25);
-    const grosor = 3 + abiertas * 7;
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.fillRect(mx - grosor / 2 + 3, -alto / 2 + 3, grosor, alto);
-    ctx.fillStyle = b.color;
-    ctx.beginPath();
-    ctx.moveTo(mx - grosor / 2, -alto / 2);
-    ctx.quadraticCurveTo(mx + grosor * 0.9, 0, mx - grosor / 2, alto / 2);
-    ctx.lineTo(mx - grosor / 2 - 2, alto / 2);
-    ctx.lineTo(mx - grosor / 2 - 2, -alto / 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(60,40,20,0.5)';
-    ctx.stroke();
-    ctx.fillStyle = '#3d2310';
-    ctx.beginPath(); ctx.arc(mx, 0, 2.6, 0, TAU); ctx.fill();
+  if (e.forma === 'galeon') {
+    ctx.strokeStyle = '#3d2310';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(L * 0.4, 0); ctx.lineTo(L * 0.66, 0); ctx.stroke();
+    if (b.velas > 0) {
+      ctx.fillStyle = e.vela;
+      ctx.beginPath(); ctx.moveTo(L * 0.64, 0); ctx.lineTo(L * 0.36, 0); ctx.quadraticCurveTo(L * 0.46, W * 0.22 * abiertas + 2, L * 0.64, 0); ctx.fill();
+    }
   }
-  // bandera en popa
+  // mascarón: cabeza de dragón
+  if (e.dragon) {
+    ctx.fillStyle = e.dragon;
+    ctx.beginPath(); ctx.ellipse(L * 0.55, 0, 5, 3.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath(); ctx.arc(L * 0.56, -1.6, 0.9, 0, TAU); ctx.arc(L * 0.56, 1.6, 0.9, 0, TAU); ctx.fill();
+  }
+
+  // jarcia: cabos del palo a proa y popa
+  const n = s.mastiles;
+  const posMastil = (m) => (n === 1 ? L * 0.05 : (-0.26 + (0.5 * m) / (n - 1)) * L);
+  ctx.strokeStyle = 'rgba(40,25,10,0.35)';
+  ctx.lineWidth = 0.7;
+  for (let m = 0; m < n; m++) {
+    const mx = posMastil(m);
+    ctx.beginPath();
+    ctx.moveTo(mx, 0); ctx.lineTo(L * 0.46, 0);
+    ctx.moveTo(mx, 0); ctx.lineTo(-L * 0.44, -W * 0.3);
+    ctx.moveTo(mx, 0); ctx.lineTo(-L * 0.44, W * 0.3);
+    ctx.stroke();
+  }
+
+  // palos y velas
+  const colorVela = b.colorVela || e.vela;
+  for (let m = 0; m < n; m++) {
+    const mx = posMastil(m);
+    const principal = m === Math.floor(n / 2);
+    const alto = W * (principal ? 1.55 : 1.28);
+    dibujarVela(ctx, e, mx, alto, abiertas, colorVela, principal);
+    ctx.fillStyle = '#3d2310';
+    ctx.beginPath(); ctx.arc(mx, 0, 2.8, 0, TAU); ctx.fill();
+    if (principal) { // cofa
+      ctx.strokeStyle = '#8a5a2b';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(mx, 0, 4.2, 0, TAU); ctx.stroke();
+    }
+  }
+
+  // farol y bandera del bando, flameando en popa
+  ctx.fillStyle = '#ffd98a';
+  ctx.beginPath(); ctx.arc(-L * 0.47, 0, 1.6, 0, TAU); ctx.fill();
+  const onda = Math.sin(T * 6 + b.id) * 2.2;
   ctx.fillStyle = b.bandera;
-  ctx.fillRect(-L * 0.5 - 2, -4, 9, 8);
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.strokeRect(-L * 0.5 - 2, -4, 9, 8);
+  ctx.beginPath();
+  ctx.moveTo(-L * 0.5, -1);
+  ctx.quadraticCurveTo(-L * 0.5 - 6, -5 + onda, -L * 0.5 - 13, -4 - onda);
+  ctx.lineTo(-L * 0.5 - 13, 4 - onda);
+  ctx.quadraticCurveTo(-L * 0.5 - 6, 3 + onda, -L * 0.5, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
   ctx.restore();
 
   if (opciones.sinBarra || b.hundiendo) return;
@@ -88,18 +335,6 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     ctx.fillStyle = '#fff';
     ctx.fillText(b.nombre, b.x, y - 5);
   }
-}
-
-function casco(ctx, L, W, dx, dy) {
-  ctx.beginPath();
-  ctx.moveTo(L / 2 + dx, dy);
-  ctx.quadraticCurveTo(L * 0.3 + dx, W / 2 + dy, L * 0.05 + dx, W / 2 + dy);
-  ctx.lineTo(-L * 0.42 + dx, W * 0.44 + dy);
-  ctx.quadraticCurveTo(-L / 2 + dx, W * 0.3 + dy, -L / 2 + dx, dy);
-  ctx.quadraticCurveTo(-L / 2 + dx, -W * 0.3 + dy, -L * 0.42 + dx, -W * 0.44 + dy);
-  ctx.lineTo(L * 0.05 + dx, -W / 2 + dy);
-  ctx.quadraticCurveTo(L * 0.3 + dx, -W / 2 + dy, L / 2 + dx, dy);
-  ctx.closePath();
 }
 
 function trazarIsla(ctx, isla, escala) {

@@ -3,6 +3,23 @@
 
 export const PRESUPUESTO = 1000;
 
+// Facciones: culturas navales históricas. Cada una cambia el aspecto del barco y da una ventaja chica.
+// mods multiplica: vida, vel, giro, recarga (más alto = recarga más rápido), abordaje.
+export const FACCIONES = {
+  espanoles: { nombre: 'Españoles', desc: 'Galeones de la flota de Indias.', bono: '+12 % de casco', mods: { vida: 1.12 },
+    estilo: { forma: 'galeon', casco: '#5b3518', franja: '#8f1d1d', cubierta: '#b07a44', vela: '#f4ecd6', patron: 'cruz', colorPatron: '#b3261e' } },
+  britanicos: { nombre: 'Británicos', desc: 'Artilleros entrenados de la marina real.', bono: 'Recargan 10 % más rápido', mods: { recarga: 1.1 },
+    estilo: { forma: 'galeon', casco: '#231a12', franja: '#d8a93a', cubierta: '#b98a52', vela: '#f5f1e4', patron: 'liso' } },
+  vikingos: { nombre: 'Vikingos', desc: 'Barcos dragón, livianos y feroces.', bono: '+25 % en abordajes y +5 % de velocidad', mods: { abordaje: 1.25, vel: 1.05 },
+    estilo: { forma: 'drakkar', casco: '#4a2c14', franja: '#7a4a22', cubierta: '#9a6a3a', vela: '#f0e6cf', patron: 'rayas', colorPatron: '#b3261e', escudos: ['#b3261e', '#e0b23c', '#2d5d8a', '#2f7a4a'], dragon: '#c9a227', remos: true } },
+  japoneses: { nombre: 'Japoneses', desc: 'Naves de guerra con castillo de madera.', bono: '+15 % de giro', mods: { giro: 1.15 },
+    estilo: { forma: 'caja', casco: '#2a2320', franja: '#7a1f1f', cubierta: '#c9a36a', vela: '#f7f3ea', patron: 'sol', colorPatron: '#c8102e', torre: '#d7b77e' } },
+  coreanos: { nombre: 'Coreanos', desc: 'Barcos tortuga con techo blindado.', bono: '+20 % de casco, −8 % de velocidad', mods: { vida: 1.2, vel: 0.92 },
+    estilo: { forma: 'tortuga', casco: '#3b2a1a', franja: '#6b4a22', cubierta: '#8a6a3a', vela: '#c9925a', patron: 'sables', colorPatron: '#6b3a1a', techo: '#3f5a3a', dragon: '#d9b23c' } },
+  otomanos: { nombre: 'Otomanos', desc: 'Galeras rápidas de vela latina y remo.', bono: '+10 % de velocidad', mods: { vel: 1.1 },
+    estilo: { forma: 'galera', casco: '#5a2f1a', franja: '#1f6f5c', cubierta: '#b88555', vela: '#e9dcc0', patron: 'rayas', colorPatron: '#a3262a', tipoVela: 'latina', remos: true } },
+};
+
 export const CASCOS = {
   balandra: { nombre: 'Balandra', desc: 'Liviana y rápida. Pocos cañones.', costo: 150, vida: 90, vel: 170, giro: 2.0, maxCanones: 6, largo: 58, ancho: 20, tripBase: 14 },
   bergantin: { nombre: 'Bergantín', desc: 'El equilibrio: aguanta y pega.', costo: 320, vida: 165, vel: 138, giro: 1.45, maxCanones: 10, largo: 78, ancho: 26, tripBase: 22 },

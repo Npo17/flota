@@ -1,5 +1,5 @@
 // Cómo se arma un barco a partir de su diseño (casco, velas, cañones, munición, tripulación).
-import { CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PESO_CANON, ENEMIGOS } from './config.js';
+import { CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PESO_CANON, ENEMIGOS, FACCIONES } from './config.js';
 
 export function costoDiseno(d) {
   return CASCOS[d.casco].costo + VELAS[d.velas].costo + d.canones * COSTO_CANON
@@ -10,19 +10,20 @@ export function costoDiseno(d) {
 export function statsDe(d) {
   const c = CASCOS[d.casco], v = VELAS[d.velas], m = MUNICIONES[d.municion], t = TRIPULACIONES[d.trip];
   const nivel = d.nivelCanones || 0;
+  const f = (FACCIONES[d.faccion] || {}).mods || {};
   return {
-    vidaMax: c.vida + (d.refuerzo || 0),
-    velMax: c.vel * v.vel * (1 - d.canones * PESO_CANON),
-    giro: c.giro * v.giro,
+    vidaMax: Math.round(c.vida * (f.vida || 1)) + (d.refuerzo || 0),
+    velMax: c.vel * v.vel * (1 - d.canones * PESO_CANON) * (f.vel || 1),
+    giro: c.giro * v.giro * (f.giro || 1),
     largo: c.largo,
     ancho: c.ancho,
     maxCanones: c.maxCanones,
     tripMax: Math.round(c.tripBase * t.mult + d.canones),
     tripNecesaria: c.tripBase + d.canones * 1.2,
-    abordaje: t.abordaje,
+    abordaje: t.abordaje * (f.abordaje || 1),
     dano: m.dano * (1 + 0.15 * nivel),
     alcance: m.alcance,
-    recarga: m.recarga,
+    recarga: m.recarga / (f.recarga || 1),
     perdigones: m.perdigones,
     tripu: m.tripu,
     velBala: m.vel,
@@ -63,6 +64,7 @@ export function crearBarco(diseno, bando, x, y, extra = {}) {
     golpeIsla: 0,
     hundiendo: 0,
     color: extra.color || '#f4ecd6',
+    colorVela: extra.colorVela || null,
     bandera: extra.bandera || '#c0392b',
     nombre: extra.nombre || 'Tu barco',
     tipo: extra.tipo || null,
@@ -79,10 +81,15 @@ export function rearmar(b) {
   b.trip = Math.min(b.trip, b.stats.tripMax);
 }
 
+function faccionAlAzar() {
+  const ids = Object.keys(FACCIONES);
+  return ids[Math.floor(Math.random() * ids.length)];
+}
+
 export function disenoEnemigo(tipo, nivel) {
   const e = ENEMIGOS[tipo];
   return {
-    casco: e.casco, velas: e.velas, canones: e.canones, municion: e.municion, trip: e.trip,
+    faccion: faccionAlAzar(), casco: e.casco, velas: e.velas, canones: e.canones, municion: e.municion, trip: e.trip,
     nivelCanones: Math.max(0, nivel - e.minNivel), refuerzo: nivel * 15,
   };
 }

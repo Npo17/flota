@@ -67,7 +67,7 @@ function spawnEnemigo(j, inicial) {
     const e = ENEMIGOS[tipo];
     const b = crearBarco(disenoEnemigo(tipo, nivel), 'enemigo', x, y, {
       a: azar.rango(0, TAU), velas: 1, bandera: e.color, color: tipo === 'tesoro' ? '#f6e7b0' : '#e9e1cc',
-      nombre: e.nombre, tipo, oro: Math.round(azar.rango(e.oro[0], e.oro[1]) * (1 + nivel * 0.25)),
+      nombre: e.nombre, tipo, colorVela: tipo === 'tesoro' ? '#f3d98b' : null, oro: Math.round(azar.rango(e.oro[0], e.oro[1]) * (1 + nivel * 0.25)),
     });
     b.nivel = nivel;
     j.barcos.push(b);
@@ -670,7 +670,7 @@ function actualizarConvoy(j, dt) {
     const a = azar.rango(0, TAU);
     const d = disenoEnemigo('tesoro', nivel);
     d.refuerzo = 160;
-    const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', oro: Math.round(azar.rango(1000, 1400)) });
+    const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: Math.round(azar.rango(1000, 1400)) });
     tesoro.nivel = nivel;
     tesoro.convoy = true;
     j.barcos.push(tesoro);

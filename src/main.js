@@ -1,5 +1,5 @@
 // Pega todo: pantallas (astillero, puerto, fin), teclado y el ciclo del juego.
-import { PRESUPUESTO, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PUERTO, ESCOLTAS_MAX } from './config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PUERTO, ESCOLTAS_MAX } from './config.js';
 import { costoDiseno, barrasDe, crearBarco, rearmar, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso } from './juego.js';
@@ -10,7 +10,7 @@ const canvas = $('mar'), ctx = canvas.getContext('2d');
 const mini = $('minimapa').getContext('2d');
 
 const mundo = crearMundo();
-let diseno = { casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
+let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
 let partida = null;
 let estado = 'astillero'; // astillero | mar | puerto | fin
 const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x: 0, y: 0 }, ladoRaton: 1 };
@@ -37,7 +37,7 @@ function grupo(titulo, catalogo, clave) {
   for (const [id, o] of Object.entries(catalogo)) {
     const b = document.createElement('button');
     b.className = 'opcion' + (diseno[clave] === id ? ' elegida' : '');
-    b.innerHTML = `<b>${o.nombre}</b><small>${o.desc}</small><em>${o.costo ? o.costo + ' oro' : 'Incluida'}</em>`;
+    b.innerHTML = `<b>${o.nombre}</b><small>${o.desc}</small><em>${o.bono ? o.bono : o.costo ? o.costo + ' oro' : 'Incluida'}</em>`;
     b.onclick = () => {
       diseno[clave] = id;
       diseno.canones = Math.min(diseno.canones, CASCOS[diseno.casco].maxCanones);
@@ -51,7 +51,7 @@ function grupo(titulo, catalogo, clave) {
 function pintarAstillero() {
   const cont = $('ast-opciones');
   cont.innerHTML = '';
-  cont.append(...grupo('Casco', CASCOS, 'casco'), ...grupo('Velas', VELAS, 'velas'));
+  cont.append(...grupo('Facción · cambia el aspecto y da una ventaja', FACCIONES, 'faccion'), ...grupo('Casco', CASCOS, 'casco'), ...grupo('Velas', VELAS, 'velas'));
   const max = CASCOS[diseno.casco].maxCanones;
   const h = document.createElement('h3');
   h.textContent = `Cañones · ${COSTO_CANON} oro cada uno (cada cañón te hace un poco más lento)`;
@@ -262,7 +262,7 @@ function ratonAMundo() {
 let avisosPintados = '';
 function pintarHud() {
   const j = partida, b = j.jugador, s = b.stats;
-  $('hud-nombre').textContent = CASCOS[b.diseno.casco].nombre;
+  $('hud-nombre').textContent = `${CASCOS[b.diseno.casco].nombre} · ${(FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).nombre}`;
   $('hud-zona').textContent = nombreZona(nivelZona(mundo, b.x, b.y));
   $('hud-vida').style.width = `${Math.max(0, (b.vida / s.vidaMax) * 100)}%`;
   $('hud-vida-txt').textContent = `Casco ${Math.max(0, Math.ceil(b.vida))} / ${s.vidaMax}`;
