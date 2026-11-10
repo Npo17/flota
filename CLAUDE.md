@@ -86,7 +86,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/barcos.js` | Estadísticas de un barco según su diseño |
 | `src/juego.js` | La simulación: movimiento, cañones, bots, gancho de abordaje, flota, remolinos, tritones, flota del tesoro |
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
-| `src/arte-britanico.js`, `src/arte-vikingo.js` | Arte propio de los barcos de esas dos civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
+| `src/arte-britanico.js`, `src/arte-vikingo.js`, `src/arte-espanol.js`, `src/arte-portugues.js` | Arte propio de los barcos de esas cuatro civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
 | `src/banderas.js` | Banderas históricas de cada civilización |
 | `src/cuenta.js` | Login con Google, nombre de jugador y estadísticas (Supabase) |
 | `src/idioma.js`, `src/textos.js`, `src/textos-historia.js` | Idiomas: la función `t()` y las traducciones (una fila por texto, una columna por idioma) |
