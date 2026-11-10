@@ -1,0 +1,3 @@
+#!/bin/sh
+# Sella la versión en index.html antes de cada commit, para que no se mezclen archivos viejos con nuevos.
+node scripts/version.mjs >/dev/null && git add index.html
