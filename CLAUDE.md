@@ -28,8 +28,10 @@ Este proyecto se trabaja con [gstack](https://github.com/garrytan/gstack), el pa
 **Instrucción para Claude, al empezar cada sesión:** fijate si tenés disponibles los skills de gstack (`/review`, `/qa`, `/investigate`, `/plan-ceo-review`). **Si no están, no hagas nada en este repo:** no edites archivos, no commitees, no publiques. Decile al socio que falta gstack, instalalo con el comando de abajo (necesita Git, [Bun](https://bun.sh/) y Node.js) y recién después seguí.
 
 ```bash
-git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup --team
 ```
+
+El repo trae un control (`.claude/settings.json` y `.claude/hooks/check-gstack.cjs`, el "modo equipo" de gstack) que bloquea el uso de skills si gstack no está instalado; necesita Node.js y Claude Code actualizado. El control frena los skills, no la edición de archivos: lo de no tocar nada sin gstack lo cumple Claude siguiendo esta regla.
 
 Se clona en la compu de cada socio (`~/.claude/skills/gstack`), no adentro de este repo. Si después de instalarlo los skills siguen sin aparecer, reiniciar Claude Code.
 

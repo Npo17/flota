@@ -11,6 +11,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 - El otro socio ya tiene invitación al repo con permiso de escritura.
 - `CLAUDE.md` tiene una regla nueva para los dos Claudes: en cada cambio se actualizan la bitácora y `CLAUDE.md`, en el mismo commit que el código.
 - gstack es obligatorio para los dos socios: si el Claude no tiene esos skills, no toca nada hasta instalarlo. `CLAUDE.md` dice cómo bajarlo y qué skill usar en cada momento (`/qa`, `/review`, `/investigate`, etc.).
+- Modo equipo de gstack activado en el repo (`.claude/settings.json` + `.claude/hooks/check-gstack.cjs`): si falta gstack, bloquea los skills y muestra cómo instalarlo. `.gitignore` deja pasar solo esos dos archivos de `.claude/`.
 - El servidor del mar vive en la cuenta de Cloudflare de Nicolás: por ahora lo republica él.
 
 **Idiomas y pantalla clara u oscura**
