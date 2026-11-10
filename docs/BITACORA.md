@@ -5,6 +5,14 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-10 — Nicolás + Claude
 
+**Estado: todo lo de abajo ya está publicado** en ageofnavies.com y en el servidor del mar (`mar.ageofnavies.com`), probado en vivo.
+
+**Contexto compartido**
+- El otro socio ya tiene invitación al repo con permiso de escritura.
+- `CLAUDE.md` tiene una regla nueva para los dos Claudes: en cada cambio se actualizan la bitácora y `CLAUDE.md`, en el mismo commit que el código.
+- Los dos socios usan gstack; si no está instalado, `CLAUDE.md` dice cómo bajarlo.
+- El servidor del mar vive en la cuenta de Cloudflare de Nicolás: por ahora lo republica él.
+
 **Idiomas y pantalla clara u oscura**
 - Botón de ajustes (⚙) en la pantalla de inicio: 8 idiomas (PT, EN, ES, FR, PL, IT, DE, TR) y pantalla oscura o clara. Se guarda en el navegador; la primera vez toma el idioma del navegador (si no lo tenemos, inglés).
 - Los textos se siguen escribiendo en español en el código, con `t('...')` de `src/idioma.js`. Las traducciones están en `src/textos.js` (interfaz y avisos) y `src/textos-historia.js` (civilizaciones y mapas), una fila por texto.
@@ -17,7 +25,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 - `src/juego.js` se reescribió para manejar varios capitanes; el modo solo es el caso de uno. Las compras del puerto pasaron a `src/puerto.js`.
 - Servidor nuevo en `servidor/` (Cloudflare Workers + Durable Object) y cliente en `src/red.js`.
 - Entre jugadores: se pueden hundir y abordar; el oro de la bodega del que pierde queda flotando; el puerto es zona segura.
-- Botones nuevos en la pantalla de inicio: "Jugar en línea" y "Jugar solo contra bots".
+- Botones nuevos en la pantalla de inicio: "Jugar online" y "Jugar solo contra bots".
 - Pendiente: mostrar la soga del gancho ajeno, y más de una sala si se llena.
 
 ## 2026-11-09 — Nicolás + Claude

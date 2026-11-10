@@ -8,13 +8,36 @@ Lo hacen dos socios, cada uno con su Claude. Este archivo y `docs/BITACORA.md` s
 1. `git pull --rebase origin main` — el otro socio puede haber subido cambios.
 2. Leer las últimas entradas de `docs/BITACORA.md`.
 3. Una sola vez por compu: `git config core.hooksPath .githooks` (sella la versión sola en cada commit).
+4. Una sola vez por compu: tener instalado gstack (ver "Herramientas de Claude" más abajo).
+
+## Regla para el Claude de cada socio: mantener estos .md al día
+
+Vale para los dos Claudes, en **cada cambio**, sin que el socio lo pida:
+
+- Agregar la entrada del cambio arriba de todo en `docs/BITACORA.md` (qué cambió, por qué, qué quedó pendiente, qué hay que republicar).
+- Actualizar este `CLAUDE.md` si cambió algo de lo que dice: un archivo nuevo en la tabla, una regla del juego decidida, un paso para probar o publicar, un pendiente que se resolvió o apareció.
+- Commitear los `.md` **en el mismo commit** que el código, así nunca quedan atrasados.
+- Si algo de este archivo ya no es cierto, corregirlo en el momento; no dejarlo para después.
+
+Lo que no quede escrito acá, el Claude del otro socio no lo sabe.
+
+## Herramientas de Claude
+
+Los dos socios usan [gstack](https://github.com/garrytan/gstack), un paquete de skills para Claude Code (`/review`, `/qa`, `/investigate`, `/ship`, etc.). Si al empezar no aparecen esos skills, instalarlo antes de trabajar (necesita Git, [Bun](https://bun.sh/) y Node.js):
+
+```bash
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
+```
+
+Se instala en la compu de cada uno, no en este repo. Ojo con `/ship` y `/land-and-deploy`: acá se sigue publicando solo con el OK del socio y con los pasos de "Publicar".
 
 ## Cómo se trabaja
 
-- **Idioma:** todo en español rioplatense, también los textos del juego, los commits y los comentarios del código.
+- **Idioma:** se trabaja en español rioplatense: commits, comentarios del código y los textos del juego tal como se escriben en el código (después se traducen a 8 idiomas, ver "Idiomas y pantalla clara").
 - **Roles de Claude:** dev (implementa y prueba), QA (busca bugs y los verifica en el navegador) y CEO (propone mejoras con datos reales, sin inventar números).
 - **Flujo:** cada cambio se prueba primero en localhost y se muestra al socio. **No se sube nada sin su OK explícito.**
-- **Al terminar un cambio:** agregar una entrada arriba de todo en `docs/BITACORA.md` (qué cambió, por qué, qué quedó pendiente) y commitearla junto con el código.
+- **Al terminar un cambio:** actualizar `docs/BITACORA.md` y este archivo, como dice la regla de arriba.
+- **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`.
 - **Commits:** en español, describiendo el cambio para un jugador, con la línea `Co-Authored-By` de Claude.
 - **Originalidad:** es un juego propio. Sirven de referencia de género otros juegos de barcos y de estrategia, pero no se copian nombres, arte, unidades ni bonificaciones de ningún juego existente. Las civilizaciones, banderas y mapas salen de la historia real.
 
@@ -30,7 +53,8 @@ Abrir http://localhost:5180. No hay paso de build: es HTML, CSS y módulos de Ja
 
 1. Commit (el hook corre `node scripts/version.mjs` y sella `?v=` en `index.html`; si no está el hook, correrlo a mano antes del commit).
 2. `git push origin main`.
-3. GitHub Pages publica solo y una acción de GitHub vacía la caché de Cloudflare. No hay que hacer nada más.
+3. GitHub Pages publica solo y una acción de GitHub vacía la caché de Cloudflare (tarda cerca de un minuto).
+4. Si cambió algo de `servidor/` o de la simulación (`src/juego.js`, `src/puerto.js`, `src/mundo.js`, `src/barcos.js`, `src/config.js`, `src/mapas.js`), republicar también el servidor del mar (ver "Juego en línea"). Si no, el sitio y el servidor quedan con reglas distintas.
 
 El sello de versión existe porque una vez el sitio quedó roto por mezclar archivos viejos (en caché) con nuevos. No sacarlo.
 
@@ -55,7 +79,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `supabase/migrations/` | Tablas y funciones de la base |
 | `scripts/` | `version.mjs` (sello de versión), `publicar.mjs` (publicación manual de respaldo) y las pruebas `probar-sim`, `probar-red` y `probar-textos` |
 
-La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrada y avanza un paso. Mantenerlo así, porque es lo que va a permitir pasarla a un servidor cuando llegue el multijugador.
+La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrada y avanza un paso. Mantenerlo así, porque el mismo archivo corre en el navegador (modo solo) y en el servidor (juego en línea).
 
 ## Idiomas y pantalla clara
 
@@ -71,8 +95,10 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - El servidor (`servidor/worker.js`, en `mar.ageofnavies.com`) corre `src/juego.js` con varios capitanes y manda una foto del mar 20 veces por segundo. Decide posiciones, daño y oro; el navegador solo manda a dónde apunta y qué dispara.
 - `juego.js` maneja varios capitanes (`j.capitanes`); el modo solo es el caso de uno. No meterle nada de pantalla ni de teclado.
 - El puerto es zona segura: ahí no se puede disparar ni recibir daño.
-- Publicar el servidor: `cd servidor && npx wrangler deploy` (necesita `npx wrangler login` una vez). Solo hace falta si cambió algo de `servidor/` o de la simulación.
-- Probar sin navegador: `node scripts/probar-sim.mjs` (simulación) y `node scripts/probar-red.mjs` (servidor, con `npx wrangler dev` corriendo en `servidor/`). Para que el juego en la compu use ese servidor de prueba: `http://localhost:5180/?mar=local`.
+- En la pantalla de inicio hay dos botones: "Jugar online" (el mar compartido) y jugar solo contra bots eligiendo el mapa.
+- Publicar el servidor: `cd servidor && npx wrangler deploy` (necesita `npx wrangler login` una vez). El servidor está en la cuenta de Cloudflare de Nicolás: hasta que el otro socio tenga acceso a esa cuenta, la republicación la hace él (avisarle en la bitácora con "hay que republicar el servidor").
+- Probar sin navegador: `node scripts/probar-sim.mjs` (simulación) y `node scripts/probar-red.mjs` (servidor, con `npx wrangler dev` corriendo en `servidor/`). Para que el juego en la compu use ese servidor de prueba: `http://localhost:5180/?mar=local`. Sin `?mar=local`, localhost se conecta al servidor publicado.
+- Después de publicar el servidor: `node scripts/probar-red.mjs wss://mar.ageofnavies.com/mar` y mirar `https://mar.ageofnavies.com/estado`.
 
 ## Reglas del juego que ya se decidieron
 
