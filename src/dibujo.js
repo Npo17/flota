@@ -189,6 +189,18 @@ export function dibujarEscena(ctx, j, vista) {
       }
       ctx.stroke();
     }
+    // las fauces de Caribdis
+    ctx.fillStyle = '#050d18';
+    ctx.beginPath(); ctx.arc(w.x, w.y, 30, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e9e4d0';
+    for (let d = 0; d < 12; d++) {
+      const ang = (d / 12) * TAU + j.t * 0.5 * w.giro, largo = 9 + 3 * Math.sin(j.t * 3 + d);
+      ctx.beginPath();
+      ctx.moveTo(w.x + Math.cos(ang - 0.13) * 30, w.y + Math.sin(ang - 0.13) * 30);
+      ctx.lineTo(w.x + Math.cos(ang) * (30 - largo), w.y + Math.sin(ang) * (30 - largo));
+      ctx.lineTo(w.x + Math.cos(ang + 0.13) * 30, w.y + Math.sin(ang + 0.13) * 30);
+      ctx.closePath(); ctx.fill();
+    }
   }
 
   // islas
@@ -297,6 +309,16 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.setLineDash([]);
     }
     dibujarBarco(ctx, b, { etiqueta: true });
+  }
+
+  // gancho de abordaje
+  if (j.gancho) {
+    const g = j.gancho, hx = g.fase === 'vuelo' ? g.x : g.obj.x, hy = g.fase === 'vuelo' ? g.y : g.obj.y;
+    ctx.strokeStyle = '#d9c08a';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = '#3a3a40';
+    ctx.beginPath(); ctx.arc(hx, hy, 5, 0, TAU); ctx.fill();
   }
 
   // tritones
@@ -423,6 +445,13 @@ export function dibujarMinimapa(ctx, j, lado) {
     if (b.bando === 'enemigo' && Math.hypot(b.x - yo.x, b.y - yo.y) > 1500) continue;
     ctx.fillStyle = b.bando === 'enemigo' ? '#ff6b6b' : '#7dff9b';
     ctx.fillRect(b.x * k - 1.5, b.y * k - 1.5, 3, 3);
+  }
+  for (const b of j.barcos) {
+    if (!b.convoy || b.hundiendo || b.bando !== 'enemigo') continue;
+    ctx.fillStyle = '#ffd166';
+    ctx.beginPath(); ctx.arc(b.x * k, b.y * k, 3.5 + 1.5 * Math.sin(j.t * 5), 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
   }
   ctx.save();
   ctx.translate(yo.x * k, yo.y * k);

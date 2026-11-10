@@ -36,7 +36,7 @@ export const PUERTO = {
   marinero: 8,
   parCanones: 80,
   nivelCanones: (n) => 180 * n, // n = nivel que se compra
-  escolta: (n) => 220 * n, // n = cantidad de lugares que vas a tener
+  escolta: (n) => 150 * n, // n = cantidad de lugares que vas a tener
   municion: { redonda: 60, metralla: 160, pesada: 220 },
 };
 

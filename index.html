@@ -28,6 +28,7 @@
       <div class="barra"><i id="hud-vida"></i><span id="hud-vida-txt"></span></div>
       <div class="barra trip"><i id="hud-trip"></i><span id="hud-trip-txt"></span></div>
       <div class="fila"><span>Velas</span><span id="hud-velas" class="velas"></span></div>
+      <div id="hud-velas-txt" class="suave"></div>
       <div class="fila"><span>Flota</span><span id="hud-flota"></span></div>
     </div>
     <div class="panel arriba-der">
@@ -40,7 +41,7 @@
     <div class="panel abajo-izq">
       <div class="recarga"><span>Babor (Q)</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
       <div class="recarga"><span>Estribor (E)</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
-      <div class="ayuda">El barco sigue al cursor · clic dispara los dos costados · Q/E un costado · F abordar · P puerto</div>
+      <div class="ayuda">El barco sigue al cursor · clic dispara · F gancho de abordaje · G orden a la flota · P puerto<br>Cursor cerca = velas de combate (recarga rápida) · parado junto a una isla reparás</div>
     </div>
     <canvas id="minimapa" width="170" height="170"></canvas>
   </div>
@@ -63,11 +64,18 @@
   </div>
 
   <div id="pantalla-puerto" class="pantalla oculto">
-    <div class="caja">
+    <div class="caja ancha">
       <h2>Puerto</h2>
-      <p class="sub">Tu oro quedó a salvo. Oro disponible: <b id="pto-oro" class="oro"></b></p>
-      <div id="pto-lista"></div>
-      <button id="pto-salir" class="boton principal">Volver al mar</button>
+      <p class="sub">Tu oro quedó a salvo. Tocá lo que quieras comprar: cada tarjeta dice qué hace y cuánto cuesta.</p>
+      <div class="astillero">
+        <div id="pto-opciones"></div>
+        <div class="resumen">
+          <canvas id="pto-vista" width="300" height="170"></canvas>
+          <div id="pto-barras"></div>
+          <div class="fila grande"><span>Tu oro</span><b id="pto-oro" class="oro"></b></div>
+          <button id="pto-salir" class="boton principal">Volver al mar</button>
+        </div>
+      </div>
     </div>
   </div>
 

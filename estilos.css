@@ -63,3 +63,8 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .mejora div small { color: #b9c7cf; font-size: 12px; }
 .mejora .boton { white-space: nowrap; min-width: 92px; }
 #fin-datos { margin: 12px 0; font-size: 15px; }
+
+.opcion:disabled { cursor: default; opacity: 0.55; }
+.opcion.elegida:disabled { opacity: 1; }
+.opcion em.caro { color: #ff8f8f; }
+#hud-velas-txt { margin-top: 2px; }

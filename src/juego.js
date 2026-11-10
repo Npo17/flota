@@ -35,6 +35,9 @@ export function crearPartida(mundo, diseno, oroInicial) {
     stats: { hundidos: 0, capturados: 0, saqueado: 0, tiempo: 0 },
     proxTritones: azar.rango(25, 45),
     cdAbordaje: 0,
+    gancho: null,
+    ordenFlota: 'formacion', // 'formacion' | 'ataque'
+    proxConvoy: azar.rango(70, 100),
     fin: false,
   };
   for (let i = 0; i < ENEMIGOS_VIVOS; i++) spawnEnemigo(j, true);
@@ -89,8 +92,12 @@ export function disparar(j, b, lado) {
   if (b.hundiendo || b.recarga[lado] > 0 || b.diseno.canones < 2) return false;
   const s = b.stats;
   const porLado = b.diseno.canones / 2;
-  const factor = Math.max(0.45, Math.min(1.35, b.trip / s.tripNecesaria));
+  // con todo el trapo arriba la gente está en las velas y recarga más lento (velas de combate = pocas velas)
+  const porVelas = b.velas >= 3 ? 0.75 : b.velas === 2 ? 0.92 : 1.1;
+  const factor = Math.max(0.45, Math.min(1.35, b.trip / s.tripNecesaria)) * porVelas;
   b.recarga[lado] = s.recarga / factor;
+  b.recargaTotal = b.recargaTotal || {};
+  b.recargaTotal[lado] = b.recarga[lado];
   for (let i = 0; i < porLado; i++) {
     const off = porLado === 1 ? 0 : (-0.32 + (0.64 * i) / (porLado - 1)) * s.largo;
     j.pendientes.push({ b, lado, off, t: i * 0.06 + azar.rango(0, 0.03) });
@@ -163,7 +170,9 @@ export function actualizar(j, dt, entrada) {
   j.pendientes = j.pendientes.filter((p) => p.t > 0);
   for (const p of listos) salirBala(j, p);
 
+  actualizarGancho(j, dt);
   moverBalas(j, dt);
+  actualizarConvoy(j, dt);
   actualizarTritones(j, dt);
   actualizarCofres(j, dt);
   actualizarHundidos(j, dt);
@@ -191,7 +200,11 @@ function controlarJugador(j, e, dt) {
   }
   if (e.fuegoTodo) { disparar(j, b, -1); disparar(j, b, 1); }
   if (e.fuego) disparar(j, b, e.fuego);
-  if (e.abordar) intentarAbordaje(j);
+  if (e.abordar) lanzarGancho(j);
+  if (e.ordenFlota) {
+    j.ordenFlota = j.ordenFlota === 'formacion' ? 'ataque' : 'formacion';
+    aviso(j, j.ordenFlota === 'ataque' ? 'Flota: ¡al ataque!' : 'Flota: en formación, a tu lado', 'info');
+  }
 }
 
 function moverBarco(j, b, dt) {
@@ -199,7 +212,10 @@ function moverBarco(j, b, dt) {
   const s = b.stats;
   for (const k of ['-1', '1']) b.recarga[k] = Math.max(0, b.recarga[k] - dt);
   const pocaGente = b.trip < s.tripMax * 0.25 ? 0.65 : 1;
-  const objetivo = (s.velMax * b.velas) / 3 * pocaGente;
+  // casco roto = barco lento: por debajo del 70 % de vida va perdiendo hasta la mitad de velocidad
+  const averia = 0.5 + 0.5 * Math.min(1, b.vida / (s.vidaMax * 0.7));
+  const frenoGancho = j.gancho && j.gancho.fase === 'enganchado' && j.gancho.obj === b ? 0.3 : 1;
+  const objetivo = (s.velMax * b.velas) / 3 * pocaGente * averia * frenoGancho;
   b.v += (objetivo - b.v) * Math.min(1, dt * (objetivo > b.v ? 0.7 : 1.1));
   const agarre = 0.3 + 0.7 * Math.min(1, b.v / (s.velMax * 0.45));
   b.a += b.timon * s.giro * agarre * dt;
@@ -217,9 +233,9 @@ function moverBarco(j, b, dt) {
       if (d < 55) {
         b.vida -= 16 * dt;
         if (Math.random() < dt * 0.6 && b.trip > 1) b.trip -= 1;
-        if (b === j.jugador && Math.random() < dt) aviso(j, '¡El remolino te está tragando!', 'malo');
+        if (b === j.jugador && Math.random() < dt) aviso(j, '¡Caribdis te está tragando!', 'malo');
       }
-      if (b === j.jugador && !b.enRemolino) { b.enRemolino = true; aviso(j, '¡Remolino! Velas arriba y salí de costado', 'malo'); }
+      if (b === j.jugador && !b.enRemolino) { b.enRemolino = true; aviso(j, '¡Caribdis! Alejá el cursor y salí de costado', 'malo'); }
     } else if (b === j.jugador && d > w.radio + 60 && b.enRemolino && cercaDeRemolino(j, b) === null) b.enRemolino = false;
   }
   b.x += vx * dt;
@@ -239,6 +255,14 @@ function moverBarco(j, b, dt) {
         if (b === j.jugador) aviso(j, '¡Encallaste contra la costa!', 'malo');
       }
       b.v = Math.min(b.v, s.velMax * 0.45); // roza la costa y sigue, sin quedar clavado
+    }
+  }
+  // carenar: parado junto a una isla y sin recibir golpes, la tripulación repara (hasta el 75 %)
+  b.reparando = false;
+  if (b.bando !== 'enemigo' && b.v < 22 && b.vida < s.vidaMax * 0.75 && j.t - (b.ultimoGolpe ?? -99) > 4) {
+    if (j.mundo.islas.some((i) => Math.hypot(b.x - i.x, b.y - i.y) < i.r + 130)) {
+      b.vida = Math.min(s.vidaMax * 0.75, b.vida + 4 * dt);
+      b.reparando = true;
     }
   }
   b.x = Math.max(60, Math.min(j.mundo.ancho - 60, b.x));
@@ -314,6 +338,7 @@ function moverBalas(j, dt) {
 
 function golpear(j, b, bl) {
   b.vida -= bl.dano;
+  b.ultimoGolpe = j.t;
   if (Math.random() < bl.tripu && b.trip > 0) b.trip -= 1;
   for (let k = 0; k < 4; k++) {
     j.particulas.push({ tipo: 'astilla', x: bl.x, y: bl.y, vx: azar.rango(-90, 90), vy: azar.rango(-90, 90), t: 0, vida: 0.5, r: 2 });
@@ -337,11 +362,13 @@ function hundir(j, b) {
   }
   if (b.bando === 'enemigo') {
     j.stats.hundidos++;
-    const partes = b.oro <= 0 ? 0 : b.oro > 200 ? 3 : b.oro > 90 ? 2 : 1;
+    const partes = b.oro <= 0 ? 0 : b.convoy ? 9 : b.oro > 200 ? 3 : b.oro > 90 ? 2 : 1;
+    const abre = b.convoy ? 110 : 25;
     for (let k = 0; k < partes; k++) {
-      j.cofres.push({ x: b.x + azar.rango(-25, 25), y: b.y + azar.rango(-25, 25), oro: Math.round(b.oro / partes), t: 0 });
+      j.cofres.push({ x: b.x + azar.rango(-abre, abre), y: b.y + azar.rango(-abre, abre), oro: Math.round(b.oro / partes), t: 0 });
     }
-    if (partes && Math.hypot(b.x - j.jugador.x, b.y - j.jugador.y) < 900) aviso(j, `¡Hundiste un ${b.nombre}! Juntá el botín`, 'bueno');
+    if (b.convoy) aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno');
+    else if (partes && Math.hypot(b.x - j.jugador.x, b.y - j.jugador.y) < 900) aviso(j, `¡Hundiste un ${b.nombre}! Juntá el botín`, 'bueno');
   } else if (b.bando === 'escolta') {
     aviso(j, `Perdiste tu ${b.nombre}`, 'malo');
   } else if (b === j.jugador) {
@@ -393,41 +420,83 @@ function actualizarParticulas(j, dt) {
   if (j.particulas.length > 900) j.particulas.splice(0, j.particulas.length - 900);
 }
 
-// ---------- Abordaje ----------
+// ---------- Abordaje con gancho ----------
+const ALCANCE_GANCHO = 270;
+
+// El enemigo más cercano al que le llega el gancho, con una idea de cómo viene la pelea
 export function candidatoAbordaje(j) {
   const yo = j.jugador;
-  let mejor = null, mejorD = Infinity;
+  if (yo.hundiendo) return null;
+  let mejor = null, mejorD = ALCANCE_GANCHO;
   for (const b of j.barcos) {
     if (b.bando !== 'enemigo' || b.hundiendo) continue;
     const d = Math.hypot(b.x - yo.x, b.y - yo.y);
-    const alcance = (yo.stats.largo + b.stats.largo) * 0.5 + 30;
-    if (d > alcance) continue;
-    const debil = b.vida <= b.stats.vidaMax * 0.4 || b.trip <= b.stats.tripMax * 0.35;
-    if (d < mejorD) { mejor = { b, debil }; mejorD = d; }
+    if (d < mejorD) { mejor = b; mejorD = d; }
   }
-  return mejor;
+  if (!mejor) return null;
+  const r = (yo.trip * yo.stats.abordaje) / Math.max(1, mejor.trip * mejor.stats.abordaje * 1.1);
+  return { b: mejor, debil: true, ventaja: r > 1.3 ? 'ventaja' : r > 0.8 ? 'parejo' : 'desventaja' };
 }
 
-function intentarAbordaje(j) {
-  if (j.cdAbordaje > 0) return;
+function lanzarGancho(j) {
+  if (j.gancho || j.cdAbordaje > 0) return;
   const c = candidatoAbordaje(j);
-  if (!c) return;
-  const yo = j.jugador, e = c.b;
-  j.cdAbordaje = 3;
-  if (!c.debil) { aviso(j, 'Todavía está muy entero: dañalo más antes de abordar', 'info'); return; }
+  if (!c) { aviso(j, 'Acercate más a un barco para tirarle el gancho', 'info'); j.cdAbordaje = 1; return; }
+  j.gancho = { fase: 'vuelo', x: j.jugador.x, y: j.jugador.y, obj: c.b, t: 0 };
+}
+
+function soltarGancho(j, espera, texto) {
+  j.gancho = null;
+  j.cdAbordaje = espera;
+  if (texto) aviso(j, texto, 'info');
+}
+
+function actualizarGancho(j, dt) {
+  const g = j.gancho;
+  if (!g) return;
+  const yo = j.jugador, e = g.obj;
+  g.t += dt;
+  if (yo.hundiendo || e.hundiendo || e.bando !== 'enemigo') return soltarGancho(j, 2);
+  const d = Math.hypot(e.x - yo.x, e.y - yo.y);
+  if (g.fase === 'vuelo') {
+    const dx = e.x - g.x, dy = e.y - g.y, dd = Math.hypot(dx, dy) || 1;
+    g.x += (dx / dd) * 700 * dt;
+    g.y += (dy / dd) * 700 * dt;
+    if (dd < e.stats.ancho) { g.fase = 'enganchado'; g.t = 0; aviso(j, `¡Enganchado! Tu gente tira de la soga del ${e.nombre}`, 'bueno'); }
+    else if (g.t > 0.8) soltarGancho(j, 3, 'El gancho cayó al agua');
+    return;
+  }
+  if (d > 430 || g.t > 16) return soltarGancho(j, 5, 'Se cortó la soga');
+  // la soga acerca los dos barcos; el más chico se mueve más
+  const mYo = yo.stats.largo ** 2, mEl = e.stats.largo ** 2;
+  const tiron = 95 * dt, nx = (e.x - yo.x) / (d || 1), ny = (e.y - yo.y) / (d || 1);
+  e.x -= nx * tiron * (mYo / (mYo + mEl));
+  e.y -= ny * tiron * (mYo / (mYo + mEl));
+  yo.x += nx * tiron * (mEl / (mYo + mEl));
+  yo.y += ny * tiron * (mEl / (mYo + mEl));
+  if (d < (yo.stats.ancho + e.stats.ancho) * 0.5 + 48) {
+    j.gancho = null;
+    j.cdAbordaje = 5;
+    resolverAbordaje(j, e);
+  }
+}
+
+function resolverAbordaje(j, e) {
+  const yo = j.jugador;
   const mio = yo.trip * yo.stats.abordaje * azar.rango(0.75, 1.25);
   const suyo = e.trip * e.stats.abordaje * azar.rango(0.75, 1.25) * 1.1;
   if (mio > suyo) {
-    const bajas = Math.min(yo.trip - 1, Math.round(e.trip * azar.rango(0.3, 0.6)));
+    const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(e.trip * azar.rango(0.3, 0.6))));
     yo.trip -= bajas;
     j.oroBodega += e.oro;
     j.stats.saqueado += e.oro;
-    textoFlotante(j, e.x, e.y, `+${e.oro} oro`, '#ffd166');
+    if (e.oro) textoFlotante(j, e.x, e.y, `+${e.oro} oro`, '#ffd166');
     const escoltas = j.barcos.filter((b) => b.bando === 'escolta' && !b.hundiendo).length;
     if (escoltas < j.escoltasMax) {
       e.bando = 'escolta';
       e.oro = 0;
-      e.vida = Math.max(e.vida, e.stats.vidaMax * 0.35);
+      e.convoy = false;
+      e.vida = Math.max(e.vida, e.stats.vidaMax * 0.4);
       e.trip = Math.max(4, Math.round(e.stats.tripMax * 0.4));
       e.bandera = '#1f7a3f';
       e.ia = { estado: 'sigue' };
@@ -439,10 +508,10 @@ function intentarAbordaje(j) {
       aviso(j, `¡Abordaje ganado! Flota llena: lo saqueaste y lo hundiste (−${bajas} marineros)`, 'bueno');
     }
   } else {
-    const bajas = Math.min(yo.trip - 1, Math.round(yo.trip * azar.rango(0.35, 0.55)));
+    const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(yo.trip * azar.rango(0.35, 0.55))));
     yo.trip -= bajas;
     e.trip = Math.max(1, e.trip - Math.round(e.trip * 0.3));
-    aviso(j, `¡Abordaje rechazado! Perdiste ${bajas} marineros`, 'malo');
+    aviso(j, `¡Abordaje rechazado! Perdiste ${bajas} marineros. Bajales gente a cañonazos y probá de nuevo`, 'malo');
   }
 }
 
@@ -511,6 +580,19 @@ function iaEnemigo(j, b, dt) {
   const radioVista = 560 + (b.nivel || 0) * 120 + (ia.provocado ? 500 : 0);
   const cerca = masCercano(j, b, 'aliado', radioVista);
   const debil = b.vida < b.stats.vidaMax * 0.25;
+  if (ia.lider && !ia.lider.hundiendo && ia.lider.bando === 'enemigo') {
+    const L = ia.lider;
+    const amenaza = masCercano(j, L, 'aliado', 560) || masCercano(j, b, 'aliado', 420);
+    if (amenaza) combatir(j, b, amenaza.o, Math.hypot(amenaza.o.x - b.x, amenaza.o.y - b.y));
+    else {
+      const tx = L.x - Math.sin(L.a) * 115 * ia.lado, ty = L.y + Math.cos(L.a) * 115 * ia.lado;
+      const d = Math.hypot(tx - b.x, ty - b.y);
+      timonHacia(b, d > 40 ? Math.atan2(ty - b.y, tx - b.x) : L.a);
+      b.velas = d > 200 ? 3 : d > 70 ? 2 : L.velas;
+    }
+    esquivarIslas(j, b);
+    return;
+  }
 
   if (cerca && (conducta === 'huye' || debil)) {
     const lejos = Math.atan2(b.y - cerca.o.y, b.x - cerca.o.x);
@@ -540,26 +622,72 @@ function iaEnemigo(j, b, dt) {
   esquivarIslas(j, b);
 }
 
+// Dispara si justo tiene un enemigo de costado y a tiro, sin maniobrar
+function fuegoOportunista(j, b) {
+  const en = masCercano(j, b, 'enemigo', b.stats.alcance * 0.95);
+  if (!en) return;
+  const rel = difAng(Math.atan2(en.o.y - b.y, en.o.x - b.x), b.a);
+  if (Math.abs(rel - Math.PI / 2) < 0.45) disparar(j, b, 1);
+  if (Math.abs(rel + Math.PI / 2) < 0.45) disparar(j, b, -1);
+}
+
 function iaEscolta(j, b, dt) {
   if (b.hundiendo) return;
   const lider = j.jugador;
-  const enemigo = masCercano(j, b, 'enemigo', 480);
-  const enemigoDelLider = enemigo && Math.hypot(enemigo.o.x - lider.x, enemigo.o.y - lider.y) < 650;
-  if (enemigo && enemigoDelLider) {
+  const sana = b.vida > b.stats.vidaMax * 0.3;
+  const enemigo = j.ordenFlota === 'ataque' && sana ? masCercano(j, b, 'enemigo', 520) : null;
+  if (enemigo && Math.hypot(enemigo.o.x - lider.x, enemigo.o.y - lider.y) < 700) {
     combatir(j, b, enemigo.o, enemigo.d);
   } else {
+    // en formación: a la par del jefe, una de cada lado
     const escoltas = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo);
     const k = escoltas.indexOf(b);
-    const fila = Math.floor(k / 2) + 1, costado = k % 2 ? 1 : -1;
+    const fila = Math.floor(k / 2), costado = k % 2 ? 1 : -1;
     const ca = Math.cos(lider.a), sa = Math.sin(lider.a);
-    const atras = -60 - fila * 85, lateral = costado * 70;
+    const atras = -25 - fila * 95, lateral = costado * 90;
     const tx = lider.x + ca * atras - sa * lateral, ty = lider.y + sa * atras + ca * lateral;
     const d = Math.hypot(tx - b.x, ty - b.y);
     if (d > 40) timonHacia(b, Math.atan2(ty - b.y, tx - b.x));
     else timonHacia(b, lider.a);
     b.velas = d > 260 ? 3 : d > 90 ? Math.max(2, lider.velas) : lider.velas;
+    fuegoOportunista(j, b);
   }
   esquivarIslas(j, b);
+}
+
+// ---------- Flota del tesoro ----------
+function actualizarConvoy(j, dt) {
+  if (j.barcos.some((b) => b.convoy && !b.hundiendo && b.bando === 'enemigo')) return;
+  j.proxConvoy -= dt;
+  if (j.proxConvoy > 0) return;
+  j.proxConvoy = azar.rango(200, 260);
+  const { mundo, jugador } = j;
+  for (let intento = 0; intento < 80; intento++) {
+    const x = azar.rango(500, mundo.ancho - 500), y = azar.rango(500, mundo.alto - 500);
+    const nivel = nivelZona(mundo, x, y);
+    if (nivel < 1 || Math.hypot(x - jugador.x, y - jugador.y) < 1300) continue;
+    if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 200)) continue;
+    const a = azar.rango(0, TAU);
+    const d = disenoEnemigo('tesoro', nivel);
+    d.refuerzo = 160;
+    const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', oro: Math.round(azar.rango(1000, 1400)) });
+    tesoro.nivel = nivel;
+    tesoro.convoy = true;
+    j.barcos.push(tesoro);
+    const guardia = nivel >= 2 ? 'galeonGuerra' : 'corsario';
+    for (const lado of [-1, 1]) {
+      const g = crearBarco(disenoEnemigo(guardia, nivel), 'enemigo', x - Math.sin(a) * 110 * lado, y + Math.cos(a) * 110 * lado, {
+        a, velas: 1, bandera: ENEMIGOS[guardia].color, color: '#e9e1cc', nombre: 'Guardia del tesoro', tipo: guardia,
+        oro: Math.round(azar.rango(ENEMIGOS[guardia].oro[0], ENEMIGOS[guardia].oro[1])),
+      });
+      g.nivel = nivel;
+      g.ia.lider = tesoro;
+      g.ia.lado = lado;
+      j.barcos.push(g);
+    }
+    aviso(j, '¡Flota del tesoro avistada! Un galeón cargado de oro con dos guardias. Mirá el minimapa', 'bueno');
+    return;
+  }
 }
 
 // ---------- Tritones ----------
@@ -590,7 +718,7 @@ function actualizarTritones(j, dt) {
     if (!obj || od > 1400) continue; // se pierden en el mar
     const ang = Math.atan2(obj.y - tr.y, obj.x - tr.x) + Math.sin(tr.t * 3) * 0.5;
     tr.a = ang;
-    const vel = 150;
+    const vel = 178;
     tr.x += Math.cos(ang) * vel * dt;
     tr.y += Math.sin(ang) * vel * dt;
     if (Math.random() < dt * 8) j.particulas.push({ tipo: 'estela', x: tr.x, y: tr.y, t: 0, vida: 0.8, r: 4 });

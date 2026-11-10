@@ -112,51 +112,87 @@ function entrarPuerto() {
 
 function pintarPuerto() {
   const j = partida, b = j.jugador, s = b.stats, d = b.diseno;
-  $('pto-oro').textContent = j.oroPuerto;
   const escoltas = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo);
-  const items = [];
-  const dano = Math.ceil(s.vidaMax - b.vida);
-  items.push({ t: 'Reparar el casco', d: dano ? `Faltan ${dano} puntos` : 'El casco está entero', costo: dano * PUERTO.repararPorPunto, ok: dano > 0, parcial: true,
-    hacer: (oro) => { b.vida = Math.min(s.vidaMax, b.vida + Math.floor(oro / PUERTO.repararPorPunto)); } });
-  const faltan = s.tripMax - b.trip;
-  items.push({ t: 'Reclutar marineros', d: `${b.trip} de ${s.tripMax} a bordo`, costo: faltan * PUERTO.marinero, ok: faltan > 0, parcial: true,
-    hacer: (oro) => { b.trip = Math.min(s.tripMax, b.trip + Math.floor(oro / PUERTO.marinero)); } });
-  const danoEsc = escoltas.reduce((a, e) => a + Math.ceil(e.stats.vidaMax - e.vida) + (e.stats.tripMax - e.trip) * 3, 0);
-  if (escoltas.length) items.push({ t: 'Reparar y tripular la flota', d: `${escoltas.length} barcos de escolta`, costo: danoEsc, ok: danoEsc > 0,
-    hacer: () => { for (const e of escoltas) { e.vida = e.stats.vidaMax; e.trip = e.stats.tripMax; } } });
-  items.push({ t: 'Sumar 2 cañones', d: `${d.canones} de ${s.maxCanones} que entran en el casco`, costo: PUERTO.parCanones, ok: d.canones < s.maxCanones,
-    hacer: () => { d.canones += 2; rearmar(b); } });
-  const nivel = (d.nivelCanones || 0) + 1;
-  items.push({ t: `Cañones más fuertes (nivel ${nivel})`, d: '+15 % de daño por bala', costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6,
-    hacer: () => { d.nivelCanones = nivel; rearmar(b); } });
-  for (const [id, m] of Object.entries(MUNICIONES)) {
-    if (id === d.municion) continue;
-    items.push({ t: `Cambiar a ${m.nombre.toLowerCase()}`, d: m.desc, costo: PUERTO.municion[id], ok: true,
-      hacer: () => { d.municion = id; rearmar(b); } });
-  }
-  items.push({ t: 'Agrandar la flota', d: `Podés llevar ${j.escoltasMax} barcos capturados`, costo: PUERTO.escolta(j.escoltasMax + 1), ok: j.escoltasMax < ESCOLTAS_MAX,
-    hacer: () => { j.escoltasMax++; } });
+  const grupos = [];
 
-  const lista = $('pto-lista');
-  lista.innerHTML = '';
-  for (const it of items) {
-    const fila = document.createElement('div');
-    fila.className = 'mejora';
-    const alcanza = it.parcial ? j.oroPuerto > 0 : j.oroPuerto >= it.costo;
-    fila.innerHTML = `<div><b>${it.t}</b><small>${it.d}</small></div>`;
-    const btn = document.createElement('button');
-    btn.className = 'boton';
-    btn.textContent = it.ok ? `${it.costo} oro` : 'Listo';
-    btn.disabled = !it.ok || !alcanza;
-    btn.onclick = () => {
-      const paga = it.parcial ? Math.min(it.costo, j.oroPuerto) : it.costo;
-      it.hacer(paga);
-      j.oroPuerto -= paga;
-      pintarPuerto();
-    };
-    fila.appendChild(btn);
-    lista.appendChild(fila);
+  // Reparar y tripular
+  const dano = Math.ceil(s.vidaMax - b.vida), faltan = s.tripMax - b.trip;
+  const danoEsc = escoltas.reduce((a, e) => a + Math.ceil(e.stats.vidaMax - e.vida) + (e.stats.tripMax - e.trip) * 3, 0);
+  const arreglos = [
+    { t: 'Reparar el casco', d: dano ? `Te faltan ${dano} puntos de casco.` : 'El casco está entero.', costo: dano * PUERTO.repararPorPunto, ok: dano > 0, parcial: true, listo: 'Casco entero',
+      hacer: (oro) => { b.vida = Math.min(s.vidaMax, b.vida + Math.floor(oro / PUERTO.repararPorPunto)); } },
+    { t: 'Reclutar marineros', d: `Tenés ${b.trip} de ${s.tripMax}. Más gente recarga más rápido y gana abordajes.`, costo: faltan * PUERTO.marinero, ok: faltan > 0, parcial: true, listo: 'Tripulación completa',
+      hacer: (oro) => { b.trip = Math.min(s.tripMax, b.trip + Math.floor(oro / PUERTO.marinero)); } },
+  ];
+  if (escoltas.length) arreglos.push({ t: 'Arreglar la flota', d: `Repara y llena de gente tus ${escoltas.length} barcos capturados.`, costo: danoEsc, ok: danoEsc > 0,
+    hacer: () => { for (const e of escoltas) { e.vida = e.stats.vidaMax; e.trip = e.stats.tripMax; } } });
+  grupos.push(['Reparar y tripular', arreglos]);
+
+  // Cañones
+  const nivel = (d.nivelCanones || 0) + 1;
+  grupos.push(['Cañones', [
+    { t: 'Sumar 2 cañones', d: `Tenés ${d.canones} de ${s.maxCanones} que entran en este casco. Pegás más, pero vas un poco más lento.`, costo: PUERTO.parCanones, ok: d.canones < s.maxCanones, listo: 'Casco lleno',
+      hacer: () => { d.canones += 2; } },
+    { t: `Cañones nivel ${nivel}`, d: 'Cada bala hace 15 % más de daño.', costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: 'Al máximo',
+      hacer: () => { d.nivelCanones = nivel; } },
+  ]]);
+
+  // Munición y velas: se ve cuál tenés puesta
+  grupos.push(['Munición', Object.entries(MUNICIONES).map(([id, m]) => ({
+    t: m.nombre, d: m.desc, costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: 'La que usás',
+    hacer: () => { d.municion = id; },
+  }))]);
+  grupos.push(['Velas', Object.entries(VELAS).map(([id, v]) => ({
+    t: v.nombre, d: v.desc, costo: Math.max(60, v.costo), ok: id !== d.velas, elegida: id === d.velas, listo: 'Las que usás',
+    hacer: () => { d.velas = id; },
+  }))]);
+
+  // Flota
+  grupos.push(['Flota', [
+    { t: 'Agrandar la flota', d: `Hoy podés llevar ${j.escoltasMax} barcos capturados (tenés ${escoltas.length}). Suma un lugar más.`, costo: PUERTO.escolta(j.escoltasMax + 1), ok: j.escoltasMax < ESCOLTAS_MAX, listo: 'Al máximo',
+      hacer: () => { j.escoltasMax++; } },
+  ]]);
+
+  const cont = $('pto-opciones');
+  cont.innerHTML = '';
+  for (const [titulo, items] of grupos) {
+    const h = document.createElement('h3');
+    h.textContent = titulo;
+    const caja = document.createElement('div');
+    caja.className = 'opciones';
+    for (const it of items) {
+      const alcanza = it.parcial ? j.oroPuerto > 0 : j.oroPuerto >= it.costo;
+      const btn = document.createElement('button');
+      btn.className = 'opcion' + (it.elegida ? ' elegida' : '');
+      const precio = it.ok ? `${it.costo} oro` : (it.listo || 'Listo');
+      btn.innerHTML = `<b>${it.t}</b><small>${it.d}</small><em class="${it.ok && !alcanza ? 'caro' : ''}">${precio}</em>`;
+      btn.disabled = !it.ok || !alcanza;
+      btn.onclick = () => {
+        const paga = it.parcial ? Math.min(it.costo, j.oroPuerto) : it.costo;
+        it.hacer(paga);
+        j.oroPuerto -= paga;
+        rearmar(b);
+        pintarPuerto();
+      };
+      caja.appendChild(btn);
+    }
+    cont.append(h, caja);
   }
+
+  // Resumen del barco, igual que en el astillero
+  $('pto-oro').textContent = `${j.oroPuerto} oro`;
+  const barras = barrasDe(d);
+  $('pto-barras').innerHTML = Object.entries(barras).map(([k, v]) =>
+    `<div class="stat"><span>${k}</span><div><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></div></div>`).join('')
+    + `<p class="suave">Casco ${Math.ceil(b.vida)} de ${s.vidaMax} · ${b.trip} de ${s.tripMax} marineros · ${d.canones / 2} cañones por lado</p>`;
+  const c = $('pto-vista'), cx = c.getContext('2d');
+  cx.clearRect(0, 0, c.width, c.height);
+  const copia = crearBarco(d, 'jugador', 0, 0, { a: -0.25, velas: 3, bandera: '#1f7a3f' });
+  cx.save();
+  cx.translate(c.width / 2, c.height / 2);
+  cx.scale(2.1, 2.1);
+  dibujarBarco(cx, copia, { sinBarra: true });
+  cx.restore();
 }
 
 $('pto-salir').onclick = () => {
@@ -204,6 +240,7 @@ addEventListener('keydown', (e) => {
   if (k === 'e') pulsos.fuego = 1;
   if (k === ' ') pulsos.fuegoTodo = true;
   if (k === 'f') pulsos.abordar = true;
+  if (k === 'g') pulsos.ordenFlota = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
 });
 addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
@@ -233,13 +270,15 @@ function pintarHud() {
   $('hud-trip-txt').textContent = `Tripulación ${b.trip} / ${s.tripMax}`;
   $('hud-velas').textContent = '▰'.repeat(b.velas) + '▱'.repeat(3 - b.velas);
   const esc = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo).length;
-  $('hud-flota').textContent = `${esc} de ${j.escoltasMax} escoltas`;
+  $('hud-flota').textContent = `${esc} de ${j.escoltasMax} · ${j.ordenFlota === 'ataque' ? 'al ataque' : 'en formación'}`;
   $('hud-bodega').textContent = j.oroBodega;
   $('hud-puerto').textContent = j.oroPuerto;
   $('hud-hundidos').textContent = j.stats.hundidos;
-  const total = (lado) => s.recarga / Math.max(0.45, Math.min(1.35, b.trip / s.tripNecesaria));
-  $('hud-rec-izq').style.width = `${100 - Math.min(100, (b.recarga['-1'] / total()) * 100)}%`;
-  $('hud-rec-der').style.width = `${100 - Math.min(100, (b.recarga['1'] / total()) * 100)}%`;
+  const total = (lado) => (b.recargaTotal && b.recargaTotal[lado]) || s.recarga;
+  $('hud-rec-izq').style.width = `${100 - Math.min(100, (b.recarga['-1'] / total('-1')) * 100)}%`;
+  $('hud-rec-der').style.width = `${100 - Math.min(100, (b.recarga['1'] / total('1')) * 100)}%`;
+  const averia = b.vida < s.vidaMax * 0.7 ? ' · averiado, vas más lento' : '';
+  $('hud-velas-txt').textContent = (b.velas >= 3 ? 'A toda vela: recarga lenta' : b.velas === 2 ? 'Media vela' : 'Velas de combate: recarga rápida') + averia;
 
   const clave = j.avisos.map((a) => a.texto).join('|');
   if (clave !== avisosPintados) {
@@ -249,7 +288,9 @@ function pintarHud() {
   let pista = '';
   const cand = candidatoAbordaje(j);
   if (cercaDelPuerto()) pista = j.oroBodega ? `P: entrar al puerto y guardar ${j.oroBodega} de oro` : 'P: entrar al puerto';
-  else if (cand && cand.debil) pista = `F: abordar el ${cand.b.nombre} (tu gente ${b.trip} contra ${cand.b.trip})`;
+  else if (j.gancho && j.gancho.fase === 'enganchado') pista = `Tirando de la soga del ${j.gancho.obj.nombre}…`;
+  else if (b.reparando) pista = 'Reparando el casco en la costa (hasta el 75 %)';
+  else if (cand && j.cdAbordaje <= 0) pista = `F: tirar el gancho al ${cand.b.nombre} · tu gente ${b.trip} contra ${cand.b.trip} (${cand.ventaja})`;
   if ($('pista').textContent !== pista) $('pista').textContent = pista;
 }
 
