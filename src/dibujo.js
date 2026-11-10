@@ -4,6 +4,8 @@ import { FACCIONES } from './config.js';
 import { dibujarBandera } from './banderas.js';
 import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
 import { t as tx } from './idioma.js';
+import { pintarBritanico } from './arte-britanico.js';
+import { pintarVikingo } from './arte-vikingo.js';
 
 const TAU = Math.PI * 2;
 const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
@@ -136,9 +138,16 @@ function dibujarVela(ctx, e, mx, alto, abiertas, color, principal) {
 // La parte fija del barco (casco, cubierta, cañones, palos y velas) se pinta una vez y se reutiliza.
 const ESCALA_IMG = 2.5;
 const imagenes = new Map();
+// Civilizaciones con arte propio (ver src/arte-*.js): casco, cubierta, velas y mascarón se dibujan allí, en cuatro estados de daño.
+const ARTE = { britanicos: pintarBritanico, vikingos: pintarVikingo };
+function nivelDano(b) {
+  const f = b.vida / b.stats.vidaMax;
+  return !(f < 1) ? 0 : f > 0.75 ? 0 : f > 0.5 ? 1 : f > 0.25 ? 2 : 3;
+}
 function imagenBarco(b, e) {
   const d = b.diseno;
-  const clave = `${d.faccion}|${d.casco}|${d.canones}|${d.municion}|${b.velas}|${b.colorVela || ''}`;
+  const pintar = ARTE[d.faccion], dano = pintar ? nivelDano(b) : 0;
+  const clave = `${d.faccion}|${d.casco}|${d.canones}|${d.municion}|${b.velas}|${b.colorVela || ''}|${dano}`;
   let img = imagenes.get(clave);
   if (img) return img;
   const s = b.stats, L = s.largo, W = s.ancho;
@@ -149,6 +158,22 @@ function imagenBarco(b, e) {
   ctx.translate(img.width / 2, img.height / 2);
   ctx.scale(ESCALA_IMG, ESCALA_IMG);
   ctx.lineJoin = 'round';
+
+  if (pintar) {
+    const mx = pintar(ctx, d.casco, {
+      L, W, canones: d.canones / 2, grosor: d.municion === 'pesada' ? 4.6 : 3.2, abiertas: b.velas / 3,
+      colorVela: b.colorVela || e.vela, colorRayas: e.colorPatron, escudos: e.escudos, d: dano,
+    });
+    if (b.velas > 0) { // bandera de la civilización, flameando hacia popa
+      ctx.save();
+      ctx.translate(mx - 15, -4.5);
+      dibujarBandera(ctx, d.faccion, 13, 9);
+      ctx.restore();
+    }
+    if (imagenes.size > 400) imagenes.clear();
+    imagenes.set(clave, img);
+    return img;
+  }
 
   // sombra en el agua
   ctx.save();
@@ -334,8 +359,9 @@ export function dibujarBarco(ctx, b, opciones = {}) {
       const x = -L * 0.34 + (L * 0.6 * i) / (n - 1);
       for (const lado of [-1, 1]) {
         ctx.beginPath();
-        ctx.moveTo(x, lado * W * 0.36);
-        ctx.lineTo(x - Math.sin(rema) * W * 0.5, lado * (W * 0.36 + Math.cos(rema) * W * 0.55));
+        const corto = ARTE[b.diseno.faccion] ? 1 : 0; // arte propio: remos cortos y perpendiculares al casco
+        ctx.moveTo(x, lado * W * (corto ? 0.5 : 0.36));
+        ctx.lineTo(x - Math.sin(rema) * W * (corto ? 0.3 : 0.5), lado * (W * (corto ? 0.5 : 0.36) + Math.cos(rema) * W * (corto ? 0.36 : 0.55)));
         ctx.stroke();
       }
     }
