@@ -607,7 +607,13 @@ function cuadro(ahora) {
   else {
     const yo = partida.jugador;
     const sopla = partida.viento ? 0.38 + (yo && yo.enRafaga ? 0.45 : 0) : 0.10;
-    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5);
+    // cuán adentro de un remolino está el barco: se empieza a oír un poco antes del borde y crece hasta el centro
+    let remolino = 0;
+    if (estado === 'mar' && yo && !partida.fin) for (const w of partida.mundo.remolinos) {
+      const alcance = w.radio * 1.6, d = Math.hypot(w.x - yo.x, w.y - yo.y);
+      if (d < alcance) remolino = Math.max(remolino, 1 - d / alcance);
+    }
+    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino);
   }
 }
 

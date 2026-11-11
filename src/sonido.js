@@ -10,6 +10,7 @@ for (const k of Object.keys(vol)) {
   try { const v = localStorage.getItem(GUARDADO[k]); if (v !== null && v !== '' && isFinite(+v)) vol[k] = Math.max(0, Math.min(1, +v)); } catch {}
 }
 
+let gRemolino = null, giroRemolino = [], filtroRemolino = null;
 let ctx = null, salida = null, gSonido = null, gMusica = null, gMar = null, gViento = null, filtroViento = null, gMusicaModo = null, eco = null;
 let modoActual = 'nada', fuerzaViento = 0, relojMusica = null, proximoCompas = 0, compas = 0, ultimoAjuste = 0;
 const BOTONES = 'button, [role="button"], a[href], .chip, .tarjeta, .opcion, select';
@@ -71,6 +72,29 @@ function armar(c) {
   const gVaiven = c.createGain(); gVaiven.gain.value = 110;
   vaiven.connect(gVaiven); gVaiven.connect(filtroViento.frequency);
   aire.connect(filtroViento); filtroViento.connect(gViento); aire.start(); vaiven.start();
+
+  // --- El remolino: agua que gira y traga. Un fondo grave que late y da vueltas de un oído al otro; cuanto más cerca
+  // del centro, más fuerte, más rápido gira y más abierto suena, y aparece el gorgoteo del agua yéndose hacia abajo ---
+  gRemolino = c.createGain(); gRemolino.gain.value = 0; gRemolino.connect(gSonido);
+  const ronda = c.createStereoPanner ? c.createStereoPanner() : null;
+  const late = c.createGain(); late.gain.value = 0.62;
+  if (ronda) { late.connect(ronda); ronda.connect(gRemolino); } else late.connect(gRemolino);
+  const hondo = c.createBufferSource(); hondo.buffer = bufMarron; hondo.loop = true; hondo.playbackRate.value = 0.7;
+  filtroRemolino = c.createBiquadFilter(); filtroRemolino.type = 'lowpass'; filtroRemolino.frequency.value = 240; filtroRemolino.Q.value = 1.2;
+  hondo.connect(filtroRemolino); filtroRemolino.connect(late); hondo.start();
+  const gorgoteo = c.createBufferSource(); gorgoteo.buffer = bufBlanco; gorgoteo.loop = true; gorgoteo.playbackRate.value = 0.5;
+  const fGor = c.createBiquadFilter(); fGor.type = 'bandpass'; fGor.frequency.value = 620; fGor.Q.value = 3.5;
+  const gGor = c.createGain(); gGor.gain.value = 0.10;
+  gorgoteo.connect(fGor); fGor.connect(gGor); gGor.connect(late); gorgoteo.start();
+  // tres vaivenes a la misma velocidad: el latido, la ronda de un oído al otro (a destiempo) y el tono del gorgoteo
+  giroRemolino = [];
+  for (const [destino, hondura, desfase] of [[late.gain, 0.30, 0], [ronda ? ronda.pan : null, 0.55, 0.25], [fGor.frequency, 260, 0.5]]) {
+    if (!destino) continue;
+    const o = c.createOscillator(); o.frequency.value = 0.6;
+    const g = c.createGain(); g.gain.value = hondura;
+    o.connect(g); g.connect(destino); o.start(c.currentTime + desfase);
+    giroRemolino.push(o);
+  }
 
   // --- La música: pasa por un eco suave ---
   gMusicaModo = c.createGain(); gMusicaModo.gain.value = 0; gMusicaModo.connect(gMusica);
@@ -268,9 +292,11 @@ export function evento(ev, oyente, de) {
 export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, nivel, 0, 0.9, casco, municion); }
 
 // En qué pantalla está el jugador: 'lobby' (música y un mar lejano), 'mar' (mar y viento, sin música) o 'nada'.
-// viento: de 0 a 1, cuánto sopla donde está el barco. Se puede llamar en cada cuadro: solo ajusta cada tanto.
-export function ambiente(modo, viento = 0) {
-  modoActual = modo; fuerzaViento = viento;
+// viento: de 0 a 1, cuánto sopla donde está el barco. remolino: de 0 a 1, cuán adentro de un remolino está (0 = lejos, 1 = en el centro).
+// Se puede llamar en cada cuadro: solo ajusta cada tanto.
+let cercaRemolino = 0;
+export function ambiente(modo, viento = 0, remolino = 0) {
+  modoActual = modo; fuerzaViento = viento; cercaRemolino = remolino;
   if (!ctx || ctx.state !== 'running') return;
   const ahora = ctx.currentTime;
   if (ahora - ultimoAjuste < 0.15) return;
@@ -278,6 +304,11 @@ export function ambiente(modo, viento = 0) {
   gMar.gain.setTargetAtTime(modo === 'mar' ? 0.95 : modo === 'lobby' ? 0.30 : 0, ahora, 0.6);
   gViento.gain.setTargetAtTime(modo === 'mar' ? 0.025 + 0.15 * viento : 0, ahora, 0.7); // bajo: es un fondo (Nicolás lo pidió más bajo, 12/11/2026)
   filtroViento.frequency.setTargetAtTime(380 + 520 * viento, ahora, 0.9);
+  // el remolino: de lejos apenas un rumor (para que avise sin molestar); adentro crece rápido
+  const r = modo === 'mar' ? remolino : 0;
+  gRemolino.gain.setTargetAtTime(0.12 * r + 1.6 * r * r * r, ahora, 0.35);
+  filtroRemolino.frequency.setTargetAtTime(200 + 620 * r * r, ahora, 0.4);
+  for (const o of giroRemolino) o.frequency.setTargetAtTime(0.55 + 2.6 * r * r, ahora, 0.5);
   gMusicaModo.gain.setTargetAtTime(modo === 'lobby' ? 2.8 : 0, ahora, modo === 'lobby' ? 1.2 : 0.5);
   if (modo === 'lobby') arrancarMusica(); else if (relojMusica && gMusicaModo.gain.value < 0.01) pararMusica();
 }
@@ -286,8 +317,8 @@ export function ambiente(modo, viento = 0) {
 function despertar() {
   try {
     if (!ctx) armar(new (window.AudioContext || window.webkitAudioContext)());
-    if (ctx.state === 'suspended') ctx.resume().then(() => { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento); });
-    else { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento); }
+    if (ctx.state === 'suspended') ctx.resume().then(() => { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); });
+    else { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); }
   } catch {} // sin audio en este navegador: el juego sigue igual, mudo
 }
 if (typeof window !== 'undefined') {
@@ -300,7 +331,7 @@ if (typeof window !== 'undefined') {
 
 // Para probar sin parlantes: arma todo en un contexto que no suena, toca unos segundos de cada cosa y devuelve cuánto se oyó.
 export async function probar() {
-  const guardado = [ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
+  const guardado = [gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
   const medir = async (segundos, preparar) => {
     const c = new OfflineAudioContext(2, 44100 * segundos, 44100);
     armar(c); relojMusica = null; proximoCompas = 0; compas = 0; ultimoAjuste = -1;
@@ -319,9 +350,10 @@ export async function probar() {
   for (const [c, m] of [['balandra', 'redonda'], ['galeon', 'redonda'], ['bergantin', 'metralla'], ['galeon', 'pesada']]) r[c + '-' + m] = await medir(5, () => { modoActual = 'mar'; canonazo(0.1, 0.62, 0, 0.95, c, m); });
   r.canonLejos = await medir(4, () => { modoActual = 'mar'; canonazo(0.1, 0.80 * 0.25, 0, 0.5); });
   r.andanada = await medir(4, () => { modoActual = 'mar'; for (let i = 0; i < 9; i++) canonazo(0.1 + i * 0.04, 0.62, 0, 0.95); });
+  for (const [nombre, f] of [['remolinoLejos', 0.3], ['remolinoBorde', 0.6], ['remolinoCentro', 1]]) r[nombre] = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; gRemolino.gain.value = 0.12 * f + 1.6 * f * f * f; filtroRemolino.frequency.value = 200 + 620 * f * f; for (const o of giroRemolino) o.frequency.value = 0.55 + 2.6 * f * f; });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });
   r.silencio = await medir(2, () => { modoActual = 'nada'; });
-  [ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
+  [gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
   ultimoAjuste = 0;
   return r;
 }
