@@ -5,7 +5,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-12 (tierras de un solo cuerpo y reaparecer en el puerto) — Nicolás + Claude
 
-**Estado: subido a `main` y publicado en la web junto con la entrada de abajo. EL SERVIDOR DEL MAR SIGUE SIN REPUBLICAR** (lo tiene que correr Nicolás: `cd servidor && npx wrangler deploy`). Hasta entonces, en línea: no hay salas (el juego avisa que la sala no existe), no hay viento ni las reglas nuevas, y las costas son las viejas; reaparecer sí funciona.
+**Estado: subido a `main` y publicado en la web junto con la entrada de abajo. El servidor del mar también quedó republicado** (lo corrió Nicolás el 12/11/2026) y pasa `probar-red` en vivo, salas incluidas.
 
 - **Tierras de un solo cuerpo.** Entre dos círculos de tierra grande que se tocaban quedaba un rincón en punta y los bots se metían ahí. `crearMundo` ahora rellena el tramo entre los dos centros con círculos de radio intermedio (no toca las aguas del puerto). Medido en los 20 mapas: las celdas de mar encajonadas entre tierras bajaron de 432 a 89. Quedan algunos rincones entre tres tierras. Los islotes de tres mapas (Gravelinas, Venecia, Nueva Zembla) cambiaron un poco de lugar, porque ahora también esquivan el relleno.
 - **Reaparecer.** Al hundirte ya no volvés a armar la flota: a los 6 segundos reaparecés en el puerto con el mismo barco, desde cero. "Cambiar de flota" o ESC (dos veces) llevan al astillero. Vale para un jugador, el mar de todos y las salas.

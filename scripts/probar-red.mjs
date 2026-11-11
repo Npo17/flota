@@ -50,14 +50,15 @@ a.ws.close();
 
 // --- salas: no existe sin crearla; con viento apagado no llega viento; la pública aparece en la lista; se llena
 {
-  const HTTP = URL_WS.replace('ws', 'http').replace('/mar', '');
+  const HTTP = new URL(URL_WS.replace('ws', 'http')).origin;
+  const lento = URL_WS.includes('localhost') ? 1 : 2.5; // contra el servidor publicado todo tarda más
   const cod = 'T' + Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, 'X');
   const nadie = jugador('Nadie', cod);
-  await espera(800);
+  await espera(800 * lento);
   ok(nadie.no && !nadie.hola, 'sala: se pudo entrar a una sala que no existe');
   nadie.ws.close();
   const s1 = jugador('Dueña', cod, { mapa: 'venecia', max: 2, publica: true, viento: false, abordajes: false });
-  await espera(1500);
+  await espera(1500 * lento);
   ok(s1.hola && s1.hola.sala === cod && s1.hola.mapa === 'venecia', 'sala: no se creó: ' + (s1.no || s1.error));
   ok(s1.hola && s1.hola.reglas && s1.hola.reglas.viento === false && s1.hola.reglas.abordajes === false, 'sala: no llegaron las reglas');
   ok(s1.ultima && !s1.ultima.vi, 'sala sin viento: igual llega el viento');
@@ -65,20 +66,20 @@ a.ws.close();
   const mia = lista && lista.salas.find((x) => x.codigo === cod);
   ok(mia && mia.jugadores === 1 && mia.max === 2 && mia.viento === false, 'sala: no aparece bien en la lista de públicas: ' + JSON.stringify(mia));
   const s2 = jugador('Amigo', cod);
-  await espera(1200);
+  await espera(1200 * lento);
   ok(s2.hola && s2.hola.sala === cod, 'sala: el segundo no pudo entrar: ' + s2.no);
   ok(s1.ultima.caps.length === 2, 'sala: no se ven los dos');
   const s3 = jugador('Tercero', cod);
-  await espera(800);
+  await espera(800 * lento);
   ok(s3.no && !s3.hola, 'sala: entró un tercero a una sala de 2');
   const lista2 = await fetch(HTTP + '/salas').then((r) => r.json()).catch(() => null);
   ok(lista2 && !lista2.salas.some((x) => x.codigo === cod), 'sala: una sala llena sigue en la lista');
   for (const p of [s1, s2, s3]) p.ws.close();
-  await espera(800);
+  await espera(800 * lento);
   const lista3 = await fetch(HTTP + '/salas').then((r) => r.json()).catch(() => null);
   ok(lista3 && !lista3.salas.some((x) => x.codigo === cod), 'sala: una sala vacía sigue en la lista');
   const privada = jugador('Sola', cod + 'P', { publica: false });
-  await espera(1200);
+  await espera(1200 * lento);
   const lista4 = await fetch(HTTP + '/salas').then((r) => r.json()).catch(() => null);
   ok(privada.hola && lista4 && !lista4.salas.some((x) => x.codigo === cod + 'P'), 'sala: una sala privada aparece en la lista');
   ok(privada.ultima && Array.isArray(privada.ultima.vi), 'sala: con las reglas de siempre no llega el viento');
