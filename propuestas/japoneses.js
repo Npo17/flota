@@ -3,7 +3,8 @@
 // caja con troneras, torres con tejado, laca negra y bermellón, vela grande con el mon del clan y estandartes en la popa.
 import { dis, cu, remos, caseta, caja, empalizada, timonPopa, TAU } from './motor.js';
 import { enVela, enProa, solRojo, monMokko, monAoi, monTomoe, monMurakami } from './emblemas.js';
-import { jinmaku, ryuProa } from './emblemas3.js';
+import { jinmaku } from './emblemas3.js';
+import { dragonSerio, tajamar } from './emblemas4.js';
 
 const CIPRES = { casco: '#4a3420', borda: '#6a4c2c', franja: '#15151a', oro: '#d9b27a', porta: '#15151a', cubierta: '#c9a36a', cubiertaAlta: '#d7b77e', filo: '#15100a' };
 const LACA_NEGRA = { casco: '#15151a', borda: '#26262c', franja: '#e0b83e', franja2: '#7a1f1f', oro: '#e0b83e', porta: '#e0b83e', cubierta: '#c9a36a', cubiertaAlta: '#d7b77e' };
@@ -30,25 +31,25 @@ const monMori = (ctx, col = NEGRO) => { ctx.fillStyle = col; ctx.fillRect(-.75, 
 const VELA = (x, h = .92, b = .6) => [cu(x, [h, b])];
 
 export const JAPONESES = {
-  nombre: 'Japoneses', faccion: 'japoneses', resumen: 'Tercera tanda, todo nuevo y solo japonés: cortinas de guerra con el mon, cajas con troneras, torres con tejado, laca negra y bermellón.',
+  nombre: 'Japoneses', faccion: 'japoneses', resumen: 'Cuarta tanda: mismos barcos japoneses, más sobrios. Sin borlas ni medallones en la proa, cortina de guerra lisa con pocos mon, y el dragón del Atakemaru rehecho.',
   balandra: [
-    dis('balandra', 'Kobaya', 'El más chico y rápido de la flota de guerra, casi todo remos. Cortina blanca con el mon colgada de la borda, vela grande con las tres comas y la borla roja en la proa.', {
+    dis('balandra', 'Kobaya', 'El más chico y rápido de la flota de guerra, casi todo remos. Cortina blanca con el mon colgada de la borda, vela grande con las tres comas y el tajamar negro con herraje dorado.', {
       ...WASEN, E: CIPRES, ancho: 1.0, palos: VELA(.1, .8, .54), px: [-.2, .16],
       bajo: (ctx, c) => remos(ctx, c, 7, .42, -.3, .24),
       sobre: (ctx, c) => jinmaku(ctx, c, -.4, .2), popa: nobori(['#f4f1e8', '#c8102e']),
-      emblema: enVela(monTomoe), mascaron: sagari, rm: .1, mo: .4,
+      emblema: enVela(monTomoe), mascaron: tajamar(), rm: .1, mo: .2,
     }),
     dis('balandra', 'Hayabune de los Murakami', 'El "barco veloz" de los Murakami, los señores del mar Interior que cobraban peaje a quien pasara. Baranda oscura de tablas con troneras, vela de estera con su marca 上 y estandartes rojos.', {
       ...WASEN, E: CIPRES, palos: VELA(.08, .84, .56), vela: '#d9c08a', px: [-.2, .16],
       bajo: (ctx, c) => remos(ctx, c, 6, .4, -.28, .22),
       sobre: (ctx, c) => empalizada(ctx, c, -.38, .2, TABLA_OSC, true), popa: nobori(['#c8102e', '#c8102e', '#c8102e']),
-      emblema: enVela(monMurakami), mascaron: sagari, rm: .1, mo: .4,
+      emblema: enVela(monMurakami), mascaron: tajamar(), rm: .1, mo: .2,
     }),
     dis('balandra', 'Gozabune', 'La barca de mando lacada en la que viajaba un daimio: bermellón y oro de punta a punta, con un pabellón de tejado negro y cortina con el mon de los Tokugawa.', {
       ...WASEN, E: BERMELLON, ancho: 1.08, palos: VELA(.2, .72, .48), px: [-.2, .1],
       bajo: (ctx, c) => remos(ctx, c, 6, .4, -.28, .22),
       sobre: (ctx, c) => { jinmaku(ctx, c, -.4, .26, '#f4f1e8', '#b3261e', '#e0b83e'); caseta(ctx, c, -.36, .02, .27, { pared: '#b3261e', techo: '#26262c', cumbrera: '#e0b83e' }); },
-      popa: nobori(['#e0b83e', '#f4f1e8', '#e0b83e']), emblema: enVela(monAoi), mascaron: sagari, rm: .1, mo: .4,
+      popa: nobori(['#e0b83e', '#f4f1e8', '#e0b83e']), emblema: enVela(monAoi), mascaron: tajamar(), rm: .1, mo: .2,
     }),
   ],
   bergantin: [
@@ -56,19 +57,19 @@ export const JAPONESES = {
       ...WASEN, E: CIPRES, ancho: 1.1, palos: VELA(.14), px: [-.2, .22],
       bajo: (ctx, c) => remos(ctx, c, 10, .44, -.32, .26),
       sobre: (ctx, c) => { caja(ctx, c, -.42, .22, .37, TABLA); jinmaku(ctx, c, -.42, .22); caseta(ctx, c, -.34, -.14, .24, { pared: '#f4f1e8', techo: TEJA, cumbrera: '#e0b83e' }); },
-      popa: nobori(['#f4f1e8', NEGRO, '#f4f1e8']), emblema: enVela(monTomoe), mascaron: sagari, rm: .1, mo: .4,
+      popa: nobori(['#f4f1e8', NEGRO, '#f4f1e8']), emblema: enVela(monTomoe), mascaron: tajamar(), rm: .1, mo: .2,
     }),
     dis('bergantin', 'Sekibune de los Mōri', 'La flota de los Mōri dominó el mar Interior hasta que Nobunaga la venció con sus barcos de hierro. Laca negra con filete dorado, cortina roja y su mon: una barra sobre tres estrellas.', {
       ...WASEN, E: LACA_NEGRA, ancho: 1.1, palos: VELA(.14), px: [-.2, .22],
       bajo: (ctx, c) => remos(ctx, c, 10, .44, -.32, .26),
       sobre: (ctx, c) => { caja(ctx, c, -.42, .22, .37, '#3a3026'); jinmaku(ctx, c, -.42, .22, '#b3261e', '#f4f1e8', '#15151a'); caseta(ctx, c, -.34, -.14, .24, { pared: '#f4f1e8', techo: '#26262c', cumbrera: '#e0b83e' }); },
-      popa: nobori(['#b3261e', '#f4f1e8', '#b3261e']), emblema: enVela(monMori), mascaron: sagari, rm: .1, mo: .4,
+      popa: nobori(['#b3261e', '#f4f1e8', '#b3261e']), emblema: enVela(monMori), mascaron: tajamar(), rm: .1, mo: .2,
     }),
     dis('bergantin', 'Sekibune del shogun', 'El sekibune de la guardia naval de los Tokugawa (funate-gumi), que custodiaba la bahía de Edo. Bermellón y oro, cortina blanca con el mon y las hojas de malva en la vela.', {
       ...WASEN, E: BERMELLON, ancho: 1.1, palos: VELA(.14), px: [-.2, .22],
       bajo: (ctx, c) => remos(ctx, c, 10, .44, -.32, .26),
       sobre: (ctx, c) => { caja(ctx, c, -.42, .22, .37, '#8a2a20'); jinmaku(ctx, c, -.42, .22, '#f4f1e8', '#15151a', '#e0b83e'); tenshu(ctx, c, -.24, .8, '#26262c'); },
-      popa: nobori(['#f4f1e8', '#e0b83e', '#f4f1e8']), emblema: enVela(monAoi), mascaron: sagari, rm: .1, mo: .4,
+      popa: nobori(['#f4f1e8', '#e0b83e', '#f4f1e8']), emblema: enVela(monAoi), mascaron: tajamar(), rm: .1, mo: .2,
     }),
   ],
   galeon: [
@@ -86,13 +87,13 @@ export const JAPONESES = {
         ctx.fillStyle = '#6a707a'; for (let x = -.44; x < .4; x += .04) for (const y of [-.3, -.1, .1, .3]) { ctx.beginPath(); ctx.arc(L * x, W * y, .5, 0, TAU); ctx.fill(); }
         tenshu(ctx, c, -.12, 1.15, '#23262b');
       },
-      popa: nobori(['#e0b83e', NEGRO, '#e0b83e']), emblema: enVela(monMokko), mascaron: enProa(monMokko, .8, '#e0b83e', NEGRO), rm: .15, mo: 1.6,
+      popa: nobori(['#e0b83e', NEGRO, '#e0b83e']), emblema: enVela(monMokko), mascaron: null,
     }),
     dis('galeon', 'Atakemaru (1635)', 'El coloso que el shogun Tokugawa Iemitsu mandó construir: forrado en cobre, cubierto de oro y con una cabeza de dragón en la proa. Era tan grande que casi no se movía; lo propongo como la nave de prestigio.', {
       ...ATAKE, E: COBRE, palos: VELA(.24, .9, .58),
       bajo: (ctx, c) => remos(ctx, c, 16, .4, -.38, .3),
       sobre: (ctx, c) => { caja(ctx, c, -.46, .4, .4, '#3f6b5a', '#0f1f1a'); jinmaku(ctx, c, -.44, .36, '#f4f1e8', '#15151a', '#e0b83e'); tenshu(ctx, c, -.16, 1.2, '#26262c'); caseta(ctx, c, .1, .22, .22, { pared: '#b3261e', techo: '#26262c', cumbrera: '#e0b83e' }); },
-      popa: nobori(['#e0b83e', '#f4f1e8', '#e0b83e', '#f4f1e8']), emblema: enVela(monAoi), mascaron: ryuProa(), rm: .2, mo: .2,
+      popa: nobori(['#e0b83e', '#f4f1e8', '#e0b83e', '#f4f1e8']), emblema: enVela(monAoi), mascaron: dragonSerio('#7a1f1f', '#3a0c0c'), rm: .22, mo: .5,
     }),
   ],
 };

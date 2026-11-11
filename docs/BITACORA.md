@@ -20,6 +20,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
   - Otomanos: balandra "Kalyata", bergantín "Kadırga", galeón "Kalyon". Completos.
   - Chinos: balandra "Wugongchuan". Bergantín y galeón pendientes: los tigres y dragones le siguen pareciendo infantiles.
   - Japoneses: ninguno todavía.
+- **Quinta vuelta (2026-11-12).** Cristian pidió tigres y dragones "más serios" y dijo que la sirena holandesa parecía un hombre. Esta vez se estudió primero cómo están hechos el león británico y el dragón portugués (los aprobados) y se copiaron sus reglas: dos o tres tonos de madera, contorno fino y oscuro, ojos chicos y rasgados con ceja, nada de blancos brillantes ni bigotes enrulados. Está en `propuestas/emblemas4.js` (`tigreSerio`, `dragonSerio`, `sirenaSeria`, `tajamar`). Juncos y Statenjacht usan las tallas nuevas; los japoneses quedaron más sobrios (sin borla ni medallón en la proa, cortina de guerra lisa con pocos mon, dragón del Atakemaru rehecho).
 - Pendiente: con lo que elija Cristian, pasar cada civilización a su `src/arte-<civilización>.js` y sumarla al mapa `ARTE` de `src/dibujo.js`. Ojo con los remos: en la galería los de galeras y barcos japoneses están dibujados quietos; en el juego los pone y los mueve `dibujo.js`. Decidir también si `propuestas/` se sube al repo (quedaría pública en el sitio) o queda solo en la compu.
 
 ## 2026-11-10 (arte de barcos, franceses) — Cristian + Claude

@@ -138,7 +138,8 @@ export function jinmaku(ctx, c, x0, x1, tela = '#f4f1e8', mon = '#15151a', franj
     for (let x = x0; x <= x1 + .001; x += .02) { const px = L * x, py = s * mitad(c, px) * .9; x === x0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); }
     ctx.stroke();
     ctx.strokeStyle = tela; ctx.lineWidth = W * .085; ctx.stroke();
-    for (let x = x0 + .035; x < x1; x += .07) disco(ctx, L * x, s * mitad(c, L * x) * .9, W * .028, mon);
+    ctx.strokeStyle = franja; ctx.lineWidth = W * .012; ctx.stroke();
+    for (let x = x0 + .09; x < x1 - .03; x += .17) disco(ctx, L * x, s * mitad(c, L * x) * .9, W * .024, mon);
   }
 }
 // hilera de banderines triangulares a lo largo de la borda

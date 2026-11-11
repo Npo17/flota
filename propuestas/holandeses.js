@@ -1,7 +1,7 @@
 // Holandeses, tercera tanda: quedan el Statenjacht y el De Zeven Provinciën (limpios, sin nada debajo de la talla)
 // y tres bergantines nuevos con tallas de proa en lugar de íconos redondos.
 import { dis, cu, la, ca, orzas } from './motor.js';
-import { sirenaProa } from './emblemas.js';
+import { sirenaSeria } from './emblemas4.js';
 import { delfinProa } from './emblemas2.js';
 import { caballoProa, aguilaTalla, grifoProa } from './emblemas3.js';
 
@@ -15,7 +15,7 @@ const TRES = (k = 1) => [la(-.34, .6 * k, -1), cu(-.06, [.72, .43], [.52, .35]),
 export const HOLANDESES = {
   nombre: 'Holandeses', faccion: 'holandeses', resumen: 'Cuarta tanda: el Statenjacht con la talla bien visible, en tres versiones. El bergantín (Witte Valk) y el galeón ya están elegidos.',
   balandra: [
-    dis('balandra', 'Statenjacht · sirena grande', 'La sirena quedaba chiquita sobre el bauprés y casi no se veía. Ahora es más grande y está sobre la roda, con la cola verde y el pelo suelto.', { ...STATEN, mascaron: sirenaProa('#f0c75a', '#2f7a6a'), rm: .36, mo: .5 }),
+    dis('balandra', 'Statenjacht · sirena', 'La sirena rehecha para que se lea como mujer: melena larga que le cae por la espalda, hombros angostos, cintura, los brazos pegados al cuerpo con las manos juntas adelante y la cola verde con escamas.', { ...STATEN, mascaron: sirenaSeria(), rm: .34, mo: .35 }),
     dis('balandra', 'Statenjacht · caballo marino', 'El mismo yate con un caballo marino dorado de crin blanca en la proa.', { ...STATEN, mascaron: caballoProa(), rm: .32, mo: .55 }),
     dis('balandra', 'Statenjacht · halcón', 'Con el halcón blanco del bergantín "Witte Valk" que elegiste, para que la flota holandesa lleve el mismo emblema.', { ...STATEN, mascaron: aguilaTalla('#f1ece0', '#e3b23c', false, '#b9b3a2'), rm: .3, mo: .45 }),
   ],
@@ -23,7 +23,7 @@ export const HOLANDESES = {
     dis('bergantin', 'Filibote "De Meermin"', 'El filibote panzón de cubierta angosta y popa redonda, con carga a la vista. En la proa, una sirena tallada de cola verde. El nombre es inventado.', {
       E: ROBLE, forma: { u: .85, pr: .17, pl: .36 }, tr: .32, kd: [.9, .6], ancho: 1.2, galeria: 0, popaAlta: -.3, portaY: .74, palos: TRES(.95), principal: 1,
       items: [{ t: 'escotilla', x: .1, w: .16, h: .13 }, { t: 'fardos', x: -.14 }, { t: 'cabrestante', x: .3 }],
-      mascaron: sirenaProa('#f0c75a', '#2f6a45'), rm: .18, mo: .6,
+      mascaron: sirenaSeria(), rm: .22, mo: .35,
     }),
     dis('bergantin', 'Pinaza "Witte Valk"', 'Pinaza armada de la VOC con popa alta pintada de verde y ocre. En la proa, un halcón blanco con las alas echadas hacia atrás. El nombre es inventado.', {
       E: VOC, forma: { u: .4 }, palos: TRES(), principal: 1, popaAlta: -.2, popaAlta2: -.36, proaAlta: .3,
