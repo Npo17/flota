@@ -3,6 +3,17 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (salas, reglas de la partida y gancho que vuela) — Nicolás + Claude
+
+**Estado: commiteado en `main` en la compu de Nicolás, SIN SUBIR. EL SERVIDOR DEL MAR TAMPOCO ESTÁ REPUBLICADO.** Probado en localhost contra `wrangler dev` (`probar-sim`, `probar-red`, `probar-textos` y a mano en el navegador). Al publicar: primero el servidor (es compatible con la web vieja) y después la web.
+
+- **Salas ("Jugar con amigos").** Botón nuevo en el astillero. Se crea una sala con el mapa elegido, de 2 a 12 jugadores, pública o privada, y con las reglas de abajo; da un código de 5 letras para pasarle a los amigos (o el enlace `?sala=CODIGO`). Las públicas aparecen en una lista para quien no tiene con quién jugar. Detalles de cómo está hecho en `CLAUDE.md`, "Juego en línea". No hay lista de amigos todavía: Google no da amigos y los de Steam llegan con la integración de Steam.
+- **Reglas de la partida:** viento sí o no y abordajes sí o no. Dos botones en el astillero, debajo del mapa; valen para el modo solo y para la sala que uno crea.
+- **Gancho:** vuelve a salir volando hacia el cursor, como antes de los cambios de Cristian, pero llega a 210 (antes 250). Si engancha, sigue la pelea por tripulación de Cristian tal cual. Se sacó la condición de igualar la velocidad. Cristian: lo pidió Nicolás después de jugarlo, porque arrimarse e igualar la velocidad le resultó tosco.
+- **Ramas:** se borraron `viento-y-controles` y `propuestas-arte-barcos`, que ya estaban enteras en `main`. Regla nueva en `CLAUDE.md`: rama que entra a `main`, rama que se borra.
+- `probar-sim` suma pruebas de reglas y del gancho en vuelo; `probar-red` suma las de salas (no existe sin crearla, sin viento no llega viento, la pública aparece en la lista, se llena, la privada no aparece). 24 textos nuevos con sus 7 traducciones.
+- Pendiente: lista de amigos e invitaciones; los bots siguen sin usar el viento.
+
 ## 2026-11-12 (todo a `main`: seis civilizaciones con arte propio y la jugabilidad nueva) — Cristian + Claude
 
 **Estado: publicado en ageofnavies.com por pedido de Cristian. EL SERVIDOR DEL MAR NO ESTÁ REPUBLICADO.**

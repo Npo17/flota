@@ -5,7 +5,7 @@ import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeViento, difAng } from './juego.js';
 import { catalogoPuerto, comprar } from './puerto.js';
-import { conectar, estadoDelMar } from './red.js';
+import { conectar, estadoDelMar, salasPublicas } from './red.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
 import { dibujarBandera } from './banderas.js';
 import { t, IDIOMAS, registrarTextos, idiomaActual, idiomaInicial, elegirIdioma } from './idioma.js';
@@ -24,6 +24,9 @@ let mundo = null;
 let mapaElegido = 'aleatorio';
 try { mapaElegido = localStorage.getItem('aon-mapa') || 'aleatorio'; } catch {}
 if (mapaElegido !== 'aleatorio' && !MAPAS[mapaElegido]) mapaElegido = 'aleatorio';
+// Reglas que elige el jugador para el modo solo y para las salas que crea
+const reglas = { viento: true, abordajes: true };
+try { const g = JSON.parse(localStorage.getItem('aon-reglas') || '{}'); reglas.viento = g.viento !== false; reglas.abordajes = g.abordajes !== false; } catch {}
 let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada', habilidad: 'andanada' };
 let partida = null;
 let red = null; // conexión al mar compartido cuando se juega en línea
@@ -134,6 +137,15 @@ function pintarMapa() {
   $('ast-mapa-desc').innerHTML = m ? `${t(m.desc)}<br><b>${t(m.rasgo)}</b>` : '';
 }
 
+function pintarReglas() {
+  for (const [id, clave, si, no] of [['reg-viento', 'viento', 'Con viento', 'Sin viento'], ['reg-abordajes', 'abordajes', 'Con abordajes', 'Sin abordajes']]) {
+    const b = $(id);
+    b.textContent = t(reglas[clave] ? si : no);
+    b.classList.toggle('elegida', reglas[clave]);
+    b.onclick = () => { reglas[clave] = !reglas[clave]; try { localStorage.setItem('aon-reglas', JSON.stringify(reglas)); } catch {} pintarReglas(); };
+  }
+}
+
 function elegirMapa(id) {
   mapaElegido = id;
   try { localStorage.setItem('aon-mapa', id); } catch {}
@@ -178,13 +190,13 @@ function empezar() {
 // Modo solo: vos contra los bots, en el mapa que elijas
 $('ast-zarpar').onclick = () => {
   mundo = crearMundo(mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido);
-  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno));
+  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglas);
   partida.nombreJugador = cuenta.perfil?.nombre || '';
   empezar();
   aviso(partida, '{mapa} · {lugar}', 'bueno', { mapa: mundo.nombre, lugar: mundo.lugar });
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
   aviso(partida, 'Los barcos de tu civilización son de tu equipo: no los podés dañar y pelean a tu favor', 'info');
-  aviso(partida, 'La flecha dorada muestra hacia dónde sopla el viento: de popa vas más rápido, de proa más lento', 'info');
+  if (reglas.viento) aviso(partida, 'La flecha dorada muestra hacia dónde sopla el viento: de popa vas más rápido, de proa más lento', 'info');
 };
 
 // En línea: todos en el mismo mar
@@ -210,6 +222,60 @@ $('ast-linea').onclick = () => {
     alCerrar: (motivo) => { if (estado !== 'fin') volverAlAstillero(motivo); },
     alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); },
   });
+};
+
+// ---------- Salas: jugar con amigos o en una sala pública ----------
+// Una sala es un mar aparte, con el mapa y las reglas que eligió quien la creó. Se entra con su código.
+function abrirSalas(codigo) {
+  $('pantalla-salas').classList.remove('oculto');
+  $('sal-info').textContent = '';
+  if (codigo) $('sal-codigo').value = codigo;
+  const m = MAPAS[mapaElegido];
+  $('sal-resumen').textContent = `${t(m ? m.nombre : 'Mapa aleatorio')} · ${t(reglas.viento ? 'Con viento' : 'Sin viento')} · ${t(reglas.abordajes ? 'Con abordajes' : 'Sin abordajes')}`;
+  pintarSalas();
+}
+
+async function pintarSalas() {
+  const lista = $('sal-lista');
+  const salas = await salasPublicas();
+  if ($('pantalla-salas').classList.contains('oculto')) return;
+  if (!salas || !salas.length) { lista.innerHTML = `<p class="suave">${t(salas ? 'No hay salas públicas ahora. Creá una.' : 'El mar compartido no responde ahora. Podés jugar solo.')}</p>`; return; }
+  lista.innerHTML = salas.map((s) => `<button type="button" class="sala" data-codigo="${limpiar(s.codigo)}"><span><b>${limpiar(t('Sala de {nombre}', { nombre: s.nombre }))}</b>
+    <small>${limpiar(t(MAPAS[s.mapa] ? MAPAS[s.mapa].nombre : 'Mapa aleatorio'))} · ${t('{n} de {max} capitanes', { n: s.jugadores, max: s.max })} · ${t(s.viento ? 'Con viento' : 'Sin viento')} · ${t(s.abordajes ? 'Con abordajes' : 'Sin abordajes')}</small></span><i>${t('Entrar')}</i></button>`).join('');
+  for (const b of lista.children) b.onclick = () => entrarSala(b.dataset.codigo);
+}
+
+// crear: los datos de la sala si la arma este jugador; sin eso, entra a una que ya existe
+function entrarSala(codigo, crear) {
+  codigo = String(codigo || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  if (codigo.length < 4) { $('sal-info').textContent = t('El código tiene entre 4 y 6 letras o números.'); return; }
+  if (PRESUPUESTO - costoDiseno(diseno) < 0) { $('sal-info').textContent = t('Te pasaste del presupuesto'); return; }
+  if (red) { red.cerrar(); red = null; }
+  $('sal-info').textContent = t('Conectando con la sala…');
+  const nombre = cuenta.perfil?.nombre || `${t('Capitán')} ${Math.floor(100 + Math.random() * 900)}`;
+  let adentro = false;
+  red = conectar({
+    nombre, diseno, sala: { codigo, crear },
+    alEntrar: (p) => { adentro = true; partida = p; mundo = p.mundo; $('pantalla-salas').classList.add('oculto'); empezar(); },
+    alCerrar: (motivo) => {
+      if (adentro) { if (estado !== 'fin') volverAlAstillero(motivo); return; }
+      red = null; // no llegó a entrar: el motivo se muestra en la misma pantalla
+      $('sal-info').textContent = motivo;
+      pintarSalas();
+    },
+    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); },
+  });
+}
+
+$('ast-salas').onclick = () => abrirSalas();
+$('sal-cerrar').onclick = () => { if (red && estado === 'astillero') { red.cerrar(); red = null; } $('pantalla-salas').classList.add('oculto'); };
+$('sal-entrar').onclick = () => entrarSala($('sal-codigo').value);
+$('sal-codigo').onkeydown = (ev) => { if (ev.key === 'Enter') entrarSala($('sal-codigo').value); };
+$('sal-crear').onclick = () => {
+  const letras = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sin las que se confunden (O y 0, I y 1)
+  let codigo = '';
+  for (let i = 0; i < 5; i++) codigo += letras[Math.floor(Math.random() * letras.length)];
+  entrarSala(codigo, { mapa: mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido, max: +$('sal-max').value, publica: $('sal-publica').checked, viento: reglas.viento, abordajes: reglas.abordajes });
 };
 
 async function pintarLinea(mensaje) {
@@ -382,7 +448,7 @@ function pintarHud() {
   $('hud-nombre').textContent = `${t(CASCOS[b.diseno.casco].nombre)} · ${t((FACCIONES[b.diseno.faccion] || FACCIONES.espanoles).nombre)}`;
   if (banderaHud !== b.diseno.faccion) { banderaHud = b.diseno.faccion; dibujarBandera($('hud-bandera').getContext('2d'), banderaHud, 30, 20); }
   $('hud-zona').textContent = t(nombreZona(nivelZona(mundo, b.x, b.y)));
-  $('hud-mapa').textContent = t(mundo.nombre);
+  $('hud-mapa').textContent = t(mundo.nombre) + (j.sala ? ` · ${t('Sala {codigo}', { codigo: j.sala })}` : '');
   $('hud-vida').style.width = `${Math.max(0, (b.vida / s.vidaMax) * 100)}%`;
   $('hud-vida-txt').textContent = `${t('Casco')} ${Math.max(0, Math.ceil(b.vida))} / ${s.vidaMax}`;
   $('hud-trip').style.width = `${Math.max(0, (b.trip / s.tripMax) * 100)}%`;
@@ -605,6 +671,7 @@ function cambiarIdioma(id) {
   $('map-grilla').innerHTML = ''; // las tarjetas de mapas se arman de nuevo en el idioma elegido
   pintarAstillero();
   pintarMapa();
+  pintarReglas();
   pintarCuenta();
   pintarLinea();
   pintarAjustes();
@@ -617,6 +684,12 @@ $('aj-cerrar').onclick = () => $('pantalla-ajustes').classList.add('oculto');
 ponerTema(tema);
 traducirPagina();
 pintarMapa();
+
+pintarReglas();
+{
+  const invitacion = new URLSearchParams(location.search).get('sala');
+  if (invitacion) abrirSalas(invitacion.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6));
+}
 
 iniciarCuenta(pintarCuenta);
 pintarCuenta();

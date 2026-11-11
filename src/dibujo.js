@@ -697,7 +697,7 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.fill();
       ctx.stroke();
     }
-    // abordaje: el barco que tenés bajo el cursor se marca en dorado si está a tiro de garfio, o punteado si falta arrimarse
+    // abordaje: el barco que tenés bajo el cursor se marca en dorado si le llega el gancho, o punteado si falta arrimarse
     if (!j.gancho && j.cdAbordaje <= 0) {
       const cand = candidatoAbordaje(j, raton);
       if (cand) {
@@ -738,6 +738,14 @@ export function dibujarEscena(ctx, j, vista) {
     }
   }
 
+  // el gancho en el aire: la soga desde el barco y el garfio en la punta
+  if (j.gancho && j.gancho.fase === 'vuelo') {
+    const g = j.gancho;
+    ctx.strokeStyle = '#d9c08a'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.lineTo(g.x, g.y); ctx.stroke();
+    ctx.fillStyle = '#3b3b3b';
+    ctx.beginPath(); ctx.arc(g.x, g.y, 4, 0, TAU); ctx.fill();
+  }
   // abordaje en curso: las sogas entre los dos barcos y, arriba, cuánta gente le queda a cada uno
   if (j.gancho && j.gancho.obj) {
     const e = j.gancho.obj;

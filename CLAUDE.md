@@ -54,6 +54,7 @@ Lo que encuentren `/qa` y `/review` se arregla antes de mostrarle el cambio al s
 - **Roles de Claude:** dev (implementa y prueba), QA (busca bugs y los verifica en el navegador) y CEO (propone mejoras con datos reales, sin inventar números).
 - **Flujo:** cada cambio se prueba primero en localhost y se muestra al socio. **No se sube nada sin su OK explícito.**
 - **Al terminar un cambio:** actualizar `docs/BITACORA.md` y este archivo, como dice la regla de arriba.
+- **Ramas:** si trabajaste en una rama, apenas sus cambios estén en `main` **borrala**, en GitHub y en tu compu (`git push origin --delete <rama>` y `git branch -d <rama>`). Antes comprobá que no le quede nada sin unir (`git log origin/main..origin/<rama>` tiene que salir vacío). En el repo solo quedan `main` y las ramas con trabajo en curso (pedido de Nicolás, 12/11/2026).
 - **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`.
 - **Commits:** en español, describiendo el cambio para un jugador, con la línea `Co-Authored-By` de Claude.
 - **Originalidad:** es un juego propio. Sirven de referencia de género otros juegos de barcos y de estrategia, pero no se copian nombres, arte, unidades ni bonificaciones de ningún juego existente. Las civilizaciones, banderas y mapas salen de la historia real.
@@ -113,12 +114,14 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 
 ## Juego en línea
 
-- Hay un solo mar compartido para todos, estilo agar.io. El mapa cambia una vez por día. El modo solo sigue aparte, con el mapa que se elija.
+- Hay un mar compartido para todos, estilo agar.io, con el mapa que cambia una vez por día, y además **salas**: mares aparte para jugar con amigos o con desconocidos. El modo solo sigue aparte, con el mapa que se elija.
+- **Salas** ("Jugar con amigos"). Quien crea la sala elige el mapa, cuántos jugadores (2 a 12), si es pública y las reglas (viento sí o no, abordajes sí o no). Cada sala tiene un código de 5 letras: se entra escribiéndolo, con el enlace `https://ageofnavies.com/?sala=CODIGO` o desde la lista de salas públicas. La sala existe mientras tenga gente; vacía, desaparece. En el servidor cada sala es otro Durable Object de la misma clase (`sala-CODIGO`; el mar de todos es `mar-1`), y uno más (`salas`) lleva en memoria la lista de públicas: cada sala pública le avisa cuánta gente tiene al entrar o salir alguien y cada 20 segundos, y a los 70 segundos sin avisos sale de la lista. Todavía no hay lista de amigos: se invita pasando el código. Las invitaciones a amigos de Steam llegan con la integración de Steam (app de escritorio).
+- **Reglas de la partida** (`j.reglas` en `src/juego.js`): `viento` y `abordajes`, las dos encendidas por defecto. Se eligen en el astillero (valen para el modo solo y para la sala que uno crea). Sin viento, `j.viento` es `null` y el servidor no manda `vi`; el navegador distingue eso de un servidor viejo porque el nuevo dice `v: 2` al entrar.
 - El servidor (`servidor/worker.js`, en `mar.ageofnavies.com`) corre `src/juego.js` con varios capitanes y manda una foto del mar 20 veces por segundo. Decide posiciones, daño y oro; el navegador solo manda a dónde apunta y qué dispara.
 - `juego.js` maneja varios capitanes (`j.capitanes`); el modo solo es el caso de uno. No meterle nada de pantalla ni de teclado.
 - El puerto es zona segura: ahí no se puede disparar ni recibir daño.
 - Versiones cruzadas: el servidor nuevo dice `v: 2` al entrar (mundo sin callejones); si no lo dice, el navegador arma el mundo viejo para que las islas coincidan. El navegador manda las velas elegidas (`v`) y el servidor manda el viento (`vi`) en cada foto. Si el servidor es anterior al viento, el juego no dibuja viento y le traduce las velas a distancia del cursor; si el navegador es anterior, el servidor saca las velas de la distancia como antes. Así ninguno de los dos se rompe mientras el otro no se actualizó.
-- En la pantalla de inicio hay dos botones: "Jugar online" (el mar compartido) y jugar solo contra bots eligiendo el mapa.
+- En la pantalla de inicio hay tres botones: "Jugar online" (el mar de todos), "Jugar con amigos" (salas) y jugar solo contra bots eligiendo el mapa.
 - Publicar el servidor: `cd servidor && npx wrangler deploy` (necesita `npx wrangler login` una vez). El servidor está en la cuenta de Cloudflare de Nicolás: hasta que el otro socio tenga acceso a esa cuenta, la republicación la hace él (avisarle en la bitácora con "hay que republicar el servidor").
 - Probar sin navegador: `node scripts/probar-sim.mjs` (simulación) y `node scripts/probar-red.mjs` (servidor, con `npx wrangler dev` corriendo en `servidor/`). Para que el juego en la compu use ese servidor de prueba: `http://localhost:5180/?mar=local`. Sin `?mar=local`, localhost se conecta al servidor publicado.
 - Después de publicar el servidor: `node scripts/probar-red.mjs wss://mar.ageofnavies.com/mar` y mirar `https://mar.ageofnavies.com/estado`.
@@ -128,7 +131,7 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - El barco pone la proa hacia el cursor, esté cerca o lejos. Las velas se eligen con W / S o la rueda (de aferradas a todo el trapo); menos vela = recarga más rápida.
 - Clic izquierdo dispara babor (el costado izquierdo del barco, no de la pantalla), clic derecho estribor, espacio los dos. Q y E siguen andando.
 - **El viento es la mecánica central.** Sopla en una dirección que rota despacio; de popa o de aleta el barco anda más, ciñendo menos y de proa a menos de la mitad, pero nunca queda frenado. Las ráfagas (manchas que cruzan el mapa, se ven en el agua y en el minimapa) dan un 30 % extra con el viento a favor. Las latinas ciñen mejor y las cuadras rinden más de popa. Los bots sienten el mismo viento. Los números están en `VIENTO`, en `src/config.js`.
-- Se pelea de costado. Para abordar hay que arrimarse al otro barco, ir más o menos a su velocidad y apretar F con el cursor sobre su casco (no se elige solo). El abordaje es una pelea de varios segundos: las dos tripulaciones pierden gente según su fuerza, el costado trabado no dispara (el de ninguno de los dos) y cualquiera puede cortar las sogas con F perdiendo algo de gente. Gana el que hace rendir al otro. Los números están en `ABORDAJE`, en `src/juego.js`.
+- Se pelea de costado. **Abordaje:** con F el gancho sale volando recto hacia el cursor (hay que apuntarle al casco) y llega a 210 de distancia; antes de la pelea por tripulación llegaba a 250 y se podía tirar de muy lejos. Si engancha, empieza una pelea de varios segundos: las dos tripulaciones pierden gente según su fuerza, se ven las sogas y una barra con las dos tripulaciones, ese costado no dispara y cualquiera corta las sogas con F. La versión de "arrimarse, igualar la velocidad y apretar F" se descartó por tosca (Nicolás, 12/11/2026): no pedir de nuevo igualar la velocidad. Números en `ABORDAJE` (`src/juego.js`).
 - El oro saqueado está en riesgo hasta entrar al puerto. Los barcos capturados navegan en formación; con G atacan.
 - Cada civilización es un equipo: tus barcos y los de tu civilización (bots y otros jugadores) no se dañan ni se abordan; bots de civilizaciones distintas se pelean entre ellos. El galeón del tesoro y sus guardias son un equipo aparte, enemigo de todos los capitanes.
 - Cada barco lleva la bandera entera de su civilización en el asta de popa (no en el medio). Amigo o enemigo lo marca el color de la barra de vida.
@@ -152,7 +155,7 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 
 ## Pendientes conocidos
 
-- En línea: mostrar la soga del gancho de otros jugadores; salas adicionales si se llena el mar (24 jugadores).
+- En línea: mostrar la soga del gancho de otros jugadores; lista de amigos e invitaciones (hoy se pasa el código de la sala); que una sala guarde quién la creó para poder echar gente.
 - Habilidades especiales (por ejemplo, el ancla para girar en el lugar).
 - Sonido y controles para celular.
 - Revisión de las traducciones por hablantes nativos; botón de ajustes durante la partida.

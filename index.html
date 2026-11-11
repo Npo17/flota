@@ -17,8 +17,8 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <script>try { if (localStorage.getItem('aon-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}</script>
-  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=e47a746a","/src/arte-britanico.js":"/src/arte-britanico.js?v=e47a746a","/src/arte-chino.js":"/src/arte-chino.js?v=e47a746a","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=e47a746a","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=e47a746a","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=e47a746a","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=e47a746a","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=e47a746a","/src/arte-espanol.js":"/src/arte-espanol.js?v=e47a746a","/src/arte-frances.js":"/src/arte-frances.js?v=e47a746a","/src/arte-holandes.js":"/src/arte-holandes.js?v=e47a746a","/src/arte-japones.js":"/src/arte-japones.js?v=e47a746a","/src/arte-motor.js":"/src/arte-motor.js?v=e47a746a","/src/arte-otomano.js":"/src/arte-otomano.js?v=e47a746a","/src/arte-portugues.js":"/src/arte-portugues.js?v=e47a746a","/src/arte-sueco.js":"/src/arte-sueco.js?v=e47a746a","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=e47a746a","/src/banderas.js":"/src/banderas.js?v=e47a746a","/src/barcos.js":"/src/barcos.js?v=e47a746a","/src/config.js":"/src/config.js?v=e47a746a","/src/cuenta.js":"/src/cuenta.js?v=e47a746a","/src/dibujo.js":"/src/dibujo.js?v=e47a746a","/src/idioma.js":"/src/idioma.js?v=e47a746a","/src/juego.js":"/src/juego.js?v=e47a746a","/src/main.js":"/src/main.js?v=e47a746a","/src/mapas.js":"/src/mapas.js?v=e47a746a","/src/mundo.js":"/src/mundo.js?v=e47a746a","/src/puerto.js":"/src/puerto.js?v=e47a746a","/src/red.js":"/src/red.js?v=e47a746a","/src/rng.js":"/src/rng.js?v=e47a746a","/src/textos-historia.js":"/src/textos-historia.js?v=e47a746a","/src/textos.js":"/src/textos.js?v=e47a746a"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=e47a746a">
+  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=bcacbf5d","/src/arte-britanico.js":"/src/arte-britanico.js?v=bcacbf5d","/src/arte-chino.js":"/src/arte-chino.js?v=bcacbf5d","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=bcacbf5d","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=bcacbf5d","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=bcacbf5d","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=bcacbf5d","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=bcacbf5d","/src/arte-espanol.js":"/src/arte-espanol.js?v=bcacbf5d","/src/arte-frances.js":"/src/arte-frances.js?v=bcacbf5d","/src/arte-holandes.js":"/src/arte-holandes.js?v=bcacbf5d","/src/arte-japones.js":"/src/arte-japones.js?v=bcacbf5d","/src/arte-motor.js":"/src/arte-motor.js?v=bcacbf5d","/src/arte-otomano.js":"/src/arte-otomano.js?v=bcacbf5d","/src/arte-portugues.js":"/src/arte-portugues.js?v=bcacbf5d","/src/arte-sueco.js":"/src/arte-sueco.js?v=bcacbf5d","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=bcacbf5d","/src/banderas.js":"/src/banderas.js?v=bcacbf5d","/src/barcos.js":"/src/barcos.js?v=bcacbf5d","/src/config.js":"/src/config.js?v=bcacbf5d","/src/cuenta.js":"/src/cuenta.js?v=bcacbf5d","/src/dibujo.js":"/src/dibujo.js?v=bcacbf5d","/src/idioma.js":"/src/idioma.js?v=bcacbf5d","/src/juego.js":"/src/juego.js?v=bcacbf5d","/src/main.js":"/src/main.js?v=bcacbf5d","/src/mapas.js":"/src/mapas.js?v=bcacbf5d","/src/mundo.js":"/src/mundo.js?v=bcacbf5d","/src/puerto.js":"/src/puerto.js?v=bcacbf5d","/src/red.js":"/src/red.js?v=bcacbf5d","/src/rng.js":"/src/rng.js?v=bcacbf5d","/src/textos-historia.js":"/src/textos-historia.js?v=bcacbf5d","/src/textos.js":"/src/textos.js?v=bcacbf5d"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=bcacbf5d">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -74,8 +74,13 @@
             <i data-t>Cambiar</i>
           </button>
           <p id="ast-mapa-desc" class="suave"></p>
+          <div id="ast-reglas" class="chips dos">
+            <button id="reg-viento" type="button" class="chip"></button>
+            <button id="reg-abordajes" type="button" class="chip"></button>
+          </div>
           <button id="ast-linea" class="boton principal linea" type="button" data-t>⚔ Jugar online</button>
           <p id="ast-linea-info" class="suave centro"></p>
+          <button id="ast-salas" class="boton secundario" type="button" data-t>👥 Jugar con amigos</button>
           <button id="ast-zarpar" class="boton secundario">Jugar solo contra bots</button>
           <p id="ast-mejor" class="suave"></p>
         </div>
@@ -115,6 +120,32 @@
       </div>
       <p class="sub" data-t>Veinte lugares de la era de la vela. Las banderas muestran quiénes navegan en cada uno.</p>
       <div id="map-grilla"></div>
+    </div>
+  </div>
+
+  <div id="pantalla-salas" class="pantalla oculto">
+    <div class="caja">
+      <div class="cabecera">
+        <h2 data-t>Jugar con amigos</h2>
+        <button id="sal-cerrar" class="boton" type="button" data-t>Cerrar</button>
+      </div>
+      <p class="sub" data-t>Creá una sala y pasale el código a tus amigos, o entrá a una sala pública.</p>
+      <h3 data-t>Crear una sala</h3>
+      <p id="sal-resumen" class="suave"></p>
+      <div class="sal-fila">
+        <label><span data-t>Jugadores</span>
+          <select id="sal-max" class="campo"><option>2</option><option>4</option><option selected>6</option><option>8</option><option>12</option></select></label>
+        <label class="sal-check"><input id="sal-publica" type="checkbox"> <span data-t>Sala pública (aparece en la lista)</span></label>
+      </div>
+      <button id="sal-crear" class="boton principal" type="button" data-t>Crear sala</button>
+      <h3 data-t>Entrar con un código</h3>
+      <div class="sal-fila">
+        <input id="sal-codigo" class="campo" maxlength="6" autocomplete="off" placeholder="Código de la sala" data-t-ph>
+        <button id="sal-entrar" class="boton" type="button" data-t>Entrar</button>
+      </div>
+      <h3 data-t>Salas públicas</h3>
+      <div id="sal-lista"></div>
+      <p id="sal-info" class="suave centro"></p>
     </div>
   </div>
 
@@ -160,7 +191,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=e47a746a" defer></script>
-  <script type="module" src="src/main.js?v=e47a746a"></script>
+  <script src="vendor/supabase.min.js?v=bcacbf5d" defer></script>
+  <script type="module" src="src/main.js?v=bcacbf5d"></script>
 </body>
 </html>

@@ -8,9 +8,12 @@ import { costoDiseno } from '../src/barcos.js';
 import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
-const MAX_JUGADORES = 24;
+const MAX_JUGADORES = 24; // en el mar de todos
+const MAX_SALA = 12; // tope de una sala
+const VIDA_SALA = 70000; // una sala que no avisa en este tiempo sale de la lista de públicas
 const PASO = 50; // milisegundos entre pasos de simulación
 const ORIGENES = ['https://ageofnavies.com', 'https://www.ageofnavies.com', 'http://localhost:5180', 'http://127.0.0.1:5180'];
+// (la app de escritorio se presenta con el origen de la web; ver age-of-navies-steam)
 
 // Todos juegan en el mismo mar; el mapa cambia una vez por día
 function mapaDelDia() {
@@ -23,16 +26,30 @@ function cabeceras(req) {
   return { 'Access-Control-Allow-Origin': ORIGENES.includes(o) ? o : ORIGENES[0], 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 }
 
+// El código de una sala: 4 a 6 letras o números, en mayúsculas
+const codigoSala = (x) => { const c = String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); return c.length >= 4 ? c : ''; };
+
+// Cada mar es un Durable Object aparte: 'mar-1' es el de todos, 'sala-XXXX' es una sala (con amigos o pública)
+// y 'salas' lleva la lista de salas públicas abiertas.
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === '/mar' || url.pathname === '/estado') return env.MAR.get(env.MAR.idFromName('mar-1')).fetch(req);
+    if (url.pathname === '/salas') return env.MAR.get(env.MAR.idFromName('salas')).fetch(req);
+    if (url.pathname === '/mar' || url.pathname === '/estado') {
+      const sala = codigoSala(url.searchParams.get('sala'));
+      return env.MAR.get(env.MAR.idFromName(sala ? 'sala-' + sala : 'mar-1')).fetch(req);
+    }
     return new Response('Age of Navies: servidor del mar', { status: 200 });
   },
 };
 
 export class Mar {
-  constructor() {
+  constructor(estado, env) {
+    this.env = env;
+    this.sala = ''; // código de la sala; vacío en el mar de todos
+    this.cfg = null; // lo que eligió quien creó la sala: { nombre, mapa, max, publica, reglas }
+    this.lista = new Map(); // solo en el objeto 'salas': código -> datos de cada sala pública
+    this.avisado = 0;
     this.clientes = new Map(); // socket -> { cap, entrada, conocidos, finEn }
     this.j = null;
     this.mapa = null;
@@ -43,6 +60,20 @@ export class Mar {
 
   async fetch(req) {
     const url = new URL(req.url);
+    if (url.pathname === '/salas') { // la lista de salas públicas (GET) y los avisos de cada sala (POST, solo desde el servidor)
+      const ahora = Date.now();
+      if (req.method === 'POST') {
+        if (req.headers.get('x-sala') !== 'interno') return new Response('No', { status: 403 });
+        const d = await req.json();
+        if (d.cerrar) this.lista.delete(d.codigo); else this.lista.set(d.codigo, { ...d, visto: ahora });
+        return new Response('ok');
+      }
+      for (const [k, v] of this.lista) if (ahora - v.visto > VIDA_SALA) this.lista.delete(k);
+      const salas = [...this.lista.values()].filter((x) => x.jugadores < x.max).sort((a, b) => b.jugadores - a.jugadores).slice(0, 30)
+        .map((x) => ({ codigo: x.codigo, nombre: x.nombre, mapa: x.mapa, jugadores: x.jugadores, max: x.max, viento: x.viento, abordajes: x.abordajes }));
+      return new Response(JSON.stringify({ salas }), { headers: cabeceras(req) });
+    }
+    this.sala = codigoSala(url.searchParams.get('sala'));
     if (url.pathname === '/estado') {
       const mapa = this.mapa || mapaDelDia();
       return new Response(JSON.stringify({ jugadores: this.jugando(), max: MAX_JUGADORES, mapa, nombre: MAPAS[mapa].nombre, lugar: MAPAS[mapa].lugar }), { headers: cabeceras(req) });
@@ -82,12 +113,23 @@ export class Mar {
     this.clientes.delete(ws);
     if (c.cap && this.j) quitarCapitan(this.j, c.cap);
     try { ws.close(); } catch {}
-    if (this.clientes.size === 0) { // mar vacío: se apaga hasta que entre alguien
+    if (this.clientes.size === 0) { // mar vacío: se apaga hasta que entre alguien (una sala vacía deja de existir)
       clearInterval(this.reloj);
       this.reloj = null;
       this.j = null;
       this.mapa = null;
-    }
+      this.avisar(true);
+      this.cfg = null;
+    } else this.avisar();
+  }
+
+  // Una sala pública le cuenta a la lista cuánta gente tiene (al entrar o salir alguien y cada tanto), o que cerró
+  avisar(cerrar) {
+    if (!this.sala || !this.cfg || !this.cfg.publica || !this.env) return;
+    this.avisado = Date.now();
+    const d = cerrar ? { codigo: this.sala, cerrar: true }
+      : { codigo: this.sala, nombre: this.cfg.nombre, mapa: this.mapa, jugadores: this.jugando(), max: this.cfg.max, viento: this.cfg.reglas.viento, abordajes: this.cfg.reglas.abordajes };
+    this.env.MAR.get(this.env.MAR.idFromName('salas')).fetch('https://salas/salas', { method: 'POST', headers: { 'x-sala': 'interno' }, body: JSON.stringify(d) }).catch(() => {});
   }
 
   mensaje(ws, c, m) {
@@ -120,11 +162,22 @@ export class Mar {
     const valido = FACCIONES[diseno.faccion] && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
       && diseno.canones >= 2 && diseno.canones % 2 === 0 && diseno.canones <= CASCOS[diseno.casco].maxCanones && costoDiseno(diseno) <= PRESUPUESTO;
     if (!valido) return ws.send(JSON.stringify({ t: 'no', motivo: 'Ese diseño de barco no es válido.' }));
-    if (this.jugando() >= MAX_JUGADORES) return ws.send(JSON.stringify({ t: 'no', motivo: 'El mar está lleno. Probá de nuevo en un rato.' }));
+    if (this.sala && !this.cfg) { // una sala existe mientras tenga gente: la arma el primero que entra con "crear"
+      const k = m.crear;
+      if (!k) return ws.send(JSON.stringify({ t: 'no', motivo: 'Esa sala no existe o ya se cerró.' }));
+      this.cfg = {
+        nombre: String(m.nombre || '').replace(/[<>&"']/g, '').trim().slice(0, 16) || 'Capitán',
+        mapa: MAPAS[k.mapa] ? k.mapa : mapaDelDia(),
+        max: Math.max(2, Math.min(MAX_SALA, k.max | 0 || 6)),
+        publica: !!k.publica,
+        reglas: { viento: k.viento !== false, abordajes: k.abordajes !== false },
+      };
+    }
+    if (this.jugando() >= (this.cfg ? this.cfg.max : MAX_JUGADORES)) return ws.send(JSON.stringify({ t: 'no', motivo: this.cfg ? 'La sala está llena.' : 'El mar está lleno. Probá de nuevo en un rato.' }));
 
     if (!this.j) {
-      this.mapa = mapaDelDia();
-      this.j = crearMar(crearMundo(this.mapa), { servidor: true, enemigos: 22 });
+      this.mapa = this.cfg ? this.cfg.mapa : mapaDelDia();
+      this.j = crearMar(crearMundo(this.mapa), { servidor: true, enemigos: this.cfg ? 14 : 22, reglas: this.cfg ? this.cfg.reglas : null });
       this.n = 0;
     }
     if (c.cap) quitarCapitan(this.j, c.cap);
@@ -135,7 +188,8 @@ export class Mar {
     c.entrada = {};
     c.conocidos = new Map();
     c.finEn = 0;
-    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 2 })); // v: 2 = mundo sin callejones
+    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 2, sala: this.sala || null, reglas: this.j.reglas })); // v: 2 = mundo sin callejones
+    this.avisar();
     if (!this.reloj) {
       this.ultimo = Date.now();
       this.reloj = setInterval(() => { try { this.paso(); } catch (e) { console.log('error en paso', e && e.stack); } }, PASO);
@@ -168,10 +222,11 @@ export class Mar {
     for (const cap of j.capitanes) if (cap.gancho) ganchos.push([cap.id, cap.gancho.fase === 'vuelo' ? 0 : 1, r(cap.gancho.x), r(cap.gancho.y), cap.gancho.obj ? cap.gancho.obj.id : 0]);
     const comunes = j.eventos.filter((e) => !e.p);
     // viento: rumbo (en centésimas de radián) y después x, y, radio de cada ráfaga
-    const viento = [r(j.viento.a * 100)];
-    for (const g of j.viento.rafagas) viento.push(r(g.x), r(g.y), r(g.r));
+    const viento = j.viento ? [r(j.viento.a * 100)] : null; // null = partida sin viento
+    if (viento) for (const g of j.viento.rafagas) viento.push(r(g.x), r(g.y), r(g.r));
     const rachas = []; // x, y, radio, rumbo en centésimas, décimas de segundo que le quedan
-    for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
+    if (viento) for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
+    if (ahora - this.avisado > 20000) this.avisar(); // para que la sala no se caiga de la lista
 
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;
@@ -187,7 +242,7 @@ export class Mar {
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
       const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, vi: viento, rc: rachas,
+        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(viento ? { vi: viento, rc: rachas } : {}),
         ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
         yo: {
           hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],

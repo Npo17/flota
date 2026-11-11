@@ -9,6 +9,19 @@ const rivales = (j) => { for (const b of j.barcos) if (!b.cap) b.diseno.faccion 
 let fallas = 0;
 const ok = (c, m) => { if (!c) { fallas++; console.log('FALLA:', m); } };
 
+// --- reglas de la partida: sin viento no hay viento y el barco anda igual; sin abordajes, F no tira el gancho
+{
+  const j = rivales(crearPartida(crearMundo('caribe'), diseno, 100, { viento: false, abordajes: false }));
+  ok(j.viento === null && j.reglas.viento === false && rindeViento(j, j.jugador) === 1, 'reglas: sin viento igual hay viento');
+  const x0 = j.jugador.x, y0 = j.jugador.y;
+  for (let i = 0; i < 60 * 5; i++) actualizar(j, 1 / 60, { objetivo: { x: x0 + 900, y: y0 + 600 }, velas: 3 });
+  ok(Math.hypot(j.jugador.x - x0, j.jugador.y - y0) > 100, 'reglas: sin viento el barco no navega');
+  actualizar(j, 1 / 60, { abordar: true, objetivo: { x: x0 + 900, y: y0 } });
+  ok(!j.gancho, 'reglas: sin abordajes igual salió el gancho');
+  const k = crearPartida(crearMundo('caribe'), diseno, 100);
+  ok(k.viento && k.reglas.viento && k.reglas.abordajes, 'reglas: por defecto tiene que haber viento y abordajes');
+}
+
 // --- modo solo en todos los mapas
 for (const id of Object.keys(MAPAS)) {
   const j = crearPartida(crearMundo(id), diseno, 100);
@@ -28,21 +41,25 @@ for (const id of Object.keys(MAPAS)) {
   ok(j.stats.hundidos === 1, 'solo: no contó el hundido: ' + j.stats.hundidos);
   for (let i = 0; i < 900 && !j.oroBodega; i++) { yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, { objetivo: { x: 1500, y: 4680 }, velas: 3 }); } // con viento de proa tarda más
   ok(j.oroBodega > 0, 'solo: no juntó el oro');
-  // abordaje: lejos o sin apuntar no engancha; arrimado y con el cursor sobre el casco, sí, y la pelea lleva su tiempo
+  // abordaje: el gancho sale volando hacia el cursor; lejos o mal apuntado no engancha; a tiro y apuntado, sí, y la pelea lleva su tiempo
   {
     const l = j.barcos.find((b) => b.bando === 'enemigo' && !b.hundiendo);
+    const volar = () => { for (let i = 0; i < 60 && j.gancho && j.gancho.fase === 'vuelo'; i++) { l.v = 0; yo.v = 0; actualizar(j, 1 / 60, {}); } };
     yo.vida = 1e6; // que no lo hundan otros barcos mientras se prueba
-    yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; l.x = 3000; l.y = 5420; l.a = 0; l.v = 0; j.cdAbordaje = 0;
-    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x, y: l.y } });
-    ok(!j.gancho, 'abordaje: enganchó desde lejos');
-    l.y = 5260; l.v = 0; yo.trip = 30; l.trip = 20;
     for (const o of j.barcos) if (o !== l && o !== yo) { o.x = 300; o.y = 300; }
-    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x + 600, y: l.y } });
-    ok(!!j.gancho && j.gancho.obj === l, 'abordaje: con el rival a tiro, F no lo enganchó aunque el cursor no estuviera encima');
-    j.gancho = null; j.yo.gancho = null; j.cdAbordaje = 0; l.trip = 30;
-    yo.trip = 30; l.trip = 30; l.x = 3000; l.y = 5260; l.v = 0;
+    yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; l.x = 3000; l.y = 5520; l.a = 0; l.v = 0; j.cdAbordaje = 0;
     actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x, y: l.y } });
-    ok(!!j.gancho && j.gancho.obj === l, 'abordaje: no enganchó estando arrimado');
+    ok(!!j.gancho && j.gancho.fase === 'vuelo', 'abordaje: el gancho no salió volando');
+    volar();
+    ok(!j.gancho, 'abordaje: enganchó desde lejos');
+    l.y = 5350; l.v = 0; yo.trip = 30; l.trip = 20; j.cdAbordaje = 0;
+    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x + 600, y: yo.y } });
+    volar();
+    ok(!j.gancho, 'abordaje: enganchó sin apuntarle al barco');
+    j.cdAbordaje = 0; yo.trip = 30; l.trip = 30; l.x = 3000; l.y = 5350; l.v = 0;
+    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x, y: l.y } });
+    volar();
+    ok(!!j.gancho && j.gancho.obj === l, 'abordaje: no enganchó apuntando a un barco a tiro');
     for (let i = 0; i < 60 * 2; i++) { l.v = 0; actualizar(j, 1 / 60, {}); }
     ok(!!j.gancho && l.trip < 30 && yo.trip < 30, 'abordaje: la pelea no dura o no hay bajas: ' + yo.trip + ' / ' + l.trip);
     const antes = yo.trip;
@@ -54,7 +71,7 @@ for (const id of Object.keys(MAPAS)) {
   const m = j.barcos.find((b) => b.bando === 'enemigo' && !b.hundiendo);
   yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; yo.trip = 200; m.x = 3000; m.y = 5260; m.a = 0; m.v = 0; m.vida = 5; j.cdAbordaje = 0;
   actualizar(j, 1 / 60, { abordar: true, objetivo: { x: m.x, y: m.y } });
-  for (let i = 0; i < 60 * 15 && m.bando === 'enemigo' && !m.hundiendo; i++) { m.v = 0; actualizar(j, 1 / 60, {}); }
+  for (let i = 0; i < 60 * 15 + 30 && m.bando === 'enemigo' && !m.hundiendo; i++) { m.v = 0; actualizar(j, 1 / 60, {}); }
   ok(m.bando === 'escolta' && m.cap === j.yo, 'solo: el abordaje no capturó: ' + m.bando);
   ok(j.stats.capturados === 1, 'solo: no contó la captura');
   // atracar

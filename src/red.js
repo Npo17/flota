@@ -20,8 +20,17 @@ export async function estadoDelMar() {
   } catch { return null; }
 }
 
+// Las salas públicas abiertas, para la pantalla "Jugar con amigos"
+export async function salasPublicas() {
+  try {
+    const r = await fetch(HTTP + '/salas', { cache: 'no-store' });
+    return r.ok ? (await r.json()).salas || [] : null;
+  } catch { return null; }
+}
+
 // eventos: alEntrar(partida), alCerrar(motivo), alPuerto(ok)
-export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
+// sala: { codigo, crear } para jugar en una sala en vez del mar de todos; crear = { mapa, max, publica, viento, abordajes } si la arma este jugador
+export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto }) {
   let ws = null, miId = null, abierta = false, cerradaAProposito = false;
   let pulsos = {}, objetivo = null, quieto = false, ultimoEnvio = 0;
   const porId = new Map();
@@ -34,12 +43,13 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     cdHabilidad: 0, habilidad: null,
     cdAbordaje: 0, gancho: null, ordenFlota: 'formacion', sacudon: 0, fin: false, finEn: 0, causa: null,
     nombreJugador: nombre, jugadores: [],
-    viento: null, // llega con cada foto; si el servidor es de una versión anterior, no hay viento
+    viento: null, // llega con cada foto; si el servidor es de una versión anterior o la sala es sin viento, no hay
+    reglas: { viento: true, abordajes: true }, sala: null, servidorNuevo: false,
   };
 
-  try { ws = new WebSocket(WS); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
+  try { ws = new WebSocket(WS + (sala ? '?sala=' + encodeURIComponent(sala.codigo) : '')); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
   if (ws) {
-    ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno })); };
+    ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno, ...(sala && sala.crear ? { crear: sala.crear } : {}) })); };
     ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } recibir(m); };
     ws.onclose = () => { if (!cerradaAProposito) alCerrar(t(miId ? 'Se cortó la conexión con el mar.' : 'No se pudo conectar con el mar. Probá de nuevo en un rato.')); };
     ws.onerror = () => {};
@@ -49,6 +59,13 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     if (m.t === 'hola') {
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
       j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2) }); // un servidor anterior todavía tiene los islotes pegados
+      if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
+        cerradaAProposito = true;
+        try { ws.close(); } catch {}
+        return alCerrar(t('Esa sala no existe o ya se cerró.'));
+      }
+      j.servidorNuevo = m.v >= 2; j.sala = m.sala || null;
+      if (m.reglas) j.reglas = m.reglas;
     } else if (m.t === 'no') {
       cerradaAProposito = true;
       try { ws.close(); } catch {}
@@ -139,7 +156,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     const velas = Number.isFinite(entrada.velas) ? entrada.velas : 3;
     // Un servidor de una versión anterior saca las velas de la distancia al cursor: se le manda un punto en la misma
     // dirección pero a la distancia que corresponde a las velas elegidas (salvo al tirar el gancho, que necesita el punto real)
-    if (objetivo && !j.viento && j.jugador && !entrada.abordar) {
+    if (objetivo && !j.viento && !j.servidorNuevo && j.jugador && !entrada.abordar) {
       const yo = j.jugador, dx = objetivo.x - yo.x, dy = objetivo.y - yo.y, d = Math.hypot(dx, dy) || 1, lejos = [0, 100, 215, 420][velas];
       // con el cursor pegado al barco se mantiene el rumbo, para que tampoco ahí lo frene
       const cerca = d <= yo.stats.largo * 0.6 + 15, ux = cerca ? Math.cos(yo.a) : dx / d, uy = cerca ? Math.sin(yo.a) : dy / d;

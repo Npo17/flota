@@ -171,3 +171,19 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 #aj-idioma-nombre { text-transform: none; letter-spacing: 0; color: var(--suave); }
 :root[data-tema="claro"] .logo-titulo { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
 :root[data-tema="claro"] .stat i { background: #2a8fc0; }
+
+/* Reglas de la partida y salas (jugar con amigos) */
+#ast-reglas { margin-top: 8px; }
+#ast-reglas .chip { padding: 9px 6px; font-size: 13px; letter-spacing: 0.3px; }
+#pantalla-salas { z-index: 4; align-items: flex-start; }
+.sal-fila { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.sal-fila label { display: flex; align-items: center; gap: 8px; }
+.sal-fila select.campo { width: auto; font-size: 15px; padding: 8px 10px; }
+.sal-fila input.campo { flex: 1; min-width: 150px; text-transform: uppercase; letter-spacing: 4px; }
+.sal-check { cursor: pointer; }
+.sal-check input { width: 18px; height: 18px; accent-color: #ffd166; }
+.sala { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 6px; padding: 10px 12px; text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--tarjeta); border: 2px solid transparent; border-radius: 10px; }
+.sala:hover { background: var(--tarjeta-hover); border-color: var(--acento); }
+.sala span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sala small { color: var(--suave); font-size: 12px; }
+.sala i { font-style: normal; font-weight: 700; font-size: 12px; color: #2a1c08; background: #ffd166; border-radius: 999px; padding: 5px 10px; }
