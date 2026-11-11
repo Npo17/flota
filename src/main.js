@@ -1,5 +1,5 @@
 // Pega todo: pantallas (astillero, puerto, fin), teclado y el ciclo del juego.
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON } from './config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, HABILIDADES } from './config.js';
 import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
@@ -24,7 +24,7 @@ let mundo = null;
 let mapaElegido = 'aleatorio';
 try { mapaElegido = localStorage.getItem('aon-mapa') || 'aleatorio'; } catch {}
 if (mapaElegido !== 'aleatorio' && !MAPAS[mapaElegido]) mapaElegido = 'aleatorio';
-let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
+let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada', habilidad: 'andanada' };
 let partida = null;
 let red = null; // conexión al mar compartido cuando se juega en línea
 let estado = 'astillero'; // astillero | mar | puerto | fin
@@ -33,7 +33,7 @@ const teclas = new Set();
 let pulsos = {}; // acciones de un solo toque
 let velasPedidas = 3; // de 0 (aferradas) a 3 (todo el trapo): se cambian con W / S o la rueda
 
-// Zoom que elige el jugador con + / − (o Z / X): de 0,55 (ves mucho mar) a 1,6 (de cerca)
+// Zoom que elige el jugador con Ctrl + rueda: de 0,55 (ves mucho mar) a 1,6 (de cerca)
 let zoomJugador = 1;
 try { zoomJugador = Math.max(0.55, Math.min(1.6, +localStorage.getItem('aon-zoom') || 1)); } catch {}
 function cambiarZoom(f) {
@@ -92,7 +92,7 @@ function pintarAstillero() {
   d.className = 'deslizador';
   d.innerHTML = `<input type="range" min="2" max="${max}" step="2" value="${diseno.canones}"><b>${t('{n} cañones', { n: diseno.canones })}</b>`;
   d.querySelector('input').oninput = (e) => { diseno.canones = +e.target.value; pintarAstillero(); };
-  cont.append(h, d, ...grupo(t('Munición'), MUNICIONES, 'municion'), ...grupo(t('Tripulación'), TRIPULACIONES, 'trip'));
+  cont.append(h, d, ...grupo(t('Munición'), MUNICIONES, 'municion'), ...grupo(t('Tripulación'), TRIPULACIONES, 'trip'), ...grupo(t('Habilidad · elegí una, se usa con R'), HABILIDADES, 'habilidad'));
 
   const resto = PRESUPUESTO - costoDiseno(diseno);
   $('ast-resto').textContent = t('{n} oro', { n: resto });
@@ -336,8 +336,7 @@ addEventListener('keydown', (e) => {
   if (k === 'q') pulsos.fuego = -1;
   if (k === 'e') pulsos.fuego = 1;
   if (k === ' ') pulsos.fuegoTodo = true;
-  if (k === '+' || k === '=' || k === 'z') cambiarZoom(1.15);
-  if (k === '-' || k === '_' || k === 'x') cambiarZoom(1 / 1.15);
+  if (k === 'r') pulsos.habilidad = true;
   if (k === 'w' || k === 'arrowup') cambiarVelas(1);
   if (k === 's' || k === 'arrowdown') cambiarVelas(-1);
   if (k === 'f') pulsos.abordar = true;
@@ -360,7 +359,8 @@ canvas.addEventListener('mousedown', (e) => {
 function cambiarVelas(paso) { velasPedidas = Math.max(0, Math.min(3, velasPedidas + paso)); }
 let ultimaRueda = 0;
 canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
+  e.preventDefault(); // también frena el zoom de página del navegador con Ctrl + rueda
+  if (estado === 'mar' && e.ctrlKey && e.deltaY) { cambiarZoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); return; } // Ctrl + rueda: zoom de la cámara
   if (estado !== 'mar' || !e.deltaY || e.timeStamp - ultimaRueda < 130) return; // una muesca por vez, también con panel táctil
   ultimaRueda = e.timeStamp;
   cambiarVelas(e.deltaY < 0 ? 1 : -1);
@@ -409,6 +409,9 @@ function pintarHud() {
   const averia = b.vida < s.vidaMax * 0.7 ? ` · ${t('averiado, vas más lento')}` : '';
   $('hud-velas-txt').textContent = t(b.velas >= 3 ? 'A toda vela: recarga lenta' : b.velas === 2 ? 'Media vela' : b.velas === 1 ? 'Velas de combate: recarga rápida' : 'Velas aferradas: el barco se detiene') + averia;
   pintarViento(j, b);
+  const hab = HABILIDADES[b.diseno.habilidad] || HABILIDADES.andanada, cdH = j.cdHabilidad || 0;
+  $('hud-hab-txt').textContent = `${t(hab.nombre)} (R)${cdH > 0 ? ` · ${Math.ceil(cdH)} s` : ''}`;
+  $('hud-hab').style.width = `${100 - Math.min(100, (cdH / hab.espera) * 100)}%`;
 
   const clave = j.avisos.map((a) => a.texto + (a.p ? JSON.stringify(a.p) : '')).join('|');
   if (clave !== avisosPintados) {
@@ -483,7 +486,7 @@ function cuadro(ahora) {
       }
     }
     dibujarEscena(ctx, partida, vista);
-    if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 170); }
+    if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
   }
   requestAnimationFrame(cuadro);
 }

@@ -5,7 +5,7 @@ import { crearMundo } from '../src/mundo.js';
 import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe } from '../src/juego.js';
 import { comprar } from '../src/puerto.js';
 import { costoDiseno } from '../src/barcos.js';
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES } from '../src/config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
 const MAX_JUGADORES = 24;
@@ -103,6 +103,7 @@ export class Mar {
       if (m.l === 1 || m.l === -1) e.fuego = m.l;
       if (m.g) e.abordar = true;
       if (m.r) e.ordenFlota = true;
+      if (m.h) e.habilidad = true;
     } else if (m.t === 'puerto') {
       const ok = atracar(this.j, cap);
       if (ok) { c.entrada.objetivo = null; c.entrada.quieto = true; }
@@ -115,7 +116,7 @@ export class Mar {
   entrar(ws, c, m) {
     if (c.cap && !c.cap.fin) return;
     const d = m.diseno || {};
-    const diseno = { faccion: d.faccion, casco: d.casco, velas: d.velas, canones: d.canones | 0, municion: d.municion, trip: d.trip };
+    const diseno = { faccion: d.faccion, casco: d.casco, velas: d.velas, canones: d.canones | 0, municion: d.municion, trip: d.trip, habilidad: HABILIDADES[d.habilidad] ? d.habilidad : 'andanada' };
     const valido = FACCIONES[diseno.faccion] && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
       && diseno.canones >= 2 && diseno.canones % 2 === 0 && diseno.canones <= CASCOS[diseno.casco].maxCanones && costoDiseno(diseno) <= PRESUPUESTO;
     if (!valido) return ws.send(JSON.stringify({ t: 'no', motivo: 'Ese diseño de barco no es válido.' }));
@@ -134,7 +135,7 @@ export class Mar {
     c.entrada = {};
     c.conocidos = new Map();
     c.finEn = 0;
-    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa }));
+    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 2 })); // v: 2 = mundo sin callejones
     if (!this.reloj) {
       this.ultimo = Date.now();
       this.reloj = setInterval(() => { try { this.paso(); } catch (e) { console.log('error en paso', e && e.stack); } }, PASO);
@@ -169,6 +170,8 @@ export class Mar {
     // viento: rumbo (en centésimas de radián) y después x, y, radio de cada ráfaga
     const viento = [r(j.viento.a * 100)];
     for (const g of j.viento.rafagas) viento.push(r(g.x), r(g.y), r(g.r));
+    const rachas = []; // x, y, radio, rumbo en centésimas, décimas de segundo que le quedan
+    for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
 
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;
@@ -184,9 +187,10 @@ export class Mar {
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
       const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, vi: viento,
+        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, vi: viento, rc: rachas,
         ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
         yo: {
+          hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],
           b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota,
           rec: [+bq.recarga['-1'].toFixed(2), +bq.recarga['1'].toFixed(2)], recT: bq.recargaTotal ? [bq.recargaTotal['-1'] || 0, bq.recargaTotal['1'] || 0] : null,
           av: cap.avisos.map((a) => (a.p ? [a.texto, a.tipo, a.p] : [a.texto, a.tipo])), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,

@@ -31,6 +31,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     enLinea: true, mundo: null, t: 0, yo,
     barcos: [], jugador: null, balas: [], particulas: [], cofres: [], tritones: [], textos: [], avisos: [],
     oroBodega: 0, oroPuerto: 0, escoltasMax: 2, stats: { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 },
+    cdHabilidad: 0, habilidad: null,
     cdAbordaje: 0, gancho: null, ordenFlota: 'formacion', sacudon: 0, fin: false, finEn: 0, causa: null,
     nombreJugador: nombre, jugadores: [],
     viento: null, // llega con cada foto; si el servidor es de una versión anterior, no hay viento
@@ -47,7 +48,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
   function recibir(m) {
     if (m.t === 'hola') {
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
-      j.mundo = crearMundo(m.mapa);
+      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2) }); // un servidor anterior todavía tiene los islotes pegados
     } else if (m.t === 'no') {
       cerradaAProposito = true;
       try { ws.close(); } catch {}
@@ -62,7 +63,9 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     if (m.vi) {
       const rafagas = [];
       for (let k = 1; k + 2 < m.vi.length; k += 3) rafagas.push({ x: m.vi[k], y: m.vi[k + 1], r: m.vi[k + 2] });
-      j.viento = { a: m.vi[0] / 100, rafagas };
+      const rachas = [];
+      if (m.rc) for (let k = 0; k + 4 < m.rc.length; k += 5) rachas.push({ x: m.rc[k], y: m.rc[k + 1], r: m.rc[k + 2], a: m.rc[k + 3] / 100, t: m.rc[k + 4] / 10 });
+      j.viento = { a: m.vi[0] / 100, rafagas, rachas };
     }
     for (const [id, nom] of m.caps) nombres.set(id, nom);
     j.jugadores = m.caps;
@@ -106,6 +109,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     }
     j.oroBodega = yo.oroBodega = y.ob; j.oroPuerto = yo.oroPuerto = y.op; j.escoltasMax = yo.escoltasMax = y.em;
     j.stats = y.st; j.cdAbordaje = y.cd; j.ordenFlota = y.of;
+    if (y.hb) { j.cdHabilidad = y.hb[0]; j.habilidad = y.hb[1] ? { id: y.hb[1], t: 1 } : null; yo.habilidad = j.habilidad; }
     j.avisos = y.av.map(([texto, tipo, p]) => ({ texto, tipo, p }));
     j.sacudon = Math.max(j.sacudon, y.sac);
     if (y.fin && !j.fin) { j.fin = true; j.finEn = j.t; j.causa = y.causa; }
@@ -143,6 +147,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     if (entrada.fuego) pulsos.l = entrada.fuego;
     if (entrada.abordar) pulsos.g = 1;
     if (entrada.ordenFlota) pulsos.r = 1;
+    if (entrada.habilidad) pulsos.h = 1;
     const ahora = performance.now();
     if (abierta && miId && !j.fin && ws.readyState === 1 && (ahora - ultimoEnvio > 66 || pulsos.f || pulsos.l || pulsos.g)) {
       ultimoEnvio = ahora;

@@ -454,6 +454,23 @@ function dibujarViento(ctx, j, x0, y0, vw, vh) {
     ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.arc(g.x, g.y, g.r * 0.7, 0, TAU); ctx.fill();
   }
+  // rachas: un soplo corto, bien visible, con flechas hacia donde empuja; se apaga cuando se termina
+  for (const k of v.rachas || []) {
+    if (k.x + k.r < x0 || k.x - k.r > x0 + vw || k.y + k.r < y0 || k.y - k.r > y0 + vh) continue;
+    const vida = Math.min(1, k.t / 1.2), kx = Math.cos(k.a), ky = Math.sin(k.a);
+    ctx.globalAlpha = 0.1 * vida; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 0.55 * vida; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.setLineDash([10, 9]); ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 3;
+    for (let q = 0; q < 7; q++) {
+      const lado = (q - 3) * k.r * 0.24, fase = (j.t * 0.9 + q * 0.37) % 1, largo = Math.sqrt(Math.max(0, k.r * k.r - lado * lado)) * 0.9;
+      const px = k.x - ky * lado + kx * (fase * 2 - 1) * largo, py = k.y + kx * lado + ky * (fase * 2 - 1) * largo;
+      ctx.globalAlpha = Math.sin(fase * Math.PI) * 0.85 * vida;
+      ctx.strokeStyle = '#ffe9a8';
+      ctx.beginPath(); ctx.moveTo(px - kx * 34, py - ky * 34); ctx.lineTo(px, py); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px - kx * 11 - ky * 8, py - ky * 11 + kx * 8); ctx.lineTo(px, py); ctx.lineTo(px - kx * 11 + ky * 8, py - ky * 11 - kx * 8); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
   ctx.lineCap = 'round'; ctx.strokeStyle = '#fff';
   for (let gx = Math.floor((x0 - RECORRIDO) / C); gx <= Math.floor((x0 + vw + RECORRIDO) / C); gx++) {
     for (let gy = Math.floor((y0 - RECORRIDO) / C); gy <= Math.floor((y0 + vh + RECORRIDO) / C); gy++) {
@@ -868,6 +885,10 @@ export function dibujarMinimapa(ctx, j, lado) {
   for (const b of j.barcos) {
     if (b.hundiendo || b === yo) continue;
     // los bots solo se ven de cerca; los otros jugadores, siempre
+    if (b.tipo === 'mercante' && b.rival && b.bando === 'enemigo') { // los mercantes se ven siempre: son la forma fácil de hacer oro
+      ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(b.x * k, b.y * k - 4); ctx.lineTo(b.x * k + 4, b.y * k); ctx.lineTo(b.x * k, b.y * k + 4); ctx.lineTo(b.x * k - 4, b.y * k); ctx.closePath(); ctx.fill();
+      continue;
+    }
     if (b.bando === 'enemigo' && !b.esJugador && Math.hypot(b.x - yo.x, b.y - yo.y) > 1500) continue;
     ctx.fillStyle = b.esJugador ? (b.rival ? '#ffd166' : '#b8ffcb') : b.rival ? '#ff6b6b' : '#7dff9b';
     const t = b.esJugador ? 4 : 3;

@@ -84,6 +84,7 @@ export const PUERTO = {
   nivelCanones: (n) => 180 * n, // n = nivel que se compra
   escolta: (n) => 150 * n, // n = cantidad de lugares que vas a tener
   municion: { redonda: 60, metralla: 160, pesada: 220 },
+  refuerzo: (n) => 140 * n, puntosRefuerzo: 45, nivelesRefuerzo: 6, // reforzar el casco: n = nivel que se compra
   cambioCasco: (diferencia) => Math.round(diferencia * 2.5), // pasar a un casco más grande: la diferencia de precio del astillero, por 2,5
 };
 
@@ -92,12 +93,20 @@ export const ESCOLTAS_MAX = 6;
 
 // Tipos de barcos enemigos. "nivel" sube a medida que te alejás del puerto.
 export const ENEMIGOS = {
-  mercante: { nombre: 'Mercante', casco: 'balandra', velas: 'latinas', canones: 2, municion: 'redonda', trip: 'moderada', conducta: 'huye', oro: [35, 70], color: '#d9c48a', minNivel: 0 },
+  mercante: { nombre: 'Mercante', casco: 'balandra', velas: 'latinas', canones: 2, municion: 'redonda', trip: 'moderada', conducta: 'huye', oro: [80, 150], color: '#d9c48a', minNivel: 0 },
   balandro: { nombre: 'Balandro pirata', casco: 'balandra', velas: 'cuadras', canones: 4, municion: 'redonda', trip: 'moderada', conducta: 'ataca', oro: [60, 110], color: '#3b3b3b', minNivel: 0 },
   corsario: { nombre: 'Corsario', casco: 'bergantin', velas: 'latinas', canones: 8, municion: 'redonda', trip: 'curtida', conducta: 'ataca', oro: [120, 200], color: '#8a2d2d', minNivel: 1 },
   cazador: { nombre: 'Cazador', casco: 'bergantin', velas: 'mixtas', canones: 8, municion: 'metralla', trip: 'curtida', conducta: 'ataca', oro: [150, 230], color: '#2d4f8a', minNivel: 2 },
   galeonGuerra: { nombre: 'Galeón de guerra', casco: 'galeon', velas: 'cuadras', canones: 14, municion: 'pesada', trip: 'curtida', conducta: 'ataca', oro: [300, 480], color: '#5a2d7a', minNivel: 2 },
   tesoro: { nombre: 'Galeón del tesoro', casco: 'galeon', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada', conducta: 'huye', oro: [420, 650], color: '#c9a227', minNivel: 1 },
+};
+
+// Habilidades: el capitán elige una en el astillero y la usa con R. espera = segundos hasta poder usarla de nuevo.
+export const HABILIDADES = {
+  andanada: { nombre: 'Andanada doble', desc: 'Ataque: recarga al instante los dos costados.', espera: 40, dura: 0 },
+  ancla: { nombre: 'Ancla de combate', desc: 'Maniobra: clavás el ancla y girás casi en el lugar durante 3 segundos.', espera: 30, dura: 3 },
+  carpinteros: { nombre: 'Carpinteros', desc: 'Defensa: reparan un cuarto del casco en 6 segundos.', espera: 60, dura: 6 },
+  trapo: { nombre: 'Remos y trapo', desc: 'Velocidad: durante 5 segundos vas 60 % más rápido, sople como sople el viento.', espera: 35, dura: 5 },
 };
 
 export const MUNDO = { ancho: 6400, alto: 6400 };
@@ -115,5 +124,8 @@ export const VIENTO = {
   rafaga: 1.3, // dentro de una ráfaga, con el viento a favor o de través
   anguloRafaga: 100, // hasta qué ángulo la ráfaga empuja
   rafagas: 9, radioRafaga: [260, 430], velRafaga: 70,
+  // rachas: soplos cortos que aparecen cerca de cada capitán, en cualquier dirección. Si los tomás con la proa más o menos
+  // hacia donde soplan, empujan fuerte aunque el viento general esté en contra.
+  racha: 1.5, duraRacha: 6, radioRacha: [170, 240], cadaRacha: [3, 6], anguloRacha: 60,
   vaiven: 0.6, // cuánto rota el viento (en radianes) alrededor de su rumbo del día
 };

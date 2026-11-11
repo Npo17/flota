@@ -17,8 +17,8 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <script>try { if (localStorage.getItem('aon-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}</script>
-  <script type="importmap">{"imports":{"/src/arte-britanico.js":"/src/arte-britanico.js?v=d461f703","/src/arte-espanol.js":"/src/arte-espanol.js?v=d461f703","/src/arte-frances.js":"/src/arte-frances.js?v=d461f703","/src/arte-portugues.js":"/src/arte-portugues.js?v=d461f703","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=d461f703","/src/banderas.js":"/src/banderas.js?v=d461f703","/src/barcos.js":"/src/barcos.js?v=d461f703","/src/config.js":"/src/config.js?v=d461f703","/src/cuenta.js":"/src/cuenta.js?v=d461f703","/src/dibujo.js":"/src/dibujo.js?v=d461f703","/src/idioma.js":"/src/idioma.js?v=d461f703","/src/juego.js":"/src/juego.js?v=d461f703","/src/main.js":"/src/main.js?v=d461f703","/src/mapas.js":"/src/mapas.js?v=d461f703","/src/mundo.js":"/src/mundo.js?v=d461f703","/src/puerto.js":"/src/puerto.js?v=d461f703","/src/red.js":"/src/red.js?v=d461f703","/src/rng.js":"/src/rng.js?v=d461f703","/src/textos-historia.js":"/src/textos-historia.js?v=d461f703","/src/textos.js":"/src/textos.js?v=d461f703"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=d461f703">
+  <script type="importmap">{"imports":{"/src/arte-britanico.js":"/src/arte-britanico.js?v=c0e3a48c","/src/arte-espanol.js":"/src/arte-espanol.js?v=c0e3a48c","/src/arte-frances.js":"/src/arte-frances.js?v=c0e3a48c","/src/arte-portugues.js":"/src/arte-portugues.js?v=c0e3a48c","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=c0e3a48c","/src/banderas.js":"/src/banderas.js?v=c0e3a48c","/src/barcos.js":"/src/barcos.js?v=c0e3a48c","/src/config.js":"/src/config.js?v=c0e3a48c","/src/cuenta.js":"/src/cuenta.js?v=c0e3a48c","/src/dibujo.js":"/src/dibujo.js?v=c0e3a48c","/src/idioma.js":"/src/idioma.js?v=c0e3a48c","/src/juego.js":"/src/juego.js?v=c0e3a48c","/src/main.js":"/src/main.js?v=c0e3a48c","/src/mapas.js":"/src/mapas.js?v=c0e3a48c","/src/mundo.js":"/src/mundo.js?v=c0e3a48c","/src/puerto.js":"/src/puerto.js?v=c0e3a48c","/src/red.js":"/src/red.js?v=c0e3a48c","/src/rng.js":"/src/rng.js?v=c0e3a48c","/src/textos-historia.js":"/src/textos-historia.js?v=c0e3a48c","/src/textos.js":"/src/textos.js?v=c0e3a48c"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=c0e3a48c">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -32,7 +32,7 @@
       <div class="barra trip"><i id="hud-trip"></i><span id="hud-trip-txt"></span></div>
       <div class="fila"><span data-t>Velas</span><span id="hud-velas" class="velas"></span></div>
       <div id="hud-velas-txt" class="suave"></div>
-      <div id="hud-viento-fila" class="viento oculto"><canvas id="hud-viento" width="88" height="88"></canvas><span id="hud-viento-txt"></span></div>
+      <div id="hud-viento-fila" class="viento oculto"><canvas id="hud-viento" width="128" height="128"></canvas><span id="hud-viento-txt"></span></div>
       <div class="fila"><span data-t>Flota</span><span id="hud-flota"></span></div>
     </div>
     <div class="panel arriba-der">
@@ -49,9 +49,10 @@
     <div class="panel abajo-izq">
       <div class="recarga"><span data-t>Babor · clic izquierdo</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
       <div class="recarga"><span data-t>Estribor · clic derecho</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
-      <div class="ayuda"><span data-t>El barco sigue al cursor · clic izquierdo: babor · clic derecho: estribor · espacio: los dos</span><br><span data-t>W / S o la rueda: velas · F abordar (con el cursor sobre el barco) · G orden a la flota · P puerto</span><br><span data-t>Menos vela = recarga más rápida · parado junto a una isla reparás · + / − o Z / X: zoom</span></div>
+      <div class="recarga"><span id="hud-hab-txt"></span><div class="barra chica"><i id="hud-hab"></i></div></div>
+      <div class="ayuda"><span data-t>El barco sigue al cursor · clic izquierdo: babor · clic derecho: estribor · espacio: los dos</span><br><span data-t>W / S o la rueda: velas · F abordar (con el cursor sobre el barco) · G orden a la flota · P puerto</span><br><span data-t>R: tu habilidad · Ctrl + rueda: zoom · menos vela = recarga más rápida · parado junto a una isla reparás</span></div>
     </div>
-    <canvas id="minimapa" width="170" height="170"></canvas>
+    <canvas id="minimapa" width="240" height="240"></canvas>
   </div>
 
   <div id="pantalla-astillero" class="pantalla">
@@ -159,7 +160,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=d461f703" defer></script>
-  <script type="module" src="src/main.js?v=d461f703"></script>
+  <script src="vendor/supabase.min.js?v=c0e3a48c" defer></script>
+  <script type="module" src="src/main.js?v=c0e3a48c"></script>
 </body>
 </html>

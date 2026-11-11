@@ -3,6 +3,24 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (ajustes después de una partida larga de Cristian) — Cristian + Claude
+
+**Estado: subido a la rama `viento-y-controles` (no a `main`). Probado en localhost en modo solo.** Sigue faltando `/review`, probar en línea y republicar el servidor.
+
+Cristian jugó hasta comprar el galeón y dejó esta lista; está todo hecho:
+
+- **Zoom con Ctrl + rueda** (se sacaron las teclas). La rueda sola sigue manejando las velas.
+- **Guardias del tesoro:** eran imposibles (dos galeones de guerra y dos corsarios con mejoras de zona). Ahora son dos corsarios y dos balandros sin mejoras. Ya no abandonan al galeón para perseguirte: solo pelean con lo que se le acerca a menos de 430 y vuelven a su puesto si se alejaron. Cuando el galeón cae o lo capturan, se retiran y desaparecen a los 14 segundos; si llega al puerto, entran con él.
+- **Reforzar el casco** en el puerto (+45 de casco por nivel, 6 niveles, 140 × nivel de oro), porque las mejoras se quedaban cortas contra los enemigos de mar adentro. No toqué a los enemigos comunes: si sigue desparejo, lo próximo es bajarles las mejoras de zona.
+- **Oro más fácil:** los mercantes llevan 80 a 150 (antes 35 a 70) y se ven siempre en el minimapa como un rombo dorado.
+- **Rachas de viento:** soplos de 6 segundos en cualquier dirección, cerca de cada capitán. Con la proa a menos de 60° de donde soplan dan +50 %, aunque el viento general esté en contra. Se ven como un círculo punteado con flechas.
+- **Tritones:** vienen menos (2 a 6 en lugar de 3 a 9), nadan más lento, cada uno saca 1 o 2 marineros en lugar de hasta 3, y es mucho más fácil pegarles con una bala.
+- **Habilidad a elección:** se elige una en el astillero y se usa con R. Andanada doble (recarga los dos costados, 40 s), ancla de combate (girás casi en el lugar 3 s, 30 s), carpinteros (reparan un cuarto del casco en 6 s, 60 s), remos y trapo (+60 % de velocidad 5 s, 35 s). Los bots no las usan.
+- **Mapa y brújula del viento más grandes** (240 y 64 px).
+- **Sin callejones:** `crearMundo` saca los islotes y escollos que dejan un paso de menos de 280 con otra tierra (53 de 574 entre los 20 mapas). **Bots:** si uno quiere andar y no avanza durante 2 segundos, deja lo que hacía y sale derecho hacia el lado contrario a la costa.
+- Para no romper el juego en línea mientras el servidor no se republique: el servidor nuevo manda `v: 2` al entrar; sin eso, el navegador arma el mundo viejo. **Hay que republicar el servidor.**
+- Pendiente: los bots siguen sin usar el viento ni las habilidades; el balance contra los enemigos de mar adentro está apenas tocado.
+
 ## 2026-11-11 (viento, velas y disparo por lado) — Cristian + Claude
 
 **Estado: subido a la rama `viento-y-controles` (no a `main`): no está publicado.** Probado en localhost en modo solo; falta `/review`, probar en línea y republicar el servidor antes de pasarlo a `main`.

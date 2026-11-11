@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { TEXTOS } from '../src/textos.js';
 import { TEXTOS_HISTORIA } from '../src/textos-historia.js';
 import { COLUMNAS } from '../src/idioma.js';
-import { FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS } from '../src/config.js';
+import { FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS, HABILIDADES } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
 let errores = 0;
@@ -25,7 +25,7 @@ for (const f of filas) {
 
 // Textos que el juego usa
 const usados = new Set();
-for (const cat of [FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS]) for (const o of Object.values(cat)) for (const k of ['nombre', 'desc', 'bono']) if (o[k]) usados.add(o[k]);
+for (const cat of [FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS, HABILIDADES]) for (const o of Object.values(cat)) for (const k of ['nombre', 'desc', 'bono']) if (o[k]) usados.add(o[k]);
 for (const m of Object.values(MAPAS)) for (const k of ['nombre', 'lugar', 'desc', 'rasgo']) usados.add(m[k]);
 const html = readFileSync('index.html', 'utf8');
 for (const m of html.matchAll(/<[a-z0-9]+[^>]*\sdata-t>([^<]+)</g)) usados.add(m[1].trim());

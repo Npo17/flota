@@ -3,7 +3,8 @@ import { MUNDO } from './config.js';
 import { crearRng } from './rng.js';
 import { MAPAS } from './mapas.js';
 
-export function crearMundo(idMapa) {
+// opciones.callejones: deja los islotes pegados como en la primera versión (para jugar en línea contra un servidor anterior)
+export function crearMundo(idMapa, opciones = {}) {
   if (!MAPAS[idMapa]) idMapa = Object.keys(MAPAS)[0];
   const mapa = MAPAS[idMapa];
   const rng = crearRng(mapa.semilla);
@@ -55,6 +56,18 @@ export function crearMundo(idMapa) {
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 110)) continue;
     islas.push(crearIsla(rng, x, y, r, 'arrecife'));
     puestas++;
+  }
+
+  // Sin callejones: se sacan los islotes y escollos que dejan un paso de menos de 280 con otra tierra,
+  // porque ahí los barcos (sobre todo los bots) quedaban trabados.
+  if (!opciones.callejones) {
+    const quedan = [];
+    for (const i of islas) {
+      const chico = i.tipo === 'isla' || i.tipo === 'iceberg' || i.tipo === 'arrecife';
+      if (chico && quedan.some((o) => Math.hypot(o.x - i.x, o.y - i.y) - o.r - i.r < 280)) continue;
+      quedan.push(i);
+    }
+    islas.length = 0; islas.push(...quedan);
   }
 
   const remolinos = [];

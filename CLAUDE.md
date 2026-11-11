@@ -113,7 +113,7 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - El servidor (`servidor/worker.js`, en `mar.ageofnavies.com`) corre `src/juego.js` con varios capitanes y manda una foto del mar 20 veces por segundo. Decide posiciones, daño y oro; el navegador solo manda a dónde apunta y qué dispara.
 - `juego.js` maneja varios capitanes (`j.capitanes`); el modo solo es el caso de uno. No meterle nada de pantalla ni de teclado.
 - El puerto es zona segura: ahí no se puede disparar ni recibir daño.
-- Versiones cruzadas: el navegador manda las velas elegidas (`v`) y el servidor manda el viento (`vi`) en cada foto. Si el servidor es anterior al viento, el juego no dibuja viento y le traduce las velas a distancia del cursor; si el navegador es anterior, el servidor saca las velas de la distancia como antes. Así ninguno de los dos se rompe mientras el otro no se actualizó.
+- Versiones cruzadas: el servidor nuevo dice `v: 2` al entrar (mundo sin callejones); si no lo dice, el navegador arma el mundo viejo para que las islas coincidan. El navegador manda las velas elegidas (`v`) y el servidor manda el viento (`vi`) en cada foto. Si el servidor es anterior al viento, el juego no dibuja viento y le traduce las velas a distancia del cursor; si el navegador es anterior, el servidor saca las velas de la distancia como antes. Así ninguno de los dos se rompe mientras el otro no se actualizó.
 - En la pantalla de inicio hay dos botones: "Jugar online" (el mar compartido) y jugar solo contra bots eligiendo el mapa.
 - Publicar el servidor: `cd servidor && npx wrangler deploy` (necesita `npx wrangler login` una vez). El servidor está en la cuenta de Cloudflare de Nicolás: hasta que el otro socio tenga acceso a esa cuenta, la republicación la hace él (avisarle en la bitácora con "hay que republicar el servidor").
 - Probar sin navegador: `node scripts/probar-sim.mjs` (simulación) y `node scripts/probar-red.mjs` (servidor, con `npx wrangler dev` corriendo en `servidor/`). Para que el juego en la compu use ese servidor de prueba: `http://localhost:5180/?mar=local`. Sin `?mar=local`, localhost se conecta al servidor publicado.
@@ -128,9 +128,13 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - El oro saqueado está en riesgo hasta entrar al puerto. Los barcos capturados navegan en formación; con G atacan.
 - Cada civilización es un equipo: tus barcos y los de tu civilización (bots y otros jugadores) no se dañan ni se abordan; bots de civilizaciones distintas se pelean entre ellos. El galeón del tesoro y sus guardias son un equipo aparte, enemigo de todos los capitanes.
 - Cada barco lleva la bandera entera de su civilización en el asta de popa (no en el medio). Amigo o enemigo lo marca el color de la barra de vida.
-- Zoom de cámara con + / − o Z / X.
-- El galeón del tesoro es un evento: uno solo cada tanto, rumbo al puerto, con cuatro guardias. No recibe daño ni se lo aborda hasta hundir a los guardias.
-- En el puerto se puede comprar un casco más grande (nunca más chico), además de cañones, munición y velas: con oro suficiente se llega al mejor galeón.
+- Zoom de cámara con Ctrl + rueda (la rueda sola maneja las velas).
+- Además de las ráfagas grandes hay **rachas**: soplos de unos 6 segundos que aparecen cerca de cada capitán, en cualquier dirección. Tomadas con la proa hacia donde soplan empujan fuerte aunque el viento general esté en contra.
+- Cada capitán elige **una habilidad** en el astillero y la usa con R (andanada doble, ancla de combate, carpinteros, remos y trapo). Están en `HABILIDADES`, en `src/config.js`; los bots no las usan.
+- Los mercantes se ven siempre en el minimapa (rombo dorado) y son la forma fácil de hacer oro.
+- El mundo se arma sin callejones: se sacan los islotes que dejan un paso de menos de 280 con otra tierra. Un bot que queda trabado sale solo hacia mar abierto.
+- El galeón del tesoro es un evento: uno solo cada tanto, rumbo al puerto, con cuatro guardias (dos corsarios y dos balandros, sin mejoras). No recibe daño ni se lo aborda hasta hundir a los guardias. Los guardias no se alejan del galeón para perseguir a nadie y, cuando el galeón cae, lo capturan o llega al puerto, se van.
+- En el puerto se puede reforzar el casco (+45 por nivel, hasta 6) y comprar un casco más grande (nunca más chico), además de cañones, munición y velas: con oro suficiente se llega al mejor galeón.
 - Un barco dañado va más lento. Parado junto a una isla se repara hasta el 75 %.
 - Los remolinos son solo remolinos (sin monstruo). No hay Kraken.
 - Mapas y civilizaciones son de 1400 a 1700, con banderas de época (no las modernas).

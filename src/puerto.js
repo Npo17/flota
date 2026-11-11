@@ -39,6 +39,10 @@ export function catalogoPuerto(j, cap) {
         hacer: () => { d.casco = id; b.vida = Infinity; }, // rearmar() lo deja con el casco nuevo entero
       };
     })],
+    [t('Blindaje'), [
+      { id: 'refuerzo', t: t('Reforzar el casco (nivel {n})', { n: (d.nivelCasco || 0) + 1 }), d: t('Suma {n} puntos de casco, para siempre.', { n: PUERTO.puntosRefuerzo }), costo: PUERTO.refuerzo((d.nivelCasco || 0) + 1), ok: (d.nivelCasco || 0) < PUERTO.nivelesRefuerzo, listo: t('Al máximo'),
+        hacer: () => { d.nivelCasco = (d.nivelCasco || 0) + 1; d.refuerzo = (d.refuerzo || 0) + PUERTO.puntosRefuerzo; b.vida += PUERTO.puntosRefuerzo * (b.vida / s.vidaMax); } },
+    ]],
     // munición y velas: se ve cuál tenés puesta
     [t('Munición'), Object.entries(MUNICIONES).map(([id, m]) => ({
       id: 'mun:' + id, t: t(m.nombre), d: t(m.desc), costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: t('La que usás'),

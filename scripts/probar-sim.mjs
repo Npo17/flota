@@ -98,7 +98,7 @@ for (const id of Object.keys(MAPAS)) {
 {
   const correr = (velas, rumbo, seg = 12) => {
     const j = crearPartida(crearMundo('malta'), { ...diseno, velas }, 100);
-    j.barcos = [j.jugador]; j.enemigosVivos = 0; j.viento.base = 0; j.viento.rafagas = [];
+    j.barcos = [j.jugador]; j.enemigosVivos = 0; j.viento.base = 0; j.viento.rafagas = []; j.viento.proxRacha = Infinity; // sin ráfagas ni rachas: se mide el viento parejo
     const yo = j.jugador; yo.x = 3200; yo.y = 5600; yo.a = rumbo;
     const x0 = yo.x, y0 = yo.y;
     for (let i = 0; i < 60 * seg; i++) { j.t = 0; actualizar(j, 1 / 60, { objetivo: { x: yo.x + Math.cos(rumbo) * 500, y: yo.y + Math.sin(rumbo) * 500 }, velas: 3 }); }
@@ -180,6 +180,56 @@ for (const id of Object.keys(MAPAS)) {
   const vidaA = a.vida;
   for (let i = 0; i < 60 * 10; i++) { yo.x = 1500; yo.y = 4500; yo.a = 0; yo.v = 0; a.x = 1500; a.y = 4680; a.v = 0; actualizar(j, 1 / 60, { fuego: 1 }); }
   ok(a.vida === vidaA, 'equipos: le hice daño a un aliado');
+}
+// --- rachas, habilidades, refuerzo, guardias que no abandonan al tesoro y mundo sin callejones
+{
+  const { HABILIDADES } = await import('../src/config.js');
+  const { comprar } = await import('../src/puerto.js');
+  const j = crearPartida(crearMundo('malta'), { ...diseno, habilidad: 'andanada' }, 5000), yo = j.jugador;
+  j.barcos = [yo]; j.enemigosVivos = 0;
+  // una racha a favor empuja aunque el viento general esté de proa; en contra no
+  j.viento.a = Math.PI; j.viento.rafagas = []; yo.a = 0;
+  const contra = rindeViento(j, yo);
+  j.viento.rachas = [{ x: yo.x, y: yo.y, r: 200, a: 0.3, t: 5 }];
+  ok(contra < 0.85 && rindeViento(j, yo) > 1.4, 'racha: no empuja con viento en contra');
+  j.viento.rachas = [{ x: yo.x, y: yo.y, r: 200, a: Math.PI, t: 5 }];
+  ok(rindeViento(j, yo) === contra, 'racha: empuja aunque sople para el otro lado');
+  j.viento.rachas = []; j.viento.proxRacha = 0;
+  yo.x = 800; yo.y = 5600;
+  actualizar(j, 1 / 60, {});
+  ok(j.viento.rachas.length === 1 && Math.hypot(j.viento.rachas[0].x - yo.x, j.viento.rachas[0].y - yo.y) < 600, 'racha: no apareció cerca del capitán');
+  for (let i = 0; i < 60 * 7; i++) { j.viento.proxRacha = 99; actualizar(j, 1 / 60, {}); }
+  ok(j.viento.rachas.length === 0, 'racha: no se apagó a los 6 segundos');
+  // habilidades
+  yo.recarga['1'] = 3; yo.recarga['-1'] = 3;
+  actualizar(j, 1 / 60, { habilidad: true });
+  ok(yo.recarga['1'] === 0 && yo.recarga['-1'] === 0 && j.cdHabilidad > 30, 'habilidad: la andanada doble no recargó');
+  actualizar(j, 1 / 60, { habilidad: true });
+  ok(j.cdHabilidad < HABILIDADES.andanada.espera, 'habilidad: se pudo usar dos veces seguidas');
+  yo.diseno.habilidad = 'carpinteros'; j.yo.cdHabilidad = 0; yo.vida = 50;
+  actualizar(j, 1 / 60, { habilidad: true });
+  for (let i = 0; i < 60 * 7; i++) actualizar(j, 1 / 60, {});
+  ok(yo.vida > 50 + yo.stats.vidaMax * 0.22 && !j.habilidad, 'habilidad: los carpinteros no repararon: ' + yo.vida);
+  // reforzar el casco en el puerto
+  const antes = yo.stats.vidaMax;
+  ok(comprar(j, j.yo, 'refuerzo') && yo.stats.vidaMax === antes + 45, 'puerto: el refuerzo no sumó casco');
+  // el tesoro: los guardias no persiguen a un barco que se aleja, y se van cuando cae el galeón
+  j.proxConvoy = 0; yo.vida = 1e6;
+  for (let i = 0; i < 30 && !j.barcos.some((b) => b.convoy); i++) actualizar(j, 1 / 60, {});
+  const tesoro = j.barcos.find((b) => b.convoy), guardias = j.barcos.filter((b) => b.ia && b.ia.lider === tesoro);
+  ok(guardias.length === 4 && guardias.every((g) => g.tipo !== 'galeonGuerra'), 'tesoro: guardias mal armados');
+  j.mundo.islas = j.mundo.islas.filter((i) => i.tipo === 'puerto'); j.mundo.remolinos = [];
+  for (let i = 0; i < 60 * 20; i++) { yo.x = tesoro.x + 700; yo.y = tesoro.y + 700; yo.v = 0; yo.vida = 1e6; actualizar(j, 1 / 60, {}); }
+  ok(guardias.every((g) => Math.hypot(g.x - tesoro.x, g.y - tesoro.y) < 420), 'tesoro: los guardias abandonaron al galeón: ' + guardias.map((g) => Math.round(Math.hypot(g.x - tesoro.x, g.y - tesoro.y))));
+  tesoro.vida = -1; for (const g of guardias) { g.x = tesoro.x; g.y = tesoro.y + 300; }
+  for (let i = 0; i < 60 * 16; i++) { yo.vida = 1e6; actualizar(j, 1 / 60, {}); }
+  ok(!j.barcos.some((b) => guardias.includes(b) && !b.hundiendo), 'tesoro: los guardias no se fueron al terminar el evento');
+  // mundo sin callejones: ningún islote chico deja un paso angosto con otra tierra
+  for (const id of Object.keys(MAPAS)) {
+    const m = crearMundo(id), chicos = m.islas.filter((i) => ['isla', 'iceberg', 'arrecife'].includes(i.tipo));
+    ok(chicos.every((i) => m.islas.every((o) => o === i || Math.hypot(o.x - i.x, o.y - i.y) - o.r - i.r >= 280)), `mundo ${id}: quedó un callejón`);
+    ok(crearMundo(id, { callejones: true }).islas.length >= m.islas.length, `mundo ${id}: la versión anterior tiene menos islas`);
+  }
 }
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);
