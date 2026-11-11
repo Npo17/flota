@@ -4,7 +4,7 @@ import { crearRng } from './rng.js';
 import { MAPAS } from './mapas.js';
 
 // opciones.callejones: deja los islotes pegados como en la primera versión (para jugar en línea contra un servidor anterior)
-// opciones.relleno: false deja las tierras grandes como círculos sueltos, con rincones entre uno y otro (ídem, servidor anterior)
+// opciones.relleno: false deja las tierras grandes como círculos sueltos; 1 une solo las que se tocan (para un servidor anterior); sin decir nada, une también las que dejan un paso angosto
 export function crearMundo(idMapa, opciones = {}) {
   if (!MAPAS[idMapa]) idMapa = Object.keys(MAPAS)[0];
   const mapa = MAPAS[idMapa];
@@ -19,24 +19,70 @@ export function crearMundo(idMapa, opciones = {}) {
   // Tierras grandes del mapa (continentes, penínsulas, islas mayores)
   for (const [x, y, r] of mapa.masas) islas.push(crearIsla(rng, x, y, r, 'tierra'));
 
-  // Un solo cuerpo: las tierras grandes son círculos, y donde dos se tocan quedaba un rincón en punta entre uno y otro
-  // en el que los barcos (sobre todo los bots) se metían y quedaban trabados. Se rellena el tramo entre los dos centros
-  // con más círculos, de radio intermedio, así la costa pasa derecha de una tierra a la otra.
-  if (opciones.relleno !== false && !opciones.callejones) {
+  // Un solo cuerpo: las tierras grandes son círculos, y entre dos vecinas quedaba un rincón en punta (si se tocan) o un
+  // paso angosto (si casi se tocan) en el que los barcos, sobre todo los bots, se metían y quedaban trabados.
+  // Se rellena el tramo entre los dos centros con más círculos, de radio intermedio, así la costa pasa derecha de una
+  // tierra a la otra. Nivel 1: solo las que se tocan. Nivel 2 (el de ahora): también las separadas por menos de 280,
+  // salvo que cerrar ese paso deje una parte del mar sin salida.
+  const nivel = opciones.callejones ? 0 : opciones.relleno === false ? 0 : opciones.relleno === 1 ? 1 : 2;
+  if (nivel) {
     const rng2 = crearRng(mapa.semilla + 7919); // aparte, para no cambiar el resto del mapa
     const base = islas.slice(1), relleno = []; // sin la isla del puerto: su costa queda como está
-    for (let a = 0; a < base.length; a++) for (let b = a + 1; b < base.length; b++) {
-      const A = base[a], B = base[b], d = Math.hypot(B.x - A.x, B.y - A.y);
-      if (d - A.r - B.r > 80 || d <= Math.abs(A.r - B.r)) continue; // lejos una de otra, o una adentro de la otra
-      const n = Math.ceil(d / (0.42 * Math.min(A.r, B.r)));
+    const tramo = (A, B, d, hechas) => {
+      const nuevas = [], n = Math.ceil(d / (0.42 * Math.min(A.r, B.r)));
       for (let k = 1; k < n; k++) {
         const f = k / n, x = A.x + (B.x - A.x) * f, y = A.y + (B.y - A.y) * f, r = A.r + (B.r - A.r) * f;
         if (Math.hypot(x - puerto.x, y - puerto.y) < r + 520) continue; // las aguas del puerto no se tocan
-        if (base.concat(relleno).some((o) => Math.hypot(o.x - x, o.y - y) + r <= o.r + 4)) continue; // ya está cubierto
-        relleno.push(crearIsla(rng2, x, y, r, 'tierra'));
+        if (base.concat(hechas, nuevas).some((o) => Math.hypot(o.x - x, o.y - y) + r <= o.r + 4)) continue; // ya está cubierto
+        nuevas.push({ x, y, r });
+      }
+      return nuevas;
+    };
+    const pares = [];
+    for (let a = 0; a < base.length; a++) for (let b = a + 1; b < base.length; b++) {
+      const A = base[a], B = base[b], d = Math.hypot(B.x - A.x, B.y - A.y), hueco = d - A.r - B.r;
+      if (hueco > (nivel === 2 ? 280 : 80) || d <= Math.abs(A.r - B.r)) continue; // lejos una de otra, o una adentro de la otra
+      pares.push({ A, B, d, hueco });
+    }
+    // primero las que se tocan (ahí no hay paso que cuidar)
+    for (const p of pares) if (p.hueco <= 80) relleno.push(...tramo(p.A, p.B, p.d, relleno));
+    // después los pasos angostos: se cierran solo si el mar sigue siendo uno solo
+    const angostos = pares.filter((p) => p.hueco > 80);
+    if (angostos.length) {
+      const C = 80, N = Math.ceil(MUNDO.ancho / C), M = Math.ceil(MUNDO.alto / C);
+      const alcanzable = (tierras) => { // cuántas celdas de mar se alcanzan navegando desde el puerto
+        const libre = new Uint8Array(N * M);
+        for (let cy = 0; cy < M; cy++) for (let cx = 0; cx < N; cx++) {
+          const x = cx * C + C / 2, y = cy * C + C / 2;
+          libre[cy * N + cx] = tierras.some((o) => Math.abs(o.x - x) < o.r + 40 && Math.hypot(o.x - x, o.y - y) < o.r + 40) ? 0 : 1;
+        }
+        const cola = [Math.floor((puerto.y + 200) / C) * N + Math.floor(puerto.x / C)];
+        libre[cola[0]] = 2;
+        let n = 0;
+        while (cola.length) {
+          const q = cola.pop(), cx = q % N, cy = (q - cx) / N;
+          n++;
+          if (cx > 0 && libre[q - 1] === 1) { libre[q - 1] = 2; cola.push(q - 1); }
+          if (cx < N - 1 && libre[q + 1] === 1) { libre[q + 1] = 2; cola.push(q + 1); }
+          if (cy > 0 && libre[q - N] === 1) { libre[q - N] = 2; cola.push(q - N); }
+          if (cy < M - 1 && libre[q + N] === 1) { libre[q + N] = 2; cola.push(q + N); }
+        }
+        let mar = 0;
+        for (let k = 0; k < libre.length; k++) if (libre[k]) mar++;
+        return { n, encerradas: mar - n };
+      };
+      const fijas = [islas[0], ...base];
+      let antes = alcanzable(fijas.concat(relleno));
+      for (const p of angostos.sort((a, b) => a.hueco - b.hueco)) {
+        const nuevas = tramo(p.A, p.B, p.d, relleno);
+        if (!nuevas.length) continue;
+        const ahora = alcanzable(fijas.concat(relleno, nuevas));
+        if (ahora.encerradas > antes.encerradas + 2) continue; // ese paso era la única entrada a una parte del mar: queda abierto
+        relleno.push(...nuevas);
+        antes = ahora;
       }
     }
-    islas.push(...relleno);
+    for (const q of relleno) islas.push(crearIsla(rng2, q.x, q.y, q.r, 'tierra'));
   }
 
   // Islas sueltas

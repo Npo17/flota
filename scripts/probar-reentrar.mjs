@@ -12,7 +12,7 @@ clearInterval(mar.reloj);
 const hola1 = recibidos.find((m) => m.t === 'hola');
 let fallas = 0;
 const ok = (x, m) => { if (!x) { fallas++; console.log('FALLA:', m); } };
-ok(hola1 && hola1.v === 3, 'no entró o no dice la versión 3 del mundo');
+ok(hola1 && hola1.v === 4, 'no entró o no dice la versión 4 del mundo');
 mar.mensaje(ws, c, { t: 'entrar', nombre: 'Ana', diseno });
 ok(recibidos.filter((m) => m.t === 'hola').length === 1, 'un capitán vivo pudo entrar dos veces');
 c.cap.oroPuerto = 9999; c.cap.fin = true; // lo hundieron

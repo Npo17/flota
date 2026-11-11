@@ -3,6 +3,13 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (sin pasos angostos entre tierras) — Nicolás + Claude
+
+**Estado: subido a `main` y publicado en la web. HAY QUE REPUBLICAR EL SERVIDOR** (`v: 4`); hasta entonces en línea se ven las costas de la versión anterior, sin desfase.
+
+- Nicolás encontró que seguían quedando callejones: dos tierras grandes que no se tocan pero dejan un canal angosto. Ahora `crearMundo` también une las tierras separadas por menos de 280, salvo que ese paso sea la única entrada a una parte del mar (lo comprueba recorriendo el mar desde el puerto en una grilla). Medido en los 20 mapas: el mar que queda en pasos de menos de 280 bajó de 2745 celdas a 246.
+- Cambia el aspecto de varios mapas: las costas pasan a ser franjas enteras en lugar de círculos en fila.
+
 ## 2026-11-12 (tierras de un solo cuerpo y reaparecer en el puerto) — Nicolás + Claude
 
 **Estado: subido a `main` y publicado en la web junto con la entrada de abajo. El servidor del mar también quedó republicado** (lo corrió Nicolás el 12/11/2026) y pasa `probar-red` en vivo, salas incluidas.

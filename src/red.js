@@ -58,7 +58,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   function recibir(m) {
     if (m.t === 'hola') {
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
-      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 3 }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
+      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 4 ? 2 : m.v >= 3 ? 1 : false }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
       if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
         cerradaAProposito = true;
         try { ws.close(); } catch {}
