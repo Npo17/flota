@@ -151,24 +151,43 @@ function estallido(cuando, nivel, lado, { grave = 95, cola = 0.55, brillo = 1400
 // Un cañón naval del 1600: hierro fundido y pólvora negra. No es un "pum" seco: primero el chasquido del fogonazo,
 // enseguida un estampido grave y ronco que empuja el aire, y después un trueno largo que rueda sobre el agua y vuelve en eco.
 // cerca: de 0 a 1. De lejos se pierde el chasquido y queda el trueno, más largo y apagado.
+// No todos suenan igual. El tamaño de la pieza va con el casco: la balandra lleva cañones chicos (más agudos, secos y cortos),
+// el bergantín medianos y el galeón los más grandes (más graves, con un trueno más largo). Y la munición cambia el disparo:
+// la bala redonda es el estampido de siempre; la metralla suena más abierta y rasgada, con el silbido de las bolitas saliendo
+// en abanico y poco trueno; la bala pesada lleva más pólvora: el golpe más grave y fuerte de todos, y el eco que más dura.
+const PIEZA = { balandra: { tono: 1.38, peso: 0.80, cola: 0.70 }, bergantin: { tono: 1.0, peso: 1.0, cola: 1.0 }, galeon: { tono: 0.76, peso: 1.15, cola: 1.30 } };
+const CARGA = {
+  redonda: { tono: 1.0, peso: 1.0, cola: 1.0, chasquido: 1.0, rasgado: 0, eco: 0.34 },
+  metralla: { tono: 1.22, peso: 0.82, cola: 0.60, chasquido: 1.5, rasgado: 1, eco: 0.20 },
+  pesada: { tono: 0.80, peso: 1.22, cola: 1.45, chasquido: 0.8, rasgado: 0, eco: 0.48 },
+};
 let ronco = null;
-function canonazo(cuando, nivel, lado, cerca) {
+function canonazo(cuando, nivel, lado, cerca, casco, municion) {
+  const pieza = PIEZA[casco] || PIEZA.bergantin, carga = CARGA[municion] || CARGA.redonda;
   if (!ronco) { // una curva que aplasta los picos: le da al estampido la aspereza de la pólvora
     ronco = new Float32Array(1024);
     for (let k = 0; k < 1024; k++) { const x = k / 511.5 - 1; ronco[k] = Math.tanh(3.2 * x); }
   }
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-  const fin = ctx.createGain(); fin.gain.value = nivel;
+  const fin = ctx.createGain(); fin.gain.value = nivel * pieza.peso * carga.peso;
   if (pan) { pan.pan.value = lado; fin.connect(pan); pan.connect(gSonido); } else fin.connect(gSonido);
-  const cola = 1.3 + 1.1 * (1 - cerca) + Math.random() * 0.3;
-  const tono = 0.9 + Math.random() * 0.25; // cada cañón suena un poco distinto
+  const cola = (1.3 + 1.1 * (1 - cerca) + Math.random() * 0.3) * pieza.cola * carga.cola;
+  const tono = (0.92 + Math.random() * 0.16) * pieza.tono * carga.tono; // y dentro del mismo barco, cada cañón suena apenas distinto
 
   // 1. el chasquido del fogonazo: seco y agudo, solo de cerca
   if (cerca > 0.35) {
     const c = ctx.createBufferSource(); c.buffer = bufBlanco;
     const fc = ctx.createBiquadFilter(); fc.type = 'highpass'; fc.frequency.value = 1800;
-    const gc = ctx.createGain(); gc.gain.setValueAtTime(0.0001, cuando); gc.gain.exponentialRampToValueAtTime(0.75 * (cerca - 0.2), cuando + 0.002); gc.gain.exponentialRampToValueAtTime(0.001, cuando + 0.055);
+    const gc = ctx.createGain(); gc.gain.setValueAtTime(0.0001, cuando); gc.gain.exponentialRampToValueAtTime(0.75 * (cerca - 0.2) * carga.chasquido, cuando + 0.002); gc.gain.exponentialRampToValueAtTime(0.001, cuando + 0.055);
     c.connect(fc); fc.connect(gc); gc.connect(fin); c.start(cuando, Math.random() * 2, 0.08);
+  }
+  // la metralla: las bolitas salen rasgando el aire, un silbido áspero que baja enseguida
+  if (carga.rasgado && cerca > 0.2) {
+    const m = ctx.createBufferSource(); m.buffer = bufBlanco; m.playbackRate.value = 1.3;
+    const fm = ctx.createBiquadFilter(); fm.type = 'bandpass'; fm.Q.value = 1.1;
+    fm.frequency.setValueAtTime(5200, cuando); fm.frequency.exponentialRampToValueAtTime(1500, cuando + 0.32);
+    const gm = ctx.createGain(); gm.gain.setValueAtTime(0.0001, cuando + 0.004); gm.gain.exponentialRampToValueAtTime(0.55 * cerca, cuando + 0.02); gm.gain.exponentialRampToValueAtTime(0.001, cuando + 0.36);
+    m.connect(fm); fm.connect(gm); gm.connect(fin); m.start(cuando, Math.random() * 2, 0.45);
   }
   // 2. el estampido: un golpe muy grave que cae, pasado por la curva ronca
   const o = ctx.createOscillator(); o.type = 'triangle';
@@ -190,7 +209,7 @@ function canonazo(cuando, nivel, lado, cerca) {
   gt.gain.exponentialRampToValueAtTime(0.001, cuando + 0.12 + cola);
   t.connect(ft); ft.connect(gt); gt.connect(fin); t.start(cuando, Math.random() * 3, cola + 0.3);
   const vuelve = ctx.createDelay(1.0); vuelve.delayTime.value = 0.31 + Math.random() * 0.12;
-  const gv = ctx.createGain(); gv.gain.value = 0.34;
+  const gv = ctx.createGain(); gv.gain.value = carga.eco;
   const fv = ctx.createBiquadFilter(); fv.type = 'lowpass'; fv.frequency.value = 420;
   fb.connect(vuelve); vuelve.connect(fv); fv.connect(gv); gv.connect(fin);
 }
@@ -226,7 +245,8 @@ function chasquido(cuando, nivel, lado, hz, dura) { // golpes en la madera y sal
 
 // Un evento del mar (los mismos que dibujan el humo y las astillas): 'c' cañonazo, 'g' golpe en un casco, 'h' un barco se hunde, 's' salpicón.
 // oyente: dónde está el barco del jugador. Lo lejano suena más bajo, más apagado y un instante después.
-export function evento(ev, oyente) {
+// de: para un cañonazo, { casco, municion } del barco que disparó (si se sabe)
+export function evento(ev, oyente, de) {
   if (!ctx || ctx.state !== 'running' || modoActual !== 'mar' || !oyente) return;
   const dx = ev.x - oyente.x, d = Math.hypot(dx, ev.y - oyente.y);
   const cerca = Math.max(0, 1 - d / 1700);
@@ -235,7 +255,7 @@ export function evento(ev, oyente) {
   if (ev.k === 'c') {
     if (sonando >= 9) return;
     sonando++; setTimeout(() => { sonando--; }, 320);
-    canonazo(cuando + Math.random() * 0.05, 0.62 * nivel, lado, cerca); // los cañones de un costado no salen todos a la vez
+    canonazo(cuando + Math.random() * 0.05, 0.62 * nivel, lado, cerca, de && de.casco, de && de.municion); // los cañones de un costado no salen todos a la vez
   } else if (ev.k === 'g') {
     chasquido(cuando, 0.5 * nivel, lado, 1500 + Math.random() * 900, 0.09);
     estallido(cuando, 0.28 * nivel, lado, { grave: 150, cola: 0.16, brillo: 900 });
@@ -245,7 +265,7 @@ export function evento(ev, oyente) {
   } else if (ev.k === 's' && cerca > 0.45) chasquido(cuando, 0.16 * nivel, lado, 2600, 0.22);
 }
 // Un cañonazo de muestra, para oír el volumen al mover la barra en Ajustes
-export function muestra() { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, 0.8, 0, 0.9); }
+export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, nivel, 0, 0.9, casco, municion); }
 
 // En qué pantalla está el jugador: 'lobby' (música y un mar lejano), 'mar' (mar y viento, sin música) o 'nada'.
 // viento: de 0 a 1, cuánto sopla donde está el barco. Se puede llamar en cada cuadro: solo ajusta cada tanto.
@@ -296,6 +316,7 @@ export async function probar() {
   r.mar = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0.95; gViento.gain.value = 0.05; });
   r.viento = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; gViento.gain.value = 0.175; filtroViento.frequency.value = 900; });
   r.canon = await medir(4, () => { modoActual = 'mar'; canonazo(0.1, 0.80, 0, 0.95); });
+  for (const [c, m] of [['balandra', 'redonda'], ['galeon', 'redonda'], ['bergantin', 'metralla'], ['galeon', 'pesada']]) r[c + '-' + m] = await medir(5, () => { modoActual = 'mar'; canonazo(0.1, 0.62, 0, 0.95, c, m); });
   r.canonLejos = await medir(4, () => { modoActual = 'mar'; canonazo(0.1, 0.80 * 0.25, 0, 0.5); });
   r.andanada = await medir(4, () => { modoActual = 'mar'; for (let i = 0; i < 9; i++) canonazo(0.1 + i * 0.04, 0.62, 0, 0.95); });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });

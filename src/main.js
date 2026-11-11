@@ -79,6 +79,7 @@ function grupo(titulo, catalogo, clave) {
     b.onclick = () => {
       diseno[clave] = id;
       diseno.canones = Math.min(diseno.canones, CASCOS[diseno.casco].maxCanones);
+      if (clave === 'municion' || clave === 'casco') sonido.muestra(diseno.casco, diseno.municion, 0.45); // se oye cómo va a sonar ese cañón
       pintarAstillero();
     };
     caja.appendChild(b);
@@ -184,7 +185,15 @@ pintarMapa();
 
 function empezar() {
   estado = 'mar';
-  partida.alEfecto = (ev) => sonido.evento(ev, partida.jugador);
+  // el sonido de cada evento; para un cañonazo se busca qué barco disparó (el más cercano al fogonazo): según su casco y su munición suena distinto
+  partida.alEfecto = (ev) => {
+    let de = null;
+    if (ev.k === 'c') {
+      let cerca = 1e9;
+      for (const b of partida.barcos) { const d = Math.hypot(b.x - ev.x, b.y - ev.y); if (d < cerca && d < b.stats.largo + 40) { cerca = d; de = b.diseno; } }
+    }
+    sonido.evento(ev, partida.jugador, de);
+  };
   velasPedidas = 3;
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
