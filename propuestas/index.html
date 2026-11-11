@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Age of Navies · Propuestas de barcos</title>
+<style>
+  :root { --fondo: #0d1b2a; --caja: #13263a; --tarjeta: #183049; --borde: #2a4766; --texto: #e8edf3; --suave: #9db0c4; --oro: #ffd166; --ok: #4cc38a; --mar: #2b6f9c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.45 system-ui, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(13,27,42,.96); border-bottom: 1px solid var(--borde); padding: 10px 18px 8px; backdrop-filter: blur(6px); }
+  h1 { font-size: 18px; margin: 0 0 8px; color: var(--oro); letter-spacing: .02em; }
+  h1 small { color: var(--suave); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .fila { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+  .grupo { display: flex; align-items: center; gap: 6px; }
+  .grupo > span { color: var(--suave); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  button { font: inherit; color: var(--texto); background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 7px; padding: 5px 11px; cursor: pointer; }
+  button:hover { border-color: var(--oro); }
+  button.on { background: var(--oro); color: #1a1408; border-color: var(--oro); font-weight: 600; }
+  .tabs button { padding: 7px 14px; }
+  .tabs button .n { font-size: 11px; opacity: .75; margin-left: 5px; }
+  main { padding: 14px 18px 110px; max-width: 1700px; margin: 0 auto; }
+  .resumen { color: var(--suave); margin: 2px 0 12px; }
+  section.casco { margin-bottom: 22px; }
+  section.casco h2 { font-size: 15px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .08em; color: var(--oro); }
+  section.casco h2 small { color: var(--suave); text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 8px; }
+  .grilla { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1100px) { .grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .grilla { grid-template-columns: 1fr; } }
+  .carta { background: var(--caja); border: 2px solid var(--borde); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .carta.elegida { border-color: var(--ok); box-shadow: 0 0 0 2px rgba(76,195,138,.25); }
+  .carta.hoy { opacity: .92; border-style: dashed; }
+  .lienzo { background: var(--mar); cursor: zoom-in; display: block; width: 100%; }
+  .lienzo.estados { cursor: zoom-in; }
+  .carta .txt { padding: 9px 12px 11px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .carta b { font-size: 15px; }
+  .carta .letra { display: inline-block; min-width: 22px; text-align: center; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 5px; margin-right: 7px; color: var(--oro); font-size: 12px; padding: 0 4px; }
+  .carta p { margin: 0; color: var(--suave); font-size: 13px; flex: 1; }
+  .carta .elegir { align-self: flex-start; }
+  .carta.elegida .elegir { background: var(--ok); border-color: var(--ok); color: #06231a; font-weight: 600; }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: rgba(13,27,42,.97); border-top: 1px solid var(--borde); padding: 9px 18px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  footer .lista { color: var(--suave); font-size: 13px; flex: 1; min-width: 240px; }
+  footer .lista b { color: var(--texto); }
+  #detalle { position: fixed; inset: 0; z-index: 10; background: rgba(5,12,20,.93); display: none; overflow: auto; padding: 18px; }
+  #detalle.abierto { display: block; }
+  #detalle .panel { max-width: 1500px; margin: 0 auto; }
+  #detalle .cab { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }
+  #detalle h3 { margin: 0; font-size: 20px; color: var(--oro); }
+  #detalle .cab p { margin: 0; color: var(--suave); flex: 1; min-width: 260px; }
+  #det-grande { width: 100%; border-radius: 12px; display: block; background: var(--mar); }
+  .estados4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+  @media (max-width: 900px) { .estados4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .estados4 figure { margin: 0; background: var(--caja); border: 1px solid var(--borde); border-radius: 10px; overflow: hidden; }
+  .estados4 canvas { width: 100%; display: block; }
+  .estados4 figcaption { padding: 5px 10px; font-size: 12px; color: var(--suave); }
+  .nota { color: var(--suave); font-size: 12px; }
+  kbd { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 4px; padding: 0 5px; font: inherit; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Propuestas de barcos <small>tercera tanda · quedan los elegidos y lo que hay que volver a mirar · elegí uno de cada fila · clic en un barco para verlo en grande</small></h1>
+  <div class="fila">
+    <div class="grupo tabs" id="tabs"></div>
+  </div>
+  <div class="fila" style="margin-top:8px">
+    <div class="grupo" id="g-dano"><span>Daño</span></div>
+    <div class="grupo" id="g-velas"><span>Velas</span></div>
+    <div class="grupo" id="g-canones"><span>Cañones</span></div>
+    <div class="grupo" id="g-fondo"><span>Fondo</span></div>
+    <div class="grupo" id="g-tam"><span>Tamaño</span></div>
+  </div>
+</header>
+<main id="main"></main>
+<footer>
+  <div class="lista" id="lista"></div>
+  <button id="copiar">Copiar mi elección</button>
+  <button id="borrar">Borrar elección</button>
+</footer>
+<div id="detalle"><div class="panel">
+  <div class="cab"><h3 id="det-nombre"></h3><p id="det-ref"></p>
+    <button id="det-ant">← Anterior</button><button id="det-sig">Siguiente →</button><button id="det-elegir">Elegir este</button><button id="det-cerrar">Cerrar (Esc)</button></div>
+  <canvas id="det-grande"></canvas>
+  <div class="estados4" id="det-estados"></div>
+  <p class="nota">Arriba: tamaño grande con el estado de daño y de velas elegido en la barra. Abajo: los cuatro estados de daño (sano · menos de 75 % · menos de 50 % · menos de 25 % de casco). <kbd>←</kbd> <kbd>→</kbd> cambian de diseño, <kbd>1</kbd>–<kbd>4</kbd> el daño.</p>
+</div></div>
+
+<script type="module">
+import { pintar } from './motor.js';
+import { FACCIONES, CASCOS } from '../src/config.js';
+import { dibujarBandera } from '../src/banderas.js';
+import { crearBarco } from '../src/barcos.js';
+import { dibujarBarco } from '../src/dibujo.js';
+
+const ARCHIVOS = [['suecos', 'SUECOS'], ['holandeses', 'HOLANDESES'], ['alemanes', 'ALEMANES'], ['otomanos', 'OTOMANOS'], ['chinos', 'CHINOS'], ['japoneses', 'JAPONESES']];
+const CIVS = [];
+for (const [archivo, nombre] of ARCHIVOS) {
+  try { CIVS.push((await import(`./${archivo}.js`))[nombre]); } catch (e) { console.warn('Falta', archivo, e); }
+}
+const TIPOS = ['balandra', 'bergantin', 'galeon'];
+const NOMBRE_TIPO = { balandra: 'Balandra', bergantin: 'Bergantín', galeon: 'Galeón' };
+const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const FONDOS = { mar: ['Mar', '#2b6f9c'], profundo: ['Mar profundo', '#173f63'], claro: ['Claro', '#cfd8e0'], oscuro: ['Oscuro', '#101820'] };
+const DANOS = ['Sano', 'Tocado', 'Averiado', 'Crítico'];
+const $ = (id) => document.getElementById(id);
+
+let guardado = {};
+try { guardado = JSON.parse(localStorage.getItem('aon-propuestas-3') || '{}'); } catch {}
+const est = { civ: 0, dano: 0, velas: 3, canones: 'medio', fondo: 'mar', tam: 3, elegidos: guardado.elegidos || {} };
+const guardar = () => { try { localStorage.setItem('aon-propuestas-3', JSON.stringify({ elegidos: est.elegidos })); } catch {} };
+
+const canonesDe = (tipo) => { const max = CASCOS[tipo].maxCanones / 2; return est.canones === 'min' ? 1 : est.canones === 'max' ? max : Math.max(1, Math.round(max * .7)); };
+
+// Pinta un barco centrado en el canvas. escala = píxeles de pantalla por unidad del juego.
+function pintarEn(canvas, civ, d, escala, dano = est.dano, velas = est.velas) {
+  const k = CASCOS[d.tipo], dpr = Math.min(2, devicePixelRatio || 1);
+  const w = (k.largo * 1.62 + 26) * escala, h = (k.ancho * 2.75 + 24) * escala;
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  canvas.style.aspectRatio = `${w} / ${h}`;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = FONDOS[est.fondo][1]; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width / 2, canvas.height / 2); ctx.scale(escala * dpr, escala * dpr); ctx.lineJoin = 'round';
+  if (!civ) return ctx;
+  const e = FACCIONES[civ.faccion].estilo;
+  const mx = pintar(ctx, d, { L: k.largo, W: k.ancho, canones: canonesDe(d.tipo), abiertas: velas / 3, colorVela: e.vela, d: dano });
+  // bandera entera de la civilización en el asta de popa, igual que en el juego
+  const L = k.largo, BW = 24, BH = 16, TIRAS = 6, x0 = -L * .5 - BW - 1;
+  ctx.fillStyle = '#ffd98a'; ctx.beginPath(); ctx.arc(-L * .47, 0, 1.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3a2614'; ctx.fillRect(-L * .5 - 1.5, -BH / 2 - 1.5, 2, BH + 3);
+  for (let i = 0; i < TIRAS; i++) {
+    const w = BW / TIRAS, dy = Math.sin(1.3 - i * .9) * 1.6 * (i + 1) / TIRAS;
+    ctx.save(); ctx.beginPath(); ctx.rect(x0 + (TIRAS - 1 - i) * w - .15, -BH / 2 + dy, w + .3, BH); ctx.clip();
+    ctx.translate(x0, -BH / 2 + dy); dibujarBandera(ctx, civ.faccion, BW, BH); ctx.restore();
+  }
+  return ctx;
+}
+// El barco tal como está hoy en el juego, para comparar
+function pintarHoy(canvas, civ, tipo, escala) {
+  const d = { tipo };
+  const ctx = pintarEn(canvas, null, d, escala);
+  const b = crearBarco({ faccion: civ.faccion, casco: tipo, velas: 'latinas', canones: canonesDe(tipo) * 2, municion: 'redonda', trip: 'moderada' }, 'jugador', 0, 0, { a: 0, velas: est.velas, bandera: '#1f7a3f' });
+  dibujarBarco(ctx, b, { sinBarra: true });
+}
+
+function botones(cont, opciones, actual, alElegir) {
+  for (const b of [...cont.querySelectorAll('button')]) b.remove();
+  for (const [id, txt] of opciones) {
+    const b = document.createElement('button');
+    b.textContent = txt; if (id === actual()) b.className = 'on';
+    b.onclick = () => { alElegir(id); pintarTodo(); };
+    cont.appendChild(b);
+  }
+}
+const clave = (civ, tipo) => `${civ.faccion}|${tipo}`;
+
+function pintarBarra() {
+  const tabs = $('tabs'); tabs.innerHTML = '';
+  CIVS.forEach((c, i) => {
+    const n = TIPOS.filter((t) => est.elegidos[clave(c, t)] !== undefined).length;
+    const b = document.createElement('button');
+    b.innerHTML = `${c.nombre}<span class="n">${n}/3</span>`; if (i === est.civ) b.className = 'on';
+    b.onclick = () => { est.civ = i; pintarTodo(); scrollTo(0, 0); };
+    tabs.appendChild(b);
+  });
+  botones($('g-dano'), DANOS.map((t, i) => [i, t]), () => est.dano, (v) => (est.dano = v));
+  botones($('g-velas'), [[0, 'Aferradas'], [1, 'De combate'], [2, 'Media'], [3, 'Todo el trapo']], () => est.velas, (v) => (est.velas = v));
+  botones($('g-canones'), [['min', 'Pocos'], ['medio', 'Normal'], ['max', 'Todos']], () => est.canones, (v) => (est.canones = v));
+  botones($('g-fondo'), Object.entries(FONDOS).map(([id, f]) => [id, f[0]]), () => est.fondo, (v) => (est.fondo = v));
+  botones($('g-tam'), [[2, 'Chico'], [3, 'Normal'], [4.2, 'Grande']], () => est.tam, (v) => (est.tam = v));
+}
+
+function pintarMain() {
+  const civ = CIVS[est.civ], main = $('main');
+  main.innerHTML = `<p class="resumen"><b>${civ.nombre}.</b> ${civ.resumen}</p>`;
+  for (const tipo of TIPOS) {
+    const sec = document.createElement('section'); sec.className = 'casco';
+    const k = CASCOS[tipo];
+    sec.innerHTML = `<h2>${NOMBRE_TIPO[tipo]}<small>${k.desc} · hasta ${k.maxCanones} cañones</small></h2><div class="grilla"></div>`;
+    const grilla = sec.querySelector('.grilla');
+    const hoy = document.createElement('div'); hoy.className = 'carta hoy';
+    hoy.innerHTML = `<canvas class="lienzo" style="cursor:default"></canvas><div class="txt"><b>Hoy en el juego</b><p>El dibujo genérico actual, para comparar. No muestra daño.</p></div>`;
+    pintarHoy(hoy.querySelector('canvas'), civ, tipo, est.tam);
+    grilla.appendChild(hoy);
+    civ[tipo].forEach((d, i) => {
+      const elegida = est.elegidos[clave(civ, tipo)] === i;
+      const carta = document.createElement('div'); carta.className = 'carta' + (elegida ? ' elegida' : '');
+      carta.innerHTML = `<canvas class="lienzo" title="Clic para ver en grande"></canvas><div class="txt"><b><span class="letra">${LETRAS[i]}</span>${d.nombre}</b><p>${d.ref}</p><button class="elegir">${elegida ? '✓ Elegido' : 'Elegir'}</button></div>`;
+      const cv = carta.querySelector('canvas');
+      pintarEn(cv, civ, d, est.tam);
+      cv.onclick = () => abrirDetalle(tipo, i);
+      carta.querySelector('.elegir').onclick = () => elegir(civ, tipo, i);
+      grilla.appendChild(carta);
+    });
+    main.appendChild(sec);
+  }
+}
+
+function elegir(civ, tipo, i) {
+  const k = clave(civ, tipo);
+  if (est.elegidos[k] === i) delete est.elegidos[k]; else est.elegidos[k] = i;
+  guardar(); pintarTodo();
+}
+
+function textoEleccion() {
+  const lineas = [];
+  for (const c of CIVS) {
+    const partes = TIPOS.map((t) => { const i = est.elegidos[clave(c, t)]; return `${NOMBRE_TIPO[t]}: ${i === undefined ? '(sin elegir)' : `${LETRAS[i]} · ${c[t][i].nombre}`}`; });
+    lineas.push(`${c.nombre} → ${partes.join(' | ')}`);
+  }
+  return lineas.join('\n');
+}
+function pintarPie() {
+  const total = CIVS.length * 3, n = Object.keys(est.elegidos).length;
+  const civ = CIVS[est.civ];
+  const partes = TIPOS.map((t) => { const i = est.elegidos[clave(civ, t)]; return `${NOMBRE_TIPO[t]}: <b>${i === undefined ? '—' : `${LETRAS[i]} · ${civ[t][i].nombre}`}</b>`; });
+  $('lista').innerHTML = `<b>${n} de ${total}</b> elegidos · ${civ.nombre}: ${partes.join(' · ')}`;
+}
+$('copiar').onclick = async () => {
+  const txt = textoEleccion();
+  try { await navigator.clipboard.writeText(txt); $('copiar').textContent = '✓ Copiado, pegáselo a Claude'; }
+  catch { prompt('Copiá este texto y pegáselo a Claude:', txt); }
+  setTimeout(() => ($('copiar').textContent = 'Copiar mi elección'), 2500);
+};
+$('borrar').onclick = () => { if (confirm('¿Borrar todo lo elegido?')) { est.elegidos = {}; guardar(); pintarTodo(); } };
+
+// ---------- Vista en grande ----------
+let det = null;
+function abrirDetalle(tipo, i) { det = { tipo, i }; $('detalle').classList.add('abierto'); pintarDetalle(); }
+function cerrarDetalle() { det = null; $('detalle').classList.remove('abierto'); }
+function pintarDetalle() {
+  if (!det) return;
+  const civ = CIVS[est.civ], d = civ[det.tipo][det.i];
+  const elegida = est.elegidos[clave(civ, det.tipo)] === det.i;
+  $('det-nombre').textContent = `${civ.nombre} · ${NOMBRE_TIPO[det.tipo]} ${LETRAS[det.i]} · ${d.nombre}`;
+  $('det-ref').textContent = d.ref;
+  $('det-elegir').textContent = elegida ? '✓ Elegido' : 'Elegir este'; $('det-elegir').className = elegida ? 'on' : '';
+  pintarEn($('det-grande'), civ, d, det.tipo === 'galeon' ? 7 : det.tipo === 'bergantin' ? 9 : 11);
+  const cont = $('det-estados'); cont.innerHTML = '';
+  DANOS.forEach((t, n) => {
+    const f = document.createElement('figure');
+    f.innerHTML = `<canvas></canvas><figcaption>${n + 1} · ${t}</figcaption>`;
+    pintarEn(f.querySelector('canvas'), civ, d, 3.4, n, est.velas || 3);
+    cont.appendChild(f);
+  });
+}
+function mover(paso) {
+  if (!det) return;
+  const orden = TIPOS.flatMap((t) => CIVS[est.civ][t].map((_, i) => ({ tipo: t, i })));
+  const j = orden.findIndex((o) => o.tipo === det.tipo && o.i === det.i);
+  det = orden[(j + paso + orden.length) % orden.length]; pintarDetalle();
+}
+$('det-cerrar').onclick = cerrarDetalle;
+$('det-ant').onclick = () => mover(-1);
+$('det-sig').onclick = () => mover(1);
+$('det-elegir').onclick = () => elegir(CIVS[est.civ], det.tipo, det.i);
+$('detalle').onclick = (e) => { if (e.target === $('detalle')) cerrarDetalle(); };
+addEventListener('keydown', (e) => {
+  if (!det) return;
+  if (e.key === 'Escape') cerrarDetalle();
+  if (e.key === 'ArrowLeft') mover(-1);
+  if (e.key === 'ArrowRight') mover(1);
+  if (['1', '2', '3', '4'].includes(e.key)) { est.dano = +e.key - 1; pintarTodo(); }
+});
+
+function pintarTodo() { pintarBarra(); pintarMain(); pintarPie(); pintarDetalle(); }
+pintarTodo();
+window.propuestas = { CIVS, est, abrirDetalle, pintarTodo, pintarEn };
+</script>
+</body>
+</html>

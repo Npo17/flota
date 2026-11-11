@@ -3,6 +3,25 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-10 (propuestas de arte para seis civilizaciones más) — Cristian + Claude
+
+**Estado: subido a la rama `propuestas-arte-barcos` (no a `main`). Nada de esto está en el juego todavía:** son propuestas para que Cristian elija.
+
+- Carpeta nueva `propuestas/` con una galería (`http://localhost:5180/propuestas/`) que muestra **3 diseños por casco** para suecos, holandeses, alemanes, otomanos, chinos y japoneses (54 en total), al lado del dibujo genérico de hoy. Se puede cambiar el daño (4 estados), las velas, la cantidad de cañones y el fondo, ver cada barco en grande y marcar el elegido; "Copiar mi elección" arma el texto para pasarle a Claude.
+- `propuestas/motor.js` es el mismo estilo de `src/arte-frances.js` y `src/arte-portugues.js`, pero armado por piezas (formas de casco, velas cuadras, latinas, de junco y cangrejas, castillos, casetas, toldos, remos, orzas). `propuestas/emblemas.js` tiene los emblemas de vela y los mascarones. Un archivo por civilización con sus 9 diseños y la referencia histórica de cada uno.
+- Segunda tanda, después de la primera devolución de Cristian: holandeses sin el león tallado (se parecía al británico), bergantines alemanes nuevos (Bunte Kuh, coca de Bremen, fragata Berlin), otomanos rehechos de cero (velas latinas de color, cúpula en la popa, sin el cajón de remos), tigre y dragón tallados para los juncos chinos y proa de caja en los atakebune. Lo nuevo está en `propuestas/emblemas2.js`. Gustaron: todos los suecos, la balandra y el galeón alemanes, el Duyfken y el Brederode holandeses.
+- **Tercera tanda (2026-11-11), con la devolución de Cristian.** Elegidos: suecos (galera de Gustavo Vasa, Lybska Svan, Kronan), holandeses (Statenjacht, De Zeven Provinciën), alemanes (Kraier, fragata Berlin, Adler von Lübeck), otomanos (Kalyata, Kalyon). Siguen abiertos: bergantín holandés, bergantín otomano, y todos los chinos y japoneses (rehechos; los japoneses ahora son solo barcos japoneses).
+- Reglas de estilo que dejó Cristian: **nada de íconos redondos ni discos debajo del mascarón**, ni velas de proa debajo de una talla; las tallas tienen que verse como tallas (no infantiles ni de colores); sin ojos pintados en los juncos. Lo nuevo está en `propuestas/emblemas3.js`.
+- La bandera de la civilización en el asta de popa se hizo en la rama `viento-y-controles` (junto con los equipos por civilización), no en esta. La galería la dibuja igual que el juego.
+- **Elección de Cristian (2026-11-11, cuarta vuelta):**
+  - Suecos: balandra "Galera de Gustavo Vasa · sin corona", bergantín "Lybska Svan", galeón "Kronan".
+  - Holandeses: bergantín "Witte Valk", galeón "De Zeven Provinciën". Balandra pendiente: el Statenjacht va en tres versiones nuevas (sirena grande, caballo marino, halcón), porque la sirena casi no se veía.
+  - Alemanes: bergantín "Berlin · águila tallada", galeón "Adler von Lübeck". Balandra pendiente: el Kraier le gustó, pero pidió otra talla (el águila roja queda para la Berlin); van tres (grifo, llave de Bremen, vaca de Hamburgo).
+  - Otomanos: balandra "Kalyata", bergantín "Kadırga", galeón "Kalyon". Completos.
+  - Chinos: balandra "Wugongchuan". Bergantín y galeón pendientes: los tigres y dragones le siguen pareciendo infantiles.
+  - Japoneses: ninguno todavía.
+- Pendiente: con lo que elija Cristian, pasar cada civilización a su `src/arte-<civilización>.js` y sumarla al mapa `ARTE` de `src/dibujo.js`. Ojo con los remos: en la galería los de galeras y barcos japoneses están dibujados quietos; en el juego los pone y los mueve `dibujo.js`. Decidir también si `propuestas/` se sube al repo (quedaría pública en el sitio) o queda solo en la compu.
+
 ## 2026-11-10 (arte de barcos, franceses) — Cristian + Claude
 
 **Estado: probado en localhost; commit con el OK de Cristian.** Sigue la entrada de abajo.
