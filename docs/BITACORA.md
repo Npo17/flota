@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (arreglo: reaparecer en línea quedaba trabado) — Nicolás + Claude
+
+**Estado: subido a `main` y publicado. No toca el servidor.**
+
+- Nicolás tocó "Volver al mar" jugando en línea y el juego quedó trabado con el barco hundido. Era una carrera en `src/red.js`: entre el pedido de reaparecer y la respuesta del servidor llegaba otra foto del barco hundido, y se tomaba como el barco nuevo. Ahora, desde que se pide reaparecer hasta que llega el saludo del servidor, las fotos se ignoran, y el saludo deja la partida limpia.
+- No pasaba esperando la cuenta regresiva entera, porque a los 6 segundos el servidor ya sacó al capitán y deja de mandar fotos. Por eso no lo vi al probar.
+- Prueba nueva: `node scripts/probar-reaparecer.mjs` (cliente contra servidor sin red, con esa foto de más). Falla con la versión anterior y pasa con el arreglo.
+
 ## 2026-11-12 (sin pasos angostos entre tierras) — Nicolás + Claude
 
 **Estado: subido a `main` y publicado en la web. El servidor también quedó republicado** (`v: 4`, lo corrió Nicolás) y pasa `probar-red` en vivo.

@@ -101,6 +101,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
 | `supabase/migrations/` | Tablas y funciones de la base |
 | `scripts/probar-reentrar.mjs` | Prueba, sin red, que un capitán hundido puede volver a entrar (reaparecer) |
+| `scripts/probar-reaparecer.mjs` | Reaparecer en línea de punta a punta, sin red: `src/red.js` contra `servidor/worker.js`, con la foto vieja que llega después de pedirlo |
 | `scripts/` | `version.mjs` (sello de versión), `publicar.mjs` (publicación manual de respaldo) y las pruebas `probar-sim`, `probar-red` y `probar-textos` |
 
 La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrada y avanza un paso. Mantenerlo así, porque el mismo archivo corre en el navegador (modo solo) y en el servidor (juego en línea).

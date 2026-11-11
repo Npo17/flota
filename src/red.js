@@ -33,6 +33,7 @@ export async function salasPublicas() {
 export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto }) {
   let ws = null, miId = null, abierta = false, cerradaAProposito = false;
   let pulsos = {}, objetivo = null, quieto = false, ultimoEnvio = 0;
+  let esperandoHola = false; // después de pedir reaparecer: se ignoran las fotos del barco hundido hasta que el servidor conteste
   const porId = new Map();
   const nombres = new Map();
   const yo = { id: null, nombre, barco: null, oroPuerto: 0, oroBodega: 0, escoltasMax: 2 };
@@ -57,6 +58,8 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
 
   function recibir(m) {
     if (m.t === 'hola') {
+      esperandoHola = false;
+      j.fin = false; j.finEn = 0; j.causa = null; j.jugador = null; yo.barco = null; j.gancho = null; // barco nuevo (al entrar o al reaparecer)
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
       j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 4 ? 2 : m.v >= 3 ? 1 : false }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
       if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
@@ -76,7 +79,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
 
   // Llega una foto del mar
   function foto(m) {
-    if (!j.mundo) return;
+    if (!j.mundo || esperandoHola) return;
     if (m.vi) {
       const rafagas = [];
       for (let k = 1; k + 2 < m.vi.length; k += 3) rafagas.push({ x: m.vi[k], y: m.vi[k + 1], r: m.vi[k + 2] });
@@ -209,7 +212,8 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     // Después de hundirse: vuelve a entrar al mismo mar con el mismo barco, desde cero. Devuelve false si se cortó la conexión.
     reentrar: () => {
       if (!abierta || !ws || ws.readyState !== 1) return false;
-      j.fin = false; j.finEn = 0; j.causa = null; j.jugador = null; yo.barco = null; j.gancho = null; j.reportado = null; pulsos = {};
+      esperandoHola = true; // sin esto, una foto vieja (todavía con el barco hundido) se tomaba como el barco nuevo y el juego quedaba trabado
+      j.reportado = null; pulsos = {};
       ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno }));
       return true;
     },
