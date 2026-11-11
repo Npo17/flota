@@ -3,6 +3,16 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (sonido y música) — Nicolás + Claude
+
+**Estado: subido a `main` y publicado. No toca el servidor.**
+
+- **El juego ahora suena** (`src/sonido.js`): música en el astillero (y en el menú de la app), y en el mar las olas, el viento (más fuerte dentro de una ráfaga y con el barco lanzado; casi nada si la partida es sin viento) y los cañones, propios y ajenos, más bajos, apagados y con un instante de demora cuanto más lejos, y hacia el lado del que vienen. También suenan los impactos en el casco, los hundimientos y los salpicones cercanos.
+- **No hay archivos de audio:** todo se genera con Web Audio. La música es una pieza corta escrita en el código (re menor, 6/8), no al azar. Se eligió así para que sea original y no pese; si se consigue música grabada con licencia, se cambia solo esa parte.
+- **Ajustes → Sonido:** dos barras, "Efectos y ambiente" y "Música", de 0 a 100 %. Al soltar la de efectos suena un cañonazo de muestra. Se guardan en el navegador.
+- En la web el navegador no deja sonar nada hasta el primer clic o tecla; en la app suena desde que abre.
+- Probado: sin errores en web y app; `sonido.probar()` mide que cada cosa suena y que una andanada entera no satura; en una partida los cañonazos llegan al sonido. **Nadie lo escuchó todavía con oídos:** los niveles y el gusto de la música los tiene que juzgar Nicolás.
+
 ## 2026-11-12 (arreglo de verdad de "Volver al mar" en línea, y pantalla de carga) — Nicolás + Claude
 
 **Estado: subido a `main` y publicado. No toca el servidor.**

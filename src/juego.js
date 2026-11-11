@@ -170,6 +170,7 @@ function emitir(j, ev) {
 }
 
 export function efecto(j, ev) {
+  if (j.alEfecto) j.alEfecto(ev); // la pantalla lo usa para el sonido (el servidor no pasa por acá)
   const P = j.particulas;
   if (ev.k === 'c') { // cañonazo: humo y fogonazo en la boca del cañón
     for (let k = 0; k < 4; k++) {

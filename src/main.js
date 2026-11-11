@@ -11,6 +11,7 @@ import { dibujarBandera } from './banderas.js';
 import { t, IDIOMAS, registrarTextos, idiomaActual, idiomaInicial, elegirIdioma } from './idioma.js';
 import { TEXTOS } from './textos.js';
 import { TEXTOS_HISTORIA } from './textos-historia.js';
+import * as sonido from './sonido.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
 
 const $ = (id) => document.getElementById(id);
@@ -183,6 +184,7 @@ pintarMapa();
 
 function empezar() {
   estado = 'mar';
+  partida.alEfecto = (ev) => sonido.evento(ev, partida.jugador);
   velasPedidas = 3;
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
@@ -591,6 +593,13 @@ function cuadro(ahora) {
     dibujarEscena(ctx, partida, vista);
     if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
   }
+  // sonido: en el astillero, la música; en el mar, las olas y el viento (más fuerte dentro de una ráfaga y con el barco lanzado)
+  if (estado === 'astillero' || !partida) sonido.ambiente('lobby');
+  else {
+    const yo = partida.jugador;
+    const sopla = partida.viento ? 0.38 + (yo && yo.enRafaga ? 0.45 : 0) : 0.10;
+    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5);
+  }
 }
 
 
@@ -699,6 +708,13 @@ function pintarAjustes() {
     b.classList.toggle('elegida', b.dataset.id === tema);
     b.onclick = () => { ponerTema(b.dataset.id); pintarAjustes(); };
   }
+  for (const cual of ['sonido', 'musica']) {
+    const barra = $('aj-vol-' + cual), numero = $('aj-vol-' + cual + '-n');
+    barra.value = Math.round(sonido.volumen(cual) * 100);
+    numero.textContent = barra.value + ' %';
+    barra.oninput = () => { sonido.ponerVolumen(cual, barra.value / 100); numero.textContent = barra.value + ' %'; };
+    if (cual === 'sonido') barra.onchange = () => sonido.muestra(); // al soltar la barra, un cañonazo para oír cómo quedó
+  }
 }
 
 function cambiarIdioma(id) {
@@ -736,4 +752,4 @@ requestAnimationFrame(cuadro);
 document.documentElement.classList.remove('cargando'); // ya está todo pintado: se va la pantalla de carga (index.html)
 
 // Para probar desde la consola
-window.flota = { get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; } };
+window.flota = { sonido, get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; } };

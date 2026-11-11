@@ -97,6 +97,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/idioma.js`, `src/textos.js`, `src/textos-historia.js` | Idiomas: la función `t()` y las traducciones (una fila por texto, una columna por idioma) |
 | `src/puerto.js` | Qué se compra en el puerto y qué hace cada compra (lo usan la pantalla y el servidor) |
 | `src/red.js` | Juego en línea: se conecta al mar compartido y arma una partida con lo que manda el servidor |
+| `src/sonido.js` | Música del lobby, mar, viento y cañones. Sin archivos de audio: todo se genera con Web Audio. Dos volúmenes aparte (efectos y música) que se cambian en Ajustes y se guardan en el navegador. Los cañonazos llegan por `partida.alEfecto` (lo llama `efecto()` de `juego.js`, el mismo evento que dibuja el humo). `window.flota.sonido.probar()` mide cada sonido sin parlantes |
 | `servidor/` | Servidor del mar compartido (Cloudflare Workers + Durable Object). Corre la misma `juego.js` |
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
 | `supabase/migrations/` | Tablas y funciones de la base |
@@ -163,5 +164,6 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 
 - En línea: mostrar la soga del gancho de otros jugadores; lista de amigos e invitaciones (hoy se pasa el código de la sala); que una sala guarde quién la creó para poder echar gente.
 - Habilidades especiales (por ejemplo, el ancla para girar en el lugar).
-- Sonido y controles para celular.
+- Controles para celular.
+- Sonido: reemplazar la música generada por una grabada si se consigue una con licencia; sonido propio para el abordaje, la reparación y el oro.
 - Revisión de las traducciones por hablantes nativos; botón de ajustes durante la partida.

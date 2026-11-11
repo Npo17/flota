@@ -164,6 +164,9 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .boton.icono { padding: 8px 12px; font-size: 20px; line-height: 1; }
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .chips.dos { grid-template-columns: repeat(2, 1fr); }
+.aj-vol { display: grid; grid-template-columns: 1fr 1.4fr 3.2em; align-items: center; gap: 10px; margin: 8px 0; font-weight: 700; }
+.aj-vol input { width: 100%; accent-color: #ffd166; cursor: pointer; }
+.aj-vol b { text-align: right; font-variant-numeric: tabular-nums; color: var(--rotulo); font-size: 13px; }
 .chip { font: inherit; font-weight: 800; letter-spacing: 1px; padding: 12px 8px; border-radius: 10px; border: 2px solid transparent; background: var(--tarjeta); color: inherit; cursor: pointer; }
 .chip:hover { background: var(--tarjeta-hover); }
 .chip.elegida { border-color: var(--acento); color: var(--oro); background: var(--tarjeta-elegida); }

@@ -426,4 +426,8 @@ export const TEXTOS = [
   ["Volver al mar ({n})","Back to sea ({n})","Voltar ao mar ({n})","Retour en mer ({n})","Wróć na morze ({n})","Torna in mare ({n})","Zurück aufs Meer ({n})","Denize dön ({n})"],
   ["Cambiar de flota","Change fleet","Trocar de frota","Changer de flotte","Zmień flotę","Cambia flotta","Flotte wechseln","Filoyu değiştir"],
   ["ESC otra vez para dejar la partida y cambiar de flota","Press ESC again to leave the match and change your fleet","ESC de novo para sair da partida e trocar de frota","Échap à nouveau pour quitter la partie et changer de flotte","Naciśnij ESC ponownie, aby opuścić rozgrywkę i zmienić flotę","Premi di nuovo ESC per lasciare la partita e cambiare flotta","Nochmal ESC, um die Partie zu verlassen und die Flotte zu wechseln","Maçtan çıkıp filoyu değiştirmek için tekrar ESC"],
+  // sonido
+  ["Sonido","Sound","Som","Son","Dźwięk","Audio","Ton","Ses"],
+  ["Efectos y ambiente","Effects and ambience","Efeitos e ambiente","Effets et ambiance","Efekty i otoczenie","Effetti e ambiente","Effekte und Umgebung","Efektler ve ortam"],
+  ["Música","Music","Música","Musique","Muzyka","Musica","Musik","Müzik"],
 ];
