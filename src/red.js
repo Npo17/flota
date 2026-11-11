@@ -141,7 +141,9 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     // dirección pero a la distancia que corresponde a las velas elegidas (salvo al tirar el gancho, que necesita el punto real)
     if (objetivo && !j.viento && j.jugador && !entrada.abordar) {
       const yo = j.jugador, dx = objetivo.x - yo.x, dy = objetivo.y - yo.y, d = Math.hypot(dx, dy) || 1, lejos = [0, 100, 215, 420][velas];
-      if (d > yo.stats.largo * 0.6 + 15) objetivo = { x: yo.x + (dx / d) * lejos, y: yo.y + (dy / d) * lejos };
+      // con el cursor pegado al barco se mantiene el rumbo, para que tampoco ahí lo frene
+      const cerca = d <= yo.stats.largo * 0.6 + 15, ux = cerca ? Math.cos(yo.a) : dx / d, uy = cerca ? Math.sin(yo.a) : dy / d;
+      objetivo = { x: yo.x + ux * lejos, y: yo.y + uy * lejos };
     }
     if (entrada.fuegoTodo) pulsos.f = 1;
     if (entrada.fuego) pulsos.l = entrada.fuego;

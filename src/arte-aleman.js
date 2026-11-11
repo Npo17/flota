@@ -1,8 +1,8 @@
 // Alemanes, tercera tanda: quedan el Kraier, la fragata Berlin (con el águila rehecha) y el Adler von Lübeck (con las águilas emprolijadas).
-import { dis, cu, la } from './motor.js';
-import { enVela, enProa, aguilaBicefala, aguila, llave } from './emblemas.js';
-import { aguilaTalla, grifoProa, llaveProa } from './emblemas3.js';
-import { vacaProa } from './emblemas2.js';
+import { dis, cu, la } from './arte-motor.js';
+import { enVela, enProa, aguilaBicefala, aguila, llave } from './arte-emblemas.js';
+import { aguilaTalla, grifoProa, llaveProa } from './arte-emblemas3.js';
+import { vacaProa } from './arte-emblemas2.js';
 
 const HANSA = { casco: '#3f2a18', borda: '#b3261e', franja: '#f1ece0', oro: '#e0b83e', porta: '#f1ece0', cubierta: '#b58a58', cubiertaAlta: '#c59a66' };
 const IMPERIAL = { casco: '#1b1b1f', borda: '#2c2c33', franja: '#f2c230', franja2: '#b3261e', oro: '#f2c230', porta: '#f2c230', cubierta: '#b58a58', cubiertaAlta: '#c8a06a', galeria: '#b3261e' };

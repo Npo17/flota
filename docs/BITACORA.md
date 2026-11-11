@@ -3,9 +3,20 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (todo a `main`: seis civilizaciones con arte propio y la jugabilidad nueva) — Cristian + Claude
+
+**Estado: publicado en ageofnavies.com por pedido de Cristian. EL SERVIDOR DEL MAR NO ESTÁ REPUBLICADO.**
+
+- Se juntaron en `main` las ramas `viento-y-controles` y `propuestas-arte-barcos` (las dos entradas de abajo).
+- **Arte propio para suecos, holandeses, alemanes, otomanos, chinos y japoneses** (ya son 11 de 20 civilizaciones). Cristian eligió un diseño por casco; la lista está en `src/arte-elegidos.js`. El motor por piezas y los diseños pasaron de `propuestas/` a `src/` (`arte-motor.js`, `arte-emblemas*.js`, `arte-<civilización>.js`); la galería sigue en `/propuestas/` y usa esos mismos archivos.
+- En las civilizaciones de remo (otomanos) los remos los sigue poniendo `dibujo.js`; el diseño no dibuja los suyos. Detalle sin resolver: el Kalyon otomano es un galeón de vela y el juego igual le pone remos, porque los remos van por civilización y no por barco.
+- **Nicolás: hay que republicar el servidor** (`cd servidor && npx wrangler deploy`). Mientras tanto, "Jugar online" funciona pero con las reglas viejas del servidor: sin viento, sin rachas, sin equipos por civilización, sin habilidades, con el gancho viejo, el tesoro viejo y los mapas con callejones. Lo probé desde localhost contra el servidor publicado: navegar, velas con W / S y disparo por costado andan. El modo solo tiene todo lo nuevo.
+- No se corrió `/review` ni `/qa` de gstack sobre estos cambios: Cristian pidió publicar ya. Se probó con `probar-sim`, `probar-textos`, partidas en modo solo y la prueba en línea de arriba.
+- Pendiente: probar el modo en línea con el servidor nuevo (`npx wrangler dev` y `?mar=local`) antes o apenas se republique; revisar las referencias históricas de las tarjetas de la galería, que no se contrastaron con fuentes.
+
 ## 2026-11-12 (ajustes después de una partida larga de Cristian) — Cristian + Claude
 
-**Estado: subido a la rama `viento-y-controles` (no a `main`). Probado en localhost en modo solo.** Sigue faltando `/review`, probar en línea y republicar el servidor.
+**Estado: ya está en `main`** (ver la entrada de arriba).
 
 Cristian jugó hasta comprar el galeón y dejó esta lista; está todo hecho:
 
@@ -23,7 +34,7 @@ Cristian jugó hasta comprar el galeón y dejó esta lista; está todo hecho:
 
 ## 2026-11-11 (viento, velas y disparo por lado) — Cristian + Claude
 
-**Estado: subido a la rama `viento-y-controles` (no a `main`): no está publicado.** Probado en localhost en modo solo; falta `/review`, probar en línea y republicar el servidor antes de pasarlo a `main`.
+**Estado: ya está en `main`** (ver la entrada de más arriba).
 
 - **Viento** (pedido de Cristian: que sea la mecánica central). `src/juego.js` tiene `j.viento` (rumbo que rota despacio y 9 ráfagas que viajan con él) y `rindeViento(j, b)`, que multiplica la velocidad según el ángulo entre el rumbo del barco y el viento y según el tipo de vela. Tabla y números en `VIENTO`, en `src/config.js`. Vale para todos los barcos, también bots y escoltas.
 - **Velas**: ya no dependen de la distancia del cursor. El navegador manda `velas` (0 a 3) en la entrada; se cambian con W / S, flechas o la rueda. El cursor cerca del barco ya no lo frena.
@@ -46,7 +57,7 @@ Cristian jugó hasta comprar el galeón y dejó esta lista; está todo hecho:
 
 ## 2026-11-10 (propuestas de arte para seis civilizaciones más) — Cristian + Claude
 
-**Estado: subido a la rama `propuestas-arte-barcos` (no a `main`). Nada de esto está en el juego todavía:** son propuestas para que Cristian elija.
+**Estado: ya está en `main` y los elegidos están en el juego** (ver la entrada de más arriba).
 
 - Carpeta nueva `propuestas/` con una galería (`http://localhost:5180/propuestas/`) que muestra **3 diseños por casco** para suecos, holandeses, alemanes, otomanos, chinos y japoneses (54 en total), al lado del dibujo genérico de hoy. Se puede cambiar el daño (4 estados), las velas, la cantidad de cañones y el fondo, ver cada barco en grande y marcar el elegido; "Copiar mi elección" arma el texto para pasarle a Claude.
 - `propuestas/motor.js` es el mismo estilo de `src/arte-frances.js` y `src/arte-portugues.js`, pero armado por piezas (formas de casco, velas cuadras, latinas, de junco y cangrejas, castillos, casetas, toldos, remos, orzas). `propuestas/emblemas.js` tiene los emblemas de vela y los mascarones. Un archivo por civilización con sus 9 diseños y la referencia histórica de cada uno.

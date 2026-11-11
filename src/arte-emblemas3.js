@@ -1,6 +1,6 @@
 // Tercera tanda: tallas de proa (sin discos ni medallones debajo) y adornos de borda.
 // Todas las tallas miran a proa (+x) y se dibujan como madera dorada o pintada, con sombra propia, no como íconos.
-import { mitad, mezclar } from './motor.js';
+import { mitad, mezclar } from './arte-motor.js';
 const TAU = Math.PI * 2;
 const disco = (ctx, x, y, r, col) => { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = col; ctx.fill(); };
 

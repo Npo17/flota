@@ -86,16 +86,16 @@
 </div></div>
 
 <script type="module">
-import { pintar } from './motor.js';
+import { pintar } from '../src/arte-motor.js';
 import { FACCIONES, CASCOS } from '../src/config.js';
 import { dibujarBandera } from '../src/banderas.js';
 import { crearBarco } from '../src/barcos.js';
 import { dibujarBarco } from '../src/dibujo.js';
 
-const ARCHIVOS = [['suecos', 'SUECOS'], ['holandeses', 'HOLANDESES'], ['alemanes', 'ALEMANES'], ['otomanos', 'OTOMANOS'], ['chinos', 'CHINOS'], ['japoneses', 'JAPONESES']];
+const ARCHIVOS = [['sueco', 'SUECOS'], ['holandes', 'HOLANDESES'], ['aleman', 'ALEMANES'], ['otomano', 'OTOMANOS'], ['chino', 'CHINOS'], ['japones', 'JAPONESES']];
 const CIVS = [];
 for (const [archivo, nombre] of ARCHIVOS) {
-  try { CIVS.push((await import(`./${archivo}.js`))[nombre]); } catch (e) { console.warn('Falta', archivo, e); }
+  try { CIVS.push((await import(`../src/arte-${archivo}.js`))[nombre]); } catch (e) { console.warn('Falta', archivo, e); }
 }
 const TIPOS = ['balandra', 'bergantin', 'galeon'];
 const NOMBRE_TIPO = { balandra: 'Balandra', bergantin: 'Bergantín', galeon: 'Galeón' };

@@ -1,4 +1,4 @@
-// Motor de las propuestas de arte: el mismo estilo de src/arte-frances.js y src/arte-portugues.js (vista 100 % cenital, proa hacia +x,
+// Motor de arte por piezas, usado en el juego por src/arte-elegidos.js y en la galería propuestas/. Es el mismo estilo de src/arte-frances.js y src/arte-portugues.js (vista 100 % cenital, proa hacia +x,
 // cuatro estados de daño), pero armado por piezas para poder probar muchos diseños. Lo que se elija pasa después a su src/arte-<civilización>.js.
 export const TAU = Math.PI * 2;
 
@@ -6,7 +6,7 @@ const E0 = {
   casco: '#3a2a1a', borda: '#4a3524', franja: '#d4af37', oro: '#e0b83e', cubierta: '#b98a52', cubiertaAlta: '#c99d62',
   palo: '#4a2c12', relinga: 'rgba(110,80,40,.5)', porta: '#e0b83e', ventana: '#f0c75a', filo: '#0e0905',
 };
-let E = E0, AB = 1;
+let E = E0, AB = 1, SIN_REMOS = false;
 
 export function mezclar(hex, con, f) {
   const p = (h) => { const m = /^#?([0-9a-f]{6})$/i.exec(h); const n = m ? parseInt(m[1], 16) : 0xf5f1e4; return [n >> 16, (n >> 8) & 255, n & 255]; };
@@ -290,6 +290,7 @@ function capa(ctx) {
 // ---------- Piezas sueltas que usan los diseños (van en c.bajo y c.sobre) ----------
 // remos quietos (en el juego los pone y los mueve dibujo.js; acá son para ver el conjunto)
 export function remos(ctx, c, n, largo = .5, x0 = -.3, x1 = .28) {
+  if (SIN_REMOS) return; // en el juego, los remos de estas civilizaciones los pone dibujo.js
   const { L, W } = c;
   ctx.save(); ctx.lineCap = 'round';
   for (let i = 0; i < n; i++) {
@@ -433,7 +434,8 @@ export function pintar(ctx, c0, o) {
   const { L, W } = c;
   E = { ...E0, ...c0.E };
   AB = o.abiertas;
-  const tonos = escalaVela(c0.vela || o.colorVela);
+  SIN_REMOS = !!o.sinRemos;
+  const tonos = escalaVela(o.velaForzada || c0.vela || o.colorVela); // velaForzada: velas doradas del galeón del tesoro
   const pos = c.palos.map((p) => p.x * L), nPalos = c.palos.length;
   ctx.save(); ctx.lineJoin = 'round';
   // sombra en el agua

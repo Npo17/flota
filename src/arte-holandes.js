@@ -1,9 +1,9 @@
 // Holandeses, tercera tanda: quedan el Statenjacht y el De Zeven Provinciën (limpios, sin nada debajo de la talla)
 // y tres bergantines nuevos con tallas de proa en lugar de íconos redondos.
-import { dis, cu, la, ca, orzas } from './motor.js';
-import { sirenaSeria } from './emblemas4.js';
-import { delfinProa } from './emblemas2.js';
-import { caballoProa, aguilaTalla, grifoProa } from './emblemas3.js';
+import { dis, cu, la, ca, orzas } from './arte-motor.js';
+import { sirenaSeria } from './arte-emblemas4.js';
+import { delfinProa } from './arte-emblemas2.js';
+import { caballoProa, aguilaTalla, grifoProa } from './arte-emblemas3.js';
 
 const ROBLE = { casco: '#4a2f18', borda: '#2f6a45', franja: '#e3b23c', franja2: '#b3261e', oro: '#e8c24a', porta: '#e8c24a', cubierta: '#c09560', cubiertaAlta: '#cfa772', galeria: '#2f6a45' };
 const VOC = { casco: '#3a2a1a', borda: '#3d7a52', franja: '#d9a441', franja2: '#f4f1e8', oro: '#e8c24a', porta: '#b3261e', cubierta: '#c09560', cubiertaAlta: '#cfa772', galeria: '#3d7a52' };

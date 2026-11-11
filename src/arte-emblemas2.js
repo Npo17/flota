@@ -1,5 +1,5 @@
 // Segunda tanda de emblemas y mascarones (después de la primera devolución de Cristian).
-import { escudoCortado, leonRampante } from './emblemas.js';
+import { escudoCortado, leonRampante } from './arte-emblemas.js';
 const TAU = Math.PI * 2;
 const ORO = '#e0b83e', ORO2 = '#9c721a';
 const disco = (ctx, x, y, r, col) => { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = col; ctx.fill(); };

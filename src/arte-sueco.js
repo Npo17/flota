@@ -1,7 +1,7 @@
 // Suecos, tercera tanda: quedan los tres elegidos por Cristian, con lo que pidió corregir.
-import { dis, cu, la, remos, espolon, postiza, bancos, toldo, castillo } from './motor.js';
-import { enVela, tresCoronas, gavilla } from './emblemas.js';
-import { coronaTalla, cisneProa } from './emblemas3.js';
+import { dis, cu, la, remos, espolon, postiza, bancos, toldo, castillo } from './arte-motor.js';
+import { enVela, tresCoronas, gavilla } from './arte-emblemas.js';
+import { coronaTalla, cisneProa } from './arte-emblemas3.js';
 
 const AZUL = { casco: '#1f3157', borda: '#2b4580', franja: '#f2c230', oro: '#f2c230', porta: '#f2c230', cubierta: '#b98a52', cubiertaAlta: '#c99d62' };
 const BREA = { casco: '#3a2416', borda: '#5a3a20', franja: '#f2c230', franja2: '#24478f', oro: '#e0b83e', porta: '#e0b83e', cubierta: '#b08450', cubiertaAlta: '#c2965c' };

@@ -1,10 +1,10 @@
 // Japoneses, tercera tanda: todo de nuevo y solo barcos japoneses (los de casco europeo y el del sello rojo quedaron afuera).
 // Flotas de los señores de la guerra y del shogunato (1550-1640): casco de tablas de ciprés, cortina de guerra con el mon en la borda,
 // caja con troneras, torres con tejado, laca negra y bermellón, vela grande con el mon del clan y estandartes en la popa.
-import { dis, cu, remos, caseta, caja, empalizada, timonPopa, TAU } from './motor.js';
-import { enVela, enProa, solRojo, monMokko, monAoi, monTomoe, monMurakami } from './emblemas.js';
-import { jinmaku } from './emblemas3.js';
-import { dragonSerio, tajamar } from './emblemas4.js';
+import { dis, cu, remos, caseta, caja, empalizada, timonPopa, TAU } from './arte-motor.js';
+import { enVela, enProa, solRojo, monMokko, monAoi, monTomoe, monMurakami } from './arte-emblemas.js';
+import { jinmaku } from './arte-emblemas3.js';
+import { dragonSerio, tajamar } from './arte-emblemas4.js';
 
 const CIPRES = { casco: '#4a3420', borda: '#6a4c2c', franja: '#15151a', oro: '#d9b27a', porta: '#15151a', cubierta: '#c9a36a', cubiertaAlta: '#d7b77e', filo: '#15100a' };
 const LACA_NEGRA = { casco: '#15151a', borda: '#26262c', franja: '#e0b83e', franja2: '#7a1f1f', oro: '#e0b83e', porta: '#e0b83e', cubierta: '#c9a36a', cubiertaAlta: '#d7b77e' };

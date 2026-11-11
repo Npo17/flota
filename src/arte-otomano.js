@@ -1,9 +1,9 @@
 // Otomanos, tercera tanda: quedan la Kalyata y el Kalyon elegidos; los tres bergantines mantienen la forma,
 // ahora todos con remos y con una talla en la proa (Zulfikar, media luna y halcón).
-import { dis, la, remos, espolon, mitad } from './motor.js';
-import { enVela, mediaLuna, tresLunas, zulfikar, farol } from './emblemas.js';
-import { cupula } from './emblemas2.js';
-import { zulfikarProa, lunaTalla, aguilaTalla } from './emblemas3.js';
+import { dis, la, remos, espolon, mitad } from './arte-motor.js';
+import { enVela, mediaLuna, tresLunas, zulfikar, farol } from './arte-emblemas.js';
+import { cupula } from './arte-emblemas2.js';
+import { zulfikarProa, lunaTalla, aguilaTalla } from './arte-emblemas3.js';
 
 const ROJA = { casco: '#4a1a12', borda: '#a3262a', franja: '#e8c24a', franja2: '#4a1a12', oro: '#f0c75a', porta: '#f0c75a', cubierta: '#c29560', cubiertaAlta: '#d2a872', galeria: '#a3262a' };
 const VERDE = { casco: '#16332b', borda: '#1f6f5c', franja: '#e8c24a', franja2: '#16332b', oro: '#f0c75a', porta: '#f0c75a', cubierta: '#c29560', cubiertaAlta: '#d2a872', galeria: '#1f6f5c' };

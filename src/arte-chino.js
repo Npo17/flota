@@ -1,9 +1,9 @@
 // Propuestas para los chinos: los juncos de la dinastía Ming (1400-1644), de las flotas de Zheng He a las de Qi Jiguang contra los wokou.
 // Proa chata, velas de estera con sables de bambú, casetas con tejado, rojo, negro, verde y oro.
-import { dis, ju, remos, caseta, castillo, pavesada, timonPopa, TAU } from './motor.js';
-import { banderines, farolesRojos } from './emblemas3.js';
-import { enVela, enProa, taiji, ming, fenix } from './emblemas.js';
-import { tigreSerio, dragonSerio } from './emblemas4.js';
+import { dis, ju, remos, caseta, castillo, pavesada, timonPopa, TAU } from './arte-motor.js';
+import { banderines, farolesRojos } from './arte-emblemas3.js';
+import { enVela, enProa, taiji, ming, fenix } from './arte-emblemas.js';
+import { tigreSerio, dragonSerio } from './arte-emblemas4.js';
 
 const ROJO = { casco: '#4a1f14', borda: '#b3261e', franja: '#e0b83e', franja2: '#15151a', oro: '#e0b83e', porta: '#e0b83e', cubierta: '#c49a62', cubiertaAlta: '#d2aa74' };
 const VERDE = { casco: '#2a2018', borda: '#2f6a45', franja: '#b3261e', franja2: '#f4f1e8', oro: '#e0b83e', porta: '#e0b83e', cubierta: '#c49a62', cubiertaAlta: '#d2aa74' };
