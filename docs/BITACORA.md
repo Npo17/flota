@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (tierras de un solo cuerpo y reaparecer en el puerto) — Nicolás + Claude
+
+**Estado: subido a `main` junto con la entrada de abajo. Ver al final de esta entrada si el servidor quedó republicado.**
+
+- **Tierras de un solo cuerpo.** Entre dos círculos de tierra grande que se tocaban quedaba un rincón en punta y los bots se metían ahí. `crearMundo` ahora rellena el tramo entre los dos centros con círculos de radio intermedio (no toca las aguas del puerto). Medido en los 20 mapas: las celdas de mar encajonadas entre tierras bajaron de 432 a 89. Quedan algunos rincones entre tres tierras. Los islotes de tres mapas (Gravelinas, Venecia, Nueva Zembla) cambiaron un poco de lugar, porque ahora también esquivan el relleno.
+- **Reaparecer.** Al hundirte ya no volvés a armar la flota: a los 6 segundos reaparecés en el puerto con el mismo barco, desde cero. "Cambiar de flota" o ESC (dos veces) llevan al astillero. Vale para un jugador, el mar de todos y las salas.
+- El servidor pasa a decir `v: 3` (mundo con relleno). Con el servidor publicado anterior, el navegador arma el mundo viejo, así que no se desfasan las costas.
+- Pruebas: `probar-sim` (el relleno no cambia las tierras ni tapa el puerto), `probar-reentrar` (nuevo) y, a mano en la app, hundirse y reaparecer con las mismas reglas, y salir con ESC. La reaparición en línea se probó en el servidor sin red y el flujo del navegador con el aviso de fin simulado; no con un hundimiento real entre dos jugadores.
+
 ## 2026-11-12 (salas, reglas de la partida y gancho que vuela) — Nicolás + Claude
 
 **Estado: commiteado en `main` en la compu de Nicolás, SIN SUBIR. EL SERVIDOR DEL MAR TAMPOCO ESTÁ REPUBLICADO.** Probado en localhost contra `wrangler dev` (`probar-sim`, `probar-red`, `probar-textos` y a mano en el navegador). Al publicar: primero el servidor (es compatible con la web vieja) y después la web.

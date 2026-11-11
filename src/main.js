@@ -30,6 +30,8 @@ try { const g = JSON.parse(localStorage.getItem('aon-reglas') || '{}'); reglas.v
 let diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada', habilidad: 'andanada' };
 let partida = null;
 let red = null; // conexión al mar compartido cuando se juega en línea
+let reglasPartida = null; // las reglas con las que empezó la partida de un jugador (para reaparecer con las mismas)
+let cuentaAtras = 0, relojFin = null, escapeEn = 0;
 let estado = 'astillero'; // astillero | mar | puerto | fin
 const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x: 0, y: 0 }, ladoRaton: 1 };
 const teclas = new Set();
@@ -190,7 +192,8 @@ function empezar() {
 // Modo solo: vos contra los bots, en el mapa que elijas
 $('ast-zarpar').onclick = () => {
   mundo = crearMundo(mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido);
-  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglas);
+  reglasPartida = { ...reglas };
+  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida);
   partida.nombreJugador = cuenta.perfil?.nombre || '';
   empezar();
   aviso(partida, '{mapa} · {lugar}', 'bueno', { mapa: mundo.nombre, lugar: mundo.lugar });
@@ -201,6 +204,7 @@ $('ast-zarpar').onclick = () => {
 
 // En línea: todos en el mismo mar
 function volverAlAstillero(mensaje) {
+  clearInterval(relojFin);
   if (red) { red.cerrar(); red = null; }
   partida = null;
   estado = 'astillero';
@@ -388,12 +392,43 @@ function mostrarFin() {
   $('pantalla-puerto').classList.add('oculto');
   $('pantalla-fin').classList.remove('oculto');
   $('hud').classList.add('oculto');
+  // a los pocos segundos reaparece solo en el puerto, con el mismo barco
+  cuentaAtras = 6;
+  const pintar = () => { $('fin-volver').textContent = t('Volver al mar ({n})', { n: cuentaAtras }); };
+  pintar();
+  clearInterval(relojFin);
+  relojFin = setInterval(() => { if (--cuentaAtras <= 0) reaparecer(); else pintar(); }, 1000);
 }
 
+// Te hundieron: volvés al puerto con el barco que habías armado, desde cero (sin el oro ni las mejoras de la partida anterior).
+// Para armar otra flota u otra civilización está "Cambiar de flota" (o ESC en cualquier momento).
+function reaparecer() {
+  clearInterval(relojFin);
+  if (estado !== 'fin') return;
+  $('pantalla-fin').classList.add('oculto');
+  if (partida.enLinea) {
+    if (!red || !red.reentrar()) volverAlAstillero(t('Se cortó la conexión con el mar.')); // al llegar el barco nuevo, red avisa y arranca solo
+    return;
+  }
+  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida || reglas);
+  partida.nombreJugador = cuenta.perfil?.nombre || '';
+  empezar();
+}
+
+$('fin-volver').onclick = reaparecer;
 $('fin-otra').onclick = () => volverAlAstillero();
 
 // ---------- Entrada ----------
 addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !e.repeat) { // ESC: dejar la partida para armar otra flota (dos veces seguidas en el mar, para no salir sin querer)
+    if (estado === 'fin') return volverAlAstillero();
+    if (estado === 'mar' && partida && !partida.fin) {
+      const ahora = performance.now();
+      if (ahora - escapeEn < 3500) { escapeEn = 0; reportar(true); return volverAlAstillero(); }
+      escapeEn = ahora;
+    }
+    return;
+  }
   if (estado !== 'mar') return;
   const k = e.key.toLowerCase();
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -487,6 +522,7 @@ function pintarHud() {
   let pista = '';
   const cand = candidatoAbordaje(j, vista.raton);
   if (j.fin) pista = '';
+  else if (performance.now() - escapeEn < 3500) pista = t('ESC otra vez para dejar la partida y cambiar de flota');
   else if (cercaDelPuerto()) pista = j.oroBodega ? t('P: entrar al puerto y guardar {n} de oro', { n: j.oroBodega }) : t('P: entrar al puerto');
   else if (j.gancho && j.gancho.fase === 'enganchado') pista = t('Abordando el {barco}: tu gente {a} contra {b} · F para cortar las sogas', { barco: j.gancho.obj.nombre, a: b.trip, b: j.gancho.obj.trip });
   else if (b.reparando) pista = t('Reparando el casco en la costa (hasta el 75 %)');

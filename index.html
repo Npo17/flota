@@ -17,8 +17,8 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <script>try { if (localStorage.getItem('aon-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}</script>
-  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=bcacbf5d","/src/arte-britanico.js":"/src/arte-britanico.js?v=bcacbf5d","/src/arte-chino.js":"/src/arte-chino.js?v=bcacbf5d","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=bcacbf5d","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=bcacbf5d","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=bcacbf5d","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=bcacbf5d","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=bcacbf5d","/src/arte-espanol.js":"/src/arte-espanol.js?v=bcacbf5d","/src/arte-frances.js":"/src/arte-frances.js?v=bcacbf5d","/src/arte-holandes.js":"/src/arte-holandes.js?v=bcacbf5d","/src/arte-japones.js":"/src/arte-japones.js?v=bcacbf5d","/src/arte-motor.js":"/src/arte-motor.js?v=bcacbf5d","/src/arte-otomano.js":"/src/arte-otomano.js?v=bcacbf5d","/src/arte-portugues.js":"/src/arte-portugues.js?v=bcacbf5d","/src/arte-sueco.js":"/src/arte-sueco.js?v=bcacbf5d","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=bcacbf5d","/src/banderas.js":"/src/banderas.js?v=bcacbf5d","/src/barcos.js":"/src/barcos.js?v=bcacbf5d","/src/config.js":"/src/config.js?v=bcacbf5d","/src/cuenta.js":"/src/cuenta.js?v=bcacbf5d","/src/dibujo.js":"/src/dibujo.js?v=bcacbf5d","/src/idioma.js":"/src/idioma.js?v=bcacbf5d","/src/juego.js":"/src/juego.js?v=bcacbf5d","/src/main.js":"/src/main.js?v=bcacbf5d","/src/mapas.js":"/src/mapas.js?v=bcacbf5d","/src/mundo.js":"/src/mundo.js?v=bcacbf5d","/src/puerto.js":"/src/puerto.js?v=bcacbf5d","/src/red.js":"/src/red.js?v=bcacbf5d","/src/rng.js":"/src/rng.js?v=bcacbf5d","/src/textos-historia.js":"/src/textos-historia.js?v=bcacbf5d","/src/textos.js":"/src/textos.js?v=bcacbf5d"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=bcacbf5d">
+  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=09258de2","/src/arte-britanico.js":"/src/arte-britanico.js?v=09258de2","/src/arte-chino.js":"/src/arte-chino.js?v=09258de2","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=09258de2","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=09258de2","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=09258de2","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=09258de2","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=09258de2","/src/arte-espanol.js":"/src/arte-espanol.js?v=09258de2","/src/arte-frances.js":"/src/arte-frances.js?v=09258de2","/src/arte-holandes.js":"/src/arte-holandes.js?v=09258de2","/src/arte-japones.js":"/src/arte-japones.js?v=09258de2","/src/arte-motor.js":"/src/arte-motor.js?v=09258de2","/src/arte-otomano.js":"/src/arte-otomano.js?v=09258de2","/src/arte-portugues.js":"/src/arte-portugues.js?v=09258de2","/src/arte-sueco.js":"/src/arte-sueco.js?v=09258de2","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=09258de2","/src/banderas.js":"/src/banderas.js?v=09258de2","/src/barcos.js":"/src/barcos.js?v=09258de2","/src/config.js":"/src/config.js?v=09258de2","/src/cuenta.js":"/src/cuenta.js?v=09258de2","/src/dibujo.js":"/src/dibujo.js?v=09258de2","/src/idioma.js":"/src/idioma.js?v=09258de2","/src/juego.js":"/src/juego.js?v=09258de2","/src/main.js":"/src/main.js?v=09258de2","/src/mapas.js":"/src/mapas.js?v=09258de2","/src/mundo.js":"/src/mundo.js?v=09258de2","/src/puerto.js":"/src/puerto.js?v=09258de2","/src/red.js":"/src/red.js?v=09258de2","/src/rng.js":"/src/rng.js?v=09258de2","/src/textos-historia.js":"/src/textos-historia.js?v=09258de2","/src/textos.js":"/src/textos.js?v=09258de2"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=09258de2">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -108,7 +108,8 @@
     <div class="caja">
       <h2 id="fin-titulo">Te hundieron</h2>
       <div id="fin-datos"></div>
-      <button id="fin-otra" class="boton principal" data-t>Diseñar otra flota</button>
+      <button id="fin-volver" class="boton principal" type="button"></button>
+      <button id="fin-otra" class="boton secundario" type="button" data-t>Cambiar de flota</button>
     </div>
   </div>
 
@@ -191,7 +192,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=bcacbf5d" defer></script>
-  <script type="module" src="src/main.js?v=bcacbf5d"></script>
+  <script src="vendor/supabase.min.js?v=09258de2" defer></script>
+  <script type="module" src="src/main.js?v=09258de2"></script>
 </body>
 </html>

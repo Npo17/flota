@@ -58,7 +58,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   function recibir(m) {
     if (m.t === 'hola') {
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
-      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2) }); // un servidor anterior todavía tiene los islotes pegados
+      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 3 }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
       if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
         cerradaAProposito = true;
         try { ws.close(); } catch {}
@@ -206,6 +206,13 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     cuadro,
     atracar: () => mandar({ t: 'puerto' }),
     comprar: (id) => mandar({ t: 'comprar', id }),
+    // Después de hundirse: vuelve a entrar al mismo mar con el mismo barco, desde cero. Devuelve false si se cortó la conexión.
+    reentrar: () => {
+      if (!abierta || !ws || ws.readyState !== 1) return false;
+      j.fin = false; j.finEn = 0; j.causa = null; j.jugador = null; yo.barco = null; j.gancho = null; j.reportado = null; pulsos = {};
+      ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno }));
+      return true;
+    },
     cerrar: () => { cerradaAProposito = true; try { ws.close(); } catch {} },
   };
 }

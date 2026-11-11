@@ -245,7 +245,11 @@ for (const id of Object.keys(MAPAS)) {
   for (const id of Object.keys(MAPAS)) {
     const m = crearMundo(id), chicos = m.islas.filter((i) => ['isla', 'iceberg', 'arrecife'].includes(i.tipo));
     ok(chicos.every((i) => m.islas.every((o) => o === i || Math.hypot(o.x - i.x, o.y - i.y) - o.r - i.r >= 280)), `mundo ${id}: quedó un callejón`);
-    ok(crearMundo(id, { callejones: true }).islas.length >= m.islas.length, `mundo ${id}: la versión anterior tiene menos islas`);
+    ok(crearMundo(id, { callejones: true }).islas.length >= crearMundo(id, { relleno: false }).islas.length, `mundo ${id}: la versión anterior tiene menos islas`);
+    // tierras de un solo cuerpo: el relleno solo agrega tierra, no toca lo demás ni se mete en las aguas del puerto
+    const sin = crearMundo(id, { relleno: false });
+    ok(m.islas.length >= sin.islas.length && sin.islas.filter((i) => i.tipo === 'tierra' || i.esPuerto).every((i) => m.islas.some((o) => o.x === i.x && o.y === i.y && o.r === i.r)), `mundo ${id}: el relleno cambió las tierras que ya estaban`);
+    ok(m.islas.every((i) => i.esPuerto || Math.hypot(i.x - m.puerto.x, i.y - m.puerto.y) > i.r + 200), `mundo ${id}: hay tierra encima del puerto`);
   }
 }
 console.log(fallas ? `${fallas} fallas` : 'todo bien');

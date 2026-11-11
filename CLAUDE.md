@@ -100,6 +100,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `servidor/` | Servidor del mar compartido (Cloudflare Workers + Durable Object). Corre la misma `juego.js` |
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
 | `supabase/migrations/` | Tablas y funciones de la base |
+| `scripts/probar-reentrar.mjs` | Prueba, sin red, que un capitán hundido puede volver a entrar (reaparecer) |
 | `scripts/` | `version.mjs` (sello de versión), `publicar.mjs` (publicación manual de respaldo) y las pruebas `probar-sim`, `probar-red` y `probar-textos` |
 
 La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrada y avanza un paso. Mantenerlo así, porque el mismo archivo corre en el navegador (modo solo) y en el servidor (juego en línea).
@@ -139,6 +140,8 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - Además de las ráfagas grandes hay **rachas**: soplos de unos 6 segundos que aparecen cerca de cada capitán, en cualquier dirección. Tomadas con la proa hacia donde soplan empujan fuerte aunque el viento general esté en contra.
 - Cada capitán elige **una habilidad** en el astillero y la usa con R (andanada doble, ancla de combate, carpinteros, remos y trapo). Están en `HABILIDADES`, en `src/config.js`; los bots no las usan.
 - Los mercantes se ven siempre en el minimapa (rombo dorado) y son la forma fácil de hacer oro.
+- **Tierras de un solo cuerpo:** las tierras grandes son círculos y, donde dos se tocan, `crearMundo` rellena el tramo entre los centros con más círculos, para que no queden rincones en punta donde se traban los barcos (pedido de Nicolás, 12/11/2026). El servidor dice `v: 3` al entrar; con un servidor anterior el navegador arma el mundo sin relleno.
+- **Si te hunden, reaparecés:** a los 6 segundos (o tocando "Volver al mar") volvés al puerto con el mismo barco que habías armado, desde cero: sin el oro, las mejoras ni la flota de antes. En línea es el mismo mar o la misma sala (el navegador manda `entrar` de nuevo por la misma conexión). Para armar otra flota u otra civilización: "Cambiar de flota" en esa pantalla, o ESC dos veces seguidas durante la partida.
 - El mundo se arma sin callejones: se sacan los islotes que dejan un paso de menos de 280 con otra tierra. Un bot que queda trabado sale solo hacia mar abierto.
 - El galeón del tesoro es un evento: uno solo cada tanto, rumbo al puerto, con cuatro guardias (dos corsarios y dos balandros, sin mejoras). No recibe daño ni se lo aborda hasta hundir a los guardias. Los guardias no se alejan del galeón para perseguir a nadie y, cuando el galeón cae, lo capturan o llega al puerto, se van.
 - En el puerto se puede reforzar el casco (+45 por nivel, hasta 6) y comprar un casco más grande (nunca más chico), además de cañones, munición y velas: con oro suficiente se llega al mejor galeón.

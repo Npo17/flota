@@ -422,4 +422,8 @@ export const TEXTOS = [
   ["Esa sala no existe o ya se cerró.","That room doesn't exist or has closed.","Essa sala não existe ou já fechou.","Ce salon n'existe pas ou est fermé.","Ten pokój nie istnieje lub został zamknięty.","Quella stanza non esiste o è già chiusa.","Diesen Raum gibt es nicht oder er wurde geschlossen.","Bu oda yok ya da kapanmış."],
   ["La sala está llena.","The room is full.","A sala está cheia.","Le salon est complet.","Pokój jest pełny.","La stanza è piena.","Der Raum ist voll.","Oda dolu."],
   ["En esta partida no hay abordajes","Boarding is off in this match","Nesta partida não há abordagens","Pas d'abordages dans cette partie","W tej rozgrywce nie ma abordażu","In questa partita non ci sono abbordaggi","In dieser Partie gibt es kein Entern","Bu maçta bordalama yok"],
+  // reaparecer
+  ["Volver al mar ({n})","Back to sea ({n})","Voltar ao mar ({n})","Retour en mer ({n})","Wróć na morze ({n})","Torna in mare ({n})","Zurück aufs Meer ({n})","Denize dön ({n})"],
+  ["Cambiar de flota","Change fleet","Trocar de frota","Changer de flotte","Zmień flotę","Cambia flotta","Flotte wechseln","Filoyu değiştir"],
+  ["ESC otra vez para dejar la partida y cambiar de flota","Press ESC again to leave the match and change your fleet","ESC de novo para sair da partida e trocar de frota","Échap à nouveau pour quitter la partie et changer de flotte","Naciśnij ESC ponownie, aby opuścić rozgrywkę i zmienić flotę","Premi di nuovo ESC per lasciare la partita e cambiare flotta","Nochmal ESC, um die Partie zu verlassen und die Flotte zu wechseln","Maçtan çıkıp filoyu değiştirmek için tekrar ESC"],
 ];

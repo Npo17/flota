@@ -4,6 +4,7 @@ import { crearRng } from './rng.js';
 import { MAPAS } from './mapas.js';
 
 // opciones.callejones: deja los islotes pegados como en la primera versión (para jugar en línea contra un servidor anterior)
+// opciones.relleno: false deja las tierras grandes como círculos sueltos, con rincones entre uno y otro (ídem, servidor anterior)
 export function crearMundo(idMapa, opciones = {}) {
   if (!MAPAS[idMapa]) idMapa = Object.keys(MAPAS)[0];
   const mapa = MAPAS[idMapa];
@@ -17,6 +18,26 @@ export function crearMundo(idMapa, opciones = {}) {
 
   // Tierras grandes del mapa (continentes, penínsulas, islas mayores)
   for (const [x, y, r] of mapa.masas) islas.push(crearIsla(rng, x, y, r, 'tierra'));
+
+  // Un solo cuerpo: las tierras grandes son círculos, y donde dos se tocan quedaba un rincón en punta entre uno y otro
+  // en el que los barcos (sobre todo los bots) se metían y quedaban trabados. Se rellena el tramo entre los dos centros
+  // con más círculos, de radio intermedio, así la costa pasa derecha de una tierra a la otra.
+  if (opciones.relleno !== false && !opciones.callejones) {
+    const rng2 = crearRng(mapa.semilla + 7919); // aparte, para no cambiar el resto del mapa
+    const base = islas.slice(1), relleno = []; // sin la isla del puerto: su costa queda como está
+    for (let a = 0; a < base.length; a++) for (let b = a + 1; b < base.length; b++) {
+      const A = base[a], B = base[b], d = Math.hypot(B.x - A.x, B.y - A.y);
+      if (d - A.r - B.r > 80 || d <= Math.abs(A.r - B.r)) continue; // lejos una de otra, o una adentro de la otra
+      const n = Math.ceil(d / (0.42 * Math.min(A.r, B.r)));
+      for (let k = 1; k < n; k++) {
+        const f = k / n, x = A.x + (B.x - A.x) * f, y = A.y + (B.y - A.y) * f, r = A.r + (B.r - A.r) * f;
+        if (Math.hypot(x - puerto.x, y - puerto.y) < r + 520) continue; // las aguas del puerto no se tocan
+        if (base.concat(relleno).some((o) => Math.hypot(o.x - x, o.y - y) + r <= o.r + 4)) continue; // ya está cubierto
+        relleno.push(crearIsla(rng2, x, y, r, 'tierra'));
+      }
+    }
+    islas.push(...relleno);
+  }
 
   // Islas sueltas
   const [rMin, rMax] = mapa.radio;

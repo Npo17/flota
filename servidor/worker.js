@@ -188,7 +188,7 @@ export class Mar {
     c.entrada = {};
     c.conocidos = new Map();
     c.finEn = 0;
-    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 2, sala: this.sala || null, reglas: this.j.reglas })); // v: 2 = mundo sin callejones
+    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 3, sala: this.sala || null, reglas: this.j.reglas })); // v: 2 = mundo sin callejones; v: 3 = tierras de un solo cuerpo
     this.avisar();
     if (!this.reloj) {
       this.ultimo = Date.now();
