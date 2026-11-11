@@ -3,6 +3,29 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-11 (viento, velas y disparo por lado) — Cristian + Claude
+
+**Estado: subido a la rama `viento-y-controles` (no a `main`): no está publicado.** Probado en localhost en modo solo; falta `/review`, probar en línea y republicar el servidor antes de pasarlo a `main`.
+
+- **Viento** (pedido de Cristian: que sea la mecánica central). `src/juego.js` tiene `j.viento` (rumbo que rota despacio y 9 ráfagas que viajan con él) y `rindeViento(j, b)`, que multiplica la velocidad según el ángulo entre el rumbo del barco y el viento y según el tipo de vela. Tabla y números en `VIENTO`, en `src/config.js`. Vale para todos los barcos, también bots y escoltas.
+- **Velas**: ya no dependen de la distancia del cursor. El navegador manda `velas` (0 a 3) en la entrada; se cambian con W / S, flechas o la rueda. El cursor cerca del barco ya no lo frena.
+- **Disparo**: clic izquierdo babor, clic derecho estribor, los dos juntos o espacio la andanada completa.
+- **Pantalla**: rayas de viento sobre el agua (más densas dentro de las ráfagas), ráfagas en el minimapa, brújula del viento en el indicador con cuánto suma o resta, ayuda de controles nueva. 13 textos nuevos con sus 7 traducciones.
+- **Ajustes después de que Cristian lo jugó (mismo día):**
+  - Viento de proa mucho más suave: ahora se pierde como mucho un tercio (latinas −24 %, mixtas −30 %, cuadras −36 %). Antes era más de la mitad y no se podía volver al puerto contra el viento.
+  - **Galeón del tesoro como evento:** ya no sale suelto entre los enemigos comunes. Cada tanto zarpa UNO desde mar adentro rumbo al puerto con cuatro guardias en formación (dos galeones de guerra y dos corsarios). Mientras quede un guardia no recibe daño ni se lo puede abordar. Lleva entre 1600 y 2200 de oro; si llega al puerto, se pierde hasta el próximo.
+  - **Casco nuevo en el puerto:** se puede pasar a un casco más grande (nunca más chico) pagando la diferencia del astillero por 2,5 (bergantín a galeón: 500). Sale entero y conserva cañones, gente y mejoras. Así se puede arrancar chico y terminar con el mejor galeón.
+  - **Abordaje nuevo** (reemplaza al gancho que salía volando y resolvía todo con una tirada). Ahora hay que arrimarse, igualar la velocidad y apretar F con el cursor sobre el casco del otro barco. Empieza una pelea de varios segundos: cada bando pierde gente según la fuerza del otro, se ven las sogas y una barra con las dos tripulaciones, el costado trabado no dispara y cualquiera corta las sogas con F (pierde un 10 % de su gente). El rival se rinde cuando le queda un cuarto de su tripulación; la tuya se retira cuando le queda un 30 %. Números en `ABORDAJE` (`src/juego.js`). El mensaje de red no cambió: sigue viajando como "gancho enganchado".
+- **Segunda ronda de ajustes (2026-11-11), después de que Cristian lo jugó:**
+  - **Equipos por civilización.** Cada civilización es un bando: los barcos de tu civilización (bots y otros jugadores) son aliados, no se dañan ni se abordan, y pelean a tu favor. Bots de civilizaciones distintas se pelean entre ellos (el oro de los hundidos queda flotando). El galeón del tesoro y sus guardias son un equipo aparte, enemigo de todos los capitanes; los bots no se meten con él. `equipoDe()` en `src/juego.js`. Barra de vida verde = tu equipo, roja = rival. En línea el servidor manda el equipo de cada barco (`eq` en `alta`); con un servidor anterior se sigue usando el capitán como equipo.
+  - **Bandera de la civilización entera en el asta de popa** (sin el recuadro verde del bando, que Cristian no quería), más grande y flameando. Se sacó la bandera que iba en el medio del barco. Un barco capturado pasa a llevar tu bandera.
+  - **Abordaje más fácil de activar:** los garfios llegan a 120 de separación entre cascos (antes 75) y toleran más diferencia de velocidad. Con F van al rival bajo el cursor o, si el cursor no está sobre ninguno, al rival a tiro más cercano al cursor.
+  - **Zoom:** + / − (o Z / X) acercan y alejan la cámara, de 0,55 a 1,6. Se guarda en el navegador.
+- **Cambia dos reglas que estaban como decididas** en `CLAUDE.md` (velas por distancia del cursor y clic que dispara los dos costados). Nicolás: lo pidió Cristian después de jugarlo; si no estás de acuerdo, hablalo con él antes de publicar.
+- **Hay que republicar el servidor** (`servidor/worker.js` y la simulación cambiaron). Mientras no se republique, el modo en línea sigue andando sin viento: el juego detecta que el servidor no lo manda y le traduce las velas. No probé el modo en línea, ni con el servidor viejo ni con `wrangler dev`.
+- `scripts/probar-sim.mjs` suma pruebas de viento y de velas. La prueba de juntar oro ahora espera más, porque con viento de proa se tarda más en llegar.
+- Pendiente / ideas: que los bots usen el viento a su favor (hoy solo lo sufren); que las civilizaciones de remo ciñan mejor; controles para celular.
+
 ## 2026-11-10 (arte de barcos, franceses) — Cristian + Claude
 
 **Estado: probado en localhost; commit con el OK de Cristian.** Sigue la entrada de abajo.

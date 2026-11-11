@@ -2,7 +2,7 @@
 import { hash2 } from './rng.js';
 import { FACCIONES } from './config.js';
 import { dibujarBandera } from './banderas.js';
-import { candidatoAbordaje, difAng, ALCANCE_GANCHO } from './juego.js';
+import { candidatoAbordaje, difAng, equipoDe } from './juego.js';
 import { t as tx } from './idioma.js';
 import { pintarBritanico } from './arte-britanico.js';
 import { pintarVikingo } from './arte-vikingo.js';
@@ -167,12 +167,6 @@ function imagenBarco(b, e) {
       L, W, canones: d.canones / 2, grosor: d.municion === 'pesada' ? 4.6 : 3.2, abiertas: b.velas / 3,
       colorVela: b.colorVela || e.vela, colorRayas: e.colorPatron, escudos: e.escudos, d: dano,
     });
-    if (b.velas > 0) { // bandera de la civilización, flameando hacia popa
-      ctx.save();
-      ctx.translate(mx - 15, -4.5);
-      dibujarBandera(ctx, d.faccion, 13, 9);
-      ctx.restore();
-    }
     if (imagenes.size > 400) imagenes.clear();
     imagenes.set(clave, img);
     return img;
@@ -320,12 +314,6 @@ function imagenBarco(b, e) {
     dibujarVela(ctx, e, mx, alto, abiertas, colorVela, principal);
     ctx.fillStyle = '#3d2310';
     ctx.beginPath(); ctx.arc(mx, 0, 2.8, 0, TAU); ctx.fill();
-    if (principal) { // bandera de la civilización, flameando hacia popa
-      ctx.save();
-      ctx.translate(mx - 15, -4.5);
-      dibujarBandera(ctx, b.diseno.faccion, 13, 9);
-      ctx.restore();
-    }
     if (principal) { // cofa
       ctx.strokeStyle = '#8a5a2b';
       ctx.lineWidth = 1.4;
@@ -372,21 +360,20 @@ export function dibujarBarco(ctx, b, opciones = {}) {
 
   ctx.drawImage(img, -img.width / (2 * ESCALA_IMG), -img.height / (2 * ESCALA_IMG), img.width / ESCALA_IMG, img.height / ESCALA_IMG);
 
-  // farol y bandera del bando, flameando en popa
+  // farol y, en el asta de popa, la bandera entera de la civilización de su equipo (un barco capturado lleva la tuya).
+  // Se dibuja en tiras verticales que suben y bajan un poco para que flamee. Amigo o enemigo lo dice el color de la barra de vida.
   ctx.fillStyle = '#ffd98a';
   ctx.beginPath(); ctx.arc(-L * 0.47, 0, 1.6, 0, TAU); ctx.fill();
-  const onda = Math.sin(T * 6 + b.id) * 2.2;
-  ctx.fillStyle = b.bandera;
-  ctx.beginPath();
-  ctx.moveTo(-L * 0.5, -1);
-  ctx.quadraticCurveTo(-L * 0.5 - 6, -5 + onda, -L * 0.5 - 13, -4 - onda);
-  ctx.lineTo(-L * 0.5 - 13, 4 - onda);
-  ctx.quadraticCurveTo(-L * 0.5 - 6, 3 + onda, -L * 0.5, 5);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
+  const fac = faccionDe(b), BW = 24, BH = 16, TIRAS = 6, x0 = -L * 0.5 - BW - 1;
+  ctx.fillStyle = '#3a2614'; ctx.fillRect(-L * 0.5 - 1.5, -BH / 2 - 1.5, 2, BH + 3); // asta
+  for (let i = 0; i < TIRAS; i++) {
+    const w = BW / TIRAS, k = (i + 1) / TIRAS, dy = Math.sin(T * 6 + b.id - i * 0.9) * 1.6 * k;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0 + (TIRAS - 1 - i) * w - 0.15, -BH / 2 + dy, w + 0.3, BH); ctx.clip();
+    ctx.translate(x0, -BH / 2 + dy);
+    dibujarBandera(ctx, fac, BW, BH);
+    ctx.restore();
+  }
   ctx.restore();
 
   if (opciones.sinBarra || b.hundiendo) return;
@@ -395,11 +382,11 @@ export function dibujarBarco(ctx, b, opciones = {}) {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(x - 1, y - 1, ancho + 2, 10);
   const fv = Math.max(0, b.vida / s.vidaMax);
-  ctx.fillStyle = b.bando === 'enemigo' ? '#e5484d' : '#3ecf5e';
+  ctx.fillStyle = b.rival ? '#e5484d' : '#3ecf5e';
   ctx.fillRect(x, y, ancho * fv, 5);
   ctx.fillStyle = '#e8c16a';
   ctx.fillRect(x, y + 6, ancho * Math.max(0, Math.min(1, b.trip / s.tripMax)), 2);
-  if (b.bando === 'enemigo' && opciones.etiqueta) {
+  if ((b.rival || b.bando === 'enemigo') && opciones.etiqueta) {
     ctx.font = '600 11px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -410,7 +397,7 @@ export function dibujarBarco(ctx, b, opciones = {}) {
     const mitad = ctx.measureText(rotulo).width / 2;
     ctx.save();
     ctx.translate(b.x - mitad - 16, y - 13.5);
-    dibujarBandera(ctx, b.diseno.faccion, 12, 8.5);
+    dibujarBandera(ctx, faccionDe(b), 12, 8.5);
     ctx.restore();
   }
 }
@@ -449,9 +436,48 @@ function colorMar(TONOS_MAR, f) {
   return `rgb(${u[1]},${u[2]},${u[3]})`;
 }
 
+// Equipo de un barco: en línea lo dice el servidor; en modo solo, la simulación
+const equipoEn = (b) => b.equipoSrv || equipoDe(b);
+// Civilización cuya bandera lleva un barco: la de su equipo (un barco capturado pasa a llevar la tuya)
+function faccionDe(b) {
+  const eq = equipoEn(b);
+  return FACCIONES[eq] ? eq : b.diseno.faccion;
+}
+
+// Viento: rayas blancas que corren hacia donde sopla. Fuera de las ráfagas son pocas y tenues;
+// adentro son muchas, largas y brillantes, y el agua se ve un poco más clara.
+function dibujarViento(ctx, j, x0, y0, vw, vh) {
+  const v = j.viento, C = 150, RECORRIDO = 420, cx = Math.cos(v.a), cy = Math.sin(v.a);
+  ctx.fillStyle = 'rgba(255,255,255,0.045)';
+  for (const g of v.rafagas) {
+    if (g.x + g.r < x0 || g.x - g.r > x0 + vw || g.y + g.r < y0 || g.y - g.r > y0 + vh) continue;
+    ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(g.x, g.y, g.r * 0.7, 0, TAU); ctx.fill();
+  }
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#fff';
+  for (let gx = Math.floor((x0 - RECORRIDO) / C); gx <= Math.floor((x0 + vw + RECORRIDO) / C); gx++) {
+    for (let gy = Math.floor((y0 - RECORRIDO) / C); gy <= Math.floor((y0 + vh + RECORRIDO) / C); gy++) {
+      const h = hash2(gx + 7, gy - 3), h2 = hash2(gy + 31, gx + 57);
+      const fase = (j.t * 0.35 + h * 7) % 1;
+      const px = gx * C + h2 * C + cx * (fase - 0.5) * RECORRIDO, py = gy * C + h * C + cy * (fase - 0.5) * RECORRIDO;
+      if (px < x0 - 70 || px > x0 + vw + 70 || py < y0 - 70 || py > y0 + vh + 70) continue;
+      let enRafaga = false;
+      for (const g of v.rafagas) if (Math.abs(g.x - px) < g.r && Math.hypot(g.x - px, g.y - py) < g.r) { enRafaga = true; break; }
+      if (!enRafaga && h2 > 0.42) continue;
+      const largo = enRafaga ? 56 : 26;
+      ctx.globalAlpha = Math.sin(fase * Math.PI) * (enRafaga ? 0.55 : 0.3);
+      ctx.lineWidth = enRafaga ? 2.2 : 1.4;
+      ctx.beginPath(); ctx.moveTo(px - cx * largo, py - cy * largo); ctx.lineTo(px, py); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
 export function dibujarEscena(ctx, j, vista) {
   const { ancho, alto, raton } = vista;
   const yo = j.jugador;
+  const miEquipo = equipoEn(yo);
+  for (const b of j.barcos) b.rival = equipoEn(b) !== miEquipo; // barra roja = otro equipo, verde = el tuyo
   const zoom = vista.zoom;
   const sx = (Math.random() - 0.5) * (j.sacudon || 0), sy = (Math.random() - 0.5) * (j.sacudon || 0);
   const camX = yo.x + sx, camY = yo.y + sy;
@@ -490,6 +516,8 @@ export function dibujarEscena(ctx, j, vista) {
     }
     ctx.stroke();
   }
+
+  if (j.viento) dibujarViento(ctx, j, x0, y0, vw, vh);
 
   // borde del mundo
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
@@ -651,14 +679,16 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.fill();
       ctx.stroke();
     }
-    // hasta dónde llega el gancho, hacia el cursor
-    if (!j.gancho && j.cdAbordaje <= 0 && candidatoAbordaje(j)) {
-      const ag = Math.atan2(raton.y - yo.y, raton.x - yo.x);
-      ctx.strokeStyle = 'rgba(217,192,138,0.75)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 7]);
-      ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.lineTo(yo.x + Math.cos(ag) * ALCANCE_GANCHO, yo.y + Math.sin(ag) * ALCANCE_GANCHO); ctx.stroke();
-      ctx.setLineDash([]);
+    // abordaje: el barco que tenés bajo el cursor se marca en dorado si está a tiro de garfio, o punteado si falta arrimarse
+    if (!j.gancho && j.cdAbordaje <= 0) {
+      const cand = candidatoAbordaje(j, raton);
+      if (cand) {
+        ctx.strokeStyle = cand.cerca ? 'rgba(255,209,102,0.95)' : 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2.2;
+        ctx.setLineDash(cand.cerca ? [] : [6, 7]);
+        ctx.beginPath(); ctx.arc(cand.b.x, cand.b.y, cand.b.stats.largo * 0.62, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
     // marca de rumbo donde está el cursor
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
@@ -690,14 +720,23 @@ export function dibujarEscena(ctx, j, vista) {
     }
   }
 
-  // gancho de abordaje
-  if (j.gancho) {
-    const g = j.gancho, hx = g.fase === 'vuelo' ? g.x : g.obj.x, hy = g.fase === 'vuelo' ? g.y : g.obj.y;
+  // abordaje en curso: las sogas entre los dos barcos y, arriba, cuánta gente le queda a cada uno
+  if (j.gancho && j.gancho.obj) {
+    const e = j.gancho.obj;
     ctx.strokeStyle = '#d9c08a';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.lineTo(hx, hy); ctx.stroke();
-    ctx.fillStyle = '#3a3a40';
-    ctx.beginPath(); ctx.arc(hx, hy, 5, 0, TAU); ctx.fill();
+    ctx.lineWidth = 1.8;
+    for (const q of [-0.3, 0, 0.3]) {
+      ctx.beginPath();
+      ctx.moveTo(yo.x + Math.cos(yo.a) * yo.stats.largo * q, yo.y + Math.sin(yo.a) * yo.stats.largo * q);
+      ctx.lineTo(e.x + Math.cos(e.a) * e.stats.largo * q, e.y + Math.sin(e.a) * e.stats.largo * q);
+      ctx.stroke();
+    }
+    const mx = (yo.x + e.x) / 2, my = Math.min(yo.y, e.y) - 70, total = Math.max(1, yo.trip + e.trip), w = 130, mio = (w * yo.trip) / total;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(mx - w / 2 - 2, my - 2, w + 4, 13);
+    ctx.fillStyle = '#4cc38a'; ctx.fillRect(mx - w / 2, my, mio, 9);
+    ctx.fillStyle = '#e63946'; ctx.fillRect(mx - w / 2 + mio, my, w - mio, 9);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(`${yo.trip}  ⚔  ${e.trip}`, mx, my - 6);
   }
 
   // tritones
@@ -814,6 +853,10 @@ export function dibujarMinimapa(ctx, j, lado) {
   ctx.clearRect(0, 0, lado, lado);
   ctx.fillStyle = 'rgba(10,40,62,0.85)';
   ctx.fillRect(0, 0, lado, lado);
+  if (j.viento) { // ráfagas
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    for (const g of j.viento.rafagas) { ctx.beginPath(); ctx.arc(g.x * k, g.y * k, g.r * k, 0, TAU); ctx.fill(); }
+  }
   ctx.fillStyle = m.tema.mini;
   for (const i of m.islas) { ctx.beginPath(); ctx.arc(i.x * k, i.y * k, Math.max(2, i.r * k), 0, TAU); ctx.fill(); }
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
@@ -826,7 +869,7 @@ export function dibujarMinimapa(ctx, j, lado) {
     if (b.hundiendo || b === yo) continue;
     // los bots solo se ven de cerca; los otros jugadores, siempre
     if (b.bando === 'enemigo' && !b.esJugador && Math.hypot(b.x - yo.x, b.y - yo.y) > 1500) continue;
-    ctx.fillStyle = b.esJugador ? '#ffd166' : b.bando === 'enemigo' ? '#ff6b6b' : '#7dff9b';
+    ctx.fillStyle = b.esJugador ? (b.rival ? '#ffd166' : '#b8ffcb') : b.rival ? '#ff6b6b' : '#7dff9b';
     const t = b.esJugador ? 4 : 3;
     ctx.fillRect(b.x * k - t / 2, b.y * k - t / 2, t, t);
   }

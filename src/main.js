@@ -3,7 +3,7 @@ import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO
 import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
-import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar } from './juego.js';
+import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeViento, difAng } from './juego.js';
 import { catalogoPuerto, comprar } from './puerto.js';
 import { conectar, estadoDelMar } from './red.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
@@ -31,6 +31,16 @@ let estado = 'astillero'; // astillero | mar | puerto | fin
 const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x: 0, y: 0 }, ladoRaton: 1 };
 const teclas = new Set();
 let pulsos = {}; // acciones de un solo toque
+let velasPedidas = 3; // de 0 (aferradas) a 3 (todo el trapo): se cambian con W / S o la rueda
+
+// Zoom que elige el jugador con + / − (o Z / X): de 0,55 (ves mucho mar) a 1,6 (de cerca)
+let zoomJugador = 1;
+try { zoomJugador = Math.max(0.55, Math.min(1.6, +localStorage.getItem('aon-zoom') || 1)); } catch {}
+function cambiarZoom(f) {
+  zoomJugador = Math.max(0.55, Math.min(1.6, Math.round(zoomJugador * f * 100) / 100));
+  try { localStorage.setItem('aon-zoom', String(zoomJugador)); } catch {}
+  ajustar();
+}
 
 // Si el equipo no llega a 60 cuadros por segundo, se baja la resolución del dibujo en dos escalones
 let calidad = 1;
@@ -40,7 +50,7 @@ function ajustar() {
   canvas.height = Math.round(innerHeight * dpr);
   vista.ancho = canvas.width;
   vista.alto = canvas.height;
-  vista.zoom = dpr * Math.max(0.7, Math.min(1.15, innerHeight / 800));
+  vista.zoom = dpr * Math.max(0.7, Math.min(1.15, innerHeight / 800)) * zoomJugador;
   canvas.style.imageRendering = 'auto';
 }
 addEventListener('resize', ajustar);
@@ -159,6 +169,7 @@ pintarMapa();
 
 function empezar() {
   estado = 'mar';
+  velasPedidas = 3;
   $('pantalla-astillero').classList.add('oculto');
   $('hud').classList.remove('oculto');
   $('hud-linea').classList.toggle('oculto', !partida.enLinea);
@@ -172,6 +183,8 @@ $('ast-zarpar').onclick = () => {
   empezar();
   aviso(partida, '{mapa} · {lugar}', 'bueno', { mapa: mundo.nombre, lugar: mundo.lugar });
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
+  aviso(partida, 'Los barcos de tu civilización son de tu equipo: no los podés dañar y pelean a tu favor', 'info');
+  aviso(partida, 'La flecha dorada muestra hacia dónde sopla el viento: de popa vas más rápido, de proa más lento', 'info');
 };
 
 // En línea: todos en el mismo mar
@@ -323,6 +336,10 @@ addEventListener('keydown', (e) => {
   if (k === 'q') pulsos.fuego = -1;
   if (k === 'e') pulsos.fuego = 1;
   if (k === ' ') pulsos.fuegoTodo = true;
+  if (k === '+' || k === '=' || k === 'z') cambiarZoom(1.15);
+  if (k === '-' || k === '_' || k === 'x') cambiarZoom(1 / 1.15);
+  if (k === 'w' || k === 'arrowup') cambiarVelas(1);
+  if (k === 's' || k === 'arrowdown') cambiarVelas(-1);
   if (k === 'f') pulsos.abordar = true;
   if (k === 'g') pulsos.ordenFlota = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
@@ -332,9 +349,22 @@ addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
 addEventListener('blur', () => teclas.clear());
 let ratonVisto = false;
 addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; });
+// clic izquierdo: costado de babor (el izquierdo del barco); clic derecho: estribor. Los dos a la vez, la andanada completa.
 canvas.addEventListener('mousedown', (e) => {
-  if (estado === 'mar' && e.button === 0) { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; pulsos.fuegoTodo = true; }
+  if (estado !== 'mar' || (e.button !== 0 && e.button !== 2)) return;
+  vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true;
+  const lado = e.button === 0 ? -1 : 1;
+  if (pulsos.fuego && pulsos.fuego !== lado) pulsos.fuegoTodo = true;
+  else pulsos.fuego = lado;
 });
+function cambiarVelas(paso) { velasPedidas = Math.max(0, Math.min(3, velasPedidas + paso)); }
+let ultimaRueda = 0;
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (estado !== 'mar' || !e.deltaY || e.timeStamp - ultimaRueda < 130) return; // una muesca por vez, también con panel táctil
+  ultimaRueda = e.timeStamp;
+  cambiarVelas(e.deltaY < 0 ? 1 : -1);
+}, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function ratonAMundo() {
@@ -377,7 +407,8 @@ function pintarHud() {
   $('hud-rec-izq').style.width = `${100 - Math.min(100, (b.recarga['-1'] / total('-1')) * 100)}%`;
   $('hud-rec-der').style.width = `${100 - Math.min(100, (b.recarga['1'] / total('1')) * 100)}%`;
   const averia = b.vida < s.vidaMax * 0.7 ? ` · ${t('averiado, vas más lento')}` : '';
-  $('hud-velas-txt').textContent = t(b.velas >= 3 ? 'A toda vela: recarga lenta' : b.velas === 2 ? 'Media vela' : 'Velas de combate: recarga rápida') + averia;
+  $('hud-velas-txt').textContent = t(b.velas >= 3 ? 'A toda vela: recarga lenta' : b.velas === 2 ? 'Media vela' : b.velas === 1 ? 'Velas de combate: recarga rápida' : 'Velas aferradas: el barco se detiene') + averia;
+  pintarViento(j, b);
 
   const clave = j.avisos.map((a) => a.texto + (a.p ? JSON.stringify(a.p) : '')).join('|');
   if (clave !== avisosPintados) {
@@ -385,13 +416,39 @@ function pintarHud() {
     $('avisos').innerHTML = j.avisos.map((a) => `<div class="aviso ${a.tipo}">${limpiar(t(a.texto, a.p))}</div>`).join('');
   }
   let pista = '';
-  const cand = candidatoAbordaje(j);
+  const cand = candidatoAbordaje(j, vista.raton);
   if (j.fin) pista = '';
   else if (cercaDelPuerto()) pista = j.oroBodega ? t('P: entrar al puerto y guardar {n} de oro', { n: j.oroBodega }) : t('P: entrar al puerto');
-  else if (j.gancho && j.gancho.fase === 'enganchado') pista = t('Tirando de la soga del {barco}…', { barco: j.gancho.obj.nombre });
+  else if (j.gancho && j.gancho.fase === 'enganchado') pista = t('Abordando el {barco}: tu gente {a} contra {b} · F para cortar las sogas', { barco: j.gancho.obj.nombre, a: b.trip, b: j.gancho.obj.trip });
   else if (b.reparando) pista = t('Reparando el casco en la costa (hasta el 75 %)');
-  else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = t('F: apuntá con el cursor y tirá el gancho al {barco} · tu gente {a} contra {b} ({ventaja})', { barco: cand.b.nombre, a: b.trip, b: cand.b.trip, ventaja: cand.ventaja });
+  else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = t(cand.cerca ? 'F: abordar el {barco} · tu gente {a} contra {b} ({ventaja})' : 'Arrimate al {barco} para abordarlo · tu gente {a} contra {b} ({ventaja})', { barco: cand.b.nombre, a: b.trip, b: cand.b.trip, ventaja: cand.ventaja });
   if ($('pista').textContent !== pista) $('pista').textContent = pista;
+}
+
+// Brújula del viento: la flecha dorada apunta hacia donde sopla; el triángulo es tu barco
+function pintarViento(j, b) {
+  const v = j.viento;
+  $('hud-viento-fila').classList.toggle('oculto', !v);
+  if (!v) return;
+  const rinde = rindeViento(j, b), rel = Math.abs(difAng(b.a, v.a)) * 180 / Math.PI;
+  const nombre = rel < 30 ? 'Viento de popa' : rel < 75 ? 'Viento de aleta' : rel < 110 ? 'Viento de través' : rel < 155 ? 'Ciñendo' : 'Viento de proa';
+  const pct = Math.round((rinde - 1) * 100);
+  const txt = $('hud-viento-txt');
+  txt.textContent = `${t(nombre)} · ${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)} %${b.enRafaga ? ` · ${t('ráfaga')}` : ''}`;
+  txt.className = pct > 4 ? 'bien' : pct < -4 ? 'mal' : '';
+  const c = $('hud-viento'), x = c.getContext('2d'), R = c.width / 2;
+  x.clearRect(0, 0, c.width, c.height);
+  x.strokeStyle = 'rgba(255,255,255,0.4)'; x.lineWidth = 1.5;
+  x.beginPath(); x.arc(R, R, R - 2, 0, Math.PI * 2); x.stroke();
+  x.save(); x.translate(R, R); x.rotate(v.a);
+  x.strokeStyle = '#ffd166'; x.fillStyle = '#ffd166'; x.lineWidth = 3; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(-R + 6, 0); x.lineTo(R - 12, 0); x.stroke();
+  x.beginPath(); x.moveTo(R - 3, 0); x.lineTo(R - 13, -6); x.lineTo(R - 13, 6); x.closePath(); x.fill();
+  x.restore();
+  x.save(); x.translate(R, R); x.rotate(b.a);
+  x.fillStyle = '#fff'; x.strokeStyle = 'rgba(0,0,0,0.55)'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(9, 0); x.lineTo(-6, -4.5); x.lineTo(-3, 0); x.lineTo(-6, 4.5); x.closePath(); x.fill(); x.stroke();
+  x.restore();
 }
 
 // ---------- Ciclo ----------
@@ -412,7 +469,7 @@ function cuadro(ahora) {
   if (partida) {
     ratonAMundo();
     if (estado === 'mar') {
-      const entrada = { objetivo: ratonVisto ? { ...vista.raton } : null, ...pulsos };
+      const entrada = { objetivo: ratonVisto ? { ...vista.raton } : null, velas: velasPedidas, ...pulsos };
       pulsos = {};
       if (partida.enLinea) red.cuadro(dt, entrada);
       else actualizar(partida, dt, entrada);

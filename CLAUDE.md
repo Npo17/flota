@@ -80,11 +80,11 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | Archivo | Qué tiene |
 |---|---|
 | `index.html`, `estilos.css` | Pantallas (diseño de flota, puerto, perfil, menú de mapas) e indicadores |
-| `src/config.js` | Todo el balance: civilizaciones, cascos, velas, munición, tripulación, precios del puerto, enemigos |
+| `src/config.js` | Todo el balance: civilizaciones, cascos, velas, munición, tripulación, precios del puerto, enemigos, viento |
 | `src/mapas.js` | Los 20 mapas históricos: clima, costas y reglas de cada uno |
 | `src/mundo.js` | Genera el mundo de una partida a partir del mapa (con semilla: el mismo mapa sale siempre igual) |
 | `src/barcos.js` | Estadísticas de un barco según su diseño |
-| `src/juego.js` | La simulación: movimiento, cañones, bots, gancho de abordaje, flota, remolinos, tritones, flota del tesoro |
+| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota, remolinos, tritones, flota del tesoro |
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
 | `src/arte-britanico.js`, `src/arte-vikingo.js`, `src/arte-espanol.js`, `src/arte-portugues.js`, `src/arte-frances.js` | Arte propio de los barcos de esas cinco civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
 | `src/banderas.js` | Banderas históricas de cada civilización |
@@ -113,6 +113,7 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - El servidor (`servidor/worker.js`, en `mar.ageofnavies.com`) corre `src/juego.js` con varios capitanes y manda una foto del mar 20 veces por segundo. Decide posiciones, daño y oro; el navegador solo manda a dónde apunta y qué dispara.
 - `juego.js` maneja varios capitanes (`j.capitanes`); el modo solo es el caso de uno. No meterle nada de pantalla ni de teclado.
 - El puerto es zona segura: ahí no se puede disparar ni recibir daño.
+- Versiones cruzadas: el navegador manda las velas elegidas (`v`) y el servidor manda el viento (`vi`) en cada foto. Si el servidor es anterior al viento, el juego no dibuja viento y le traduce las velas a distancia del cursor; si el navegador es anterior, el servidor saca las velas de la distancia como antes. Así ninguno de los dos se rompe mientras el otro no se actualizó.
 - En la pantalla de inicio hay dos botones: "Jugar online" (el mar compartido) y jugar solo contra bots eligiendo el mapa.
 - Publicar el servidor: `cd servidor && npx wrangler deploy` (necesita `npx wrangler login` una vez). El servidor está en la cuenta de Cloudflare de Nicolás: hasta que el otro socio tenga acceso a esa cuenta, la republicación la hace él (avisarle en la bitácora con "hay que republicar el servidor").
 - Probar sin navegador: `node scripts/probar-sim.mjs` (simulación) y `node scripts/probar-red.mjs` (servidor, con `npx wrangler dev` corriendo en `servidor/`). Para que el juego en la compu use ese servidor de prueba: `http://localhost:5180/?mar=local`. Sin `?mar=local`, localhost se conecta al servidor publicado.
@@ -120,9 +121,16 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 
 ## Reglas del juego que ya se decidieron
 
-- El barco navega hacia el cursor; cuanto más lejos está el cursor, más velas (y recarga más lenta). El clic dispara los dos costados.
-- Se pelea de costado. El gancho de abordaje (F) hay que apuntarlo y los barcos enteros se resisten.
+- El barco pone la proa hacia el cursor, esté cerca o lejos. Las velas se eligen con W / S o la rueda (de aferradas a todo el trapo); menos vela = recarga más rápida.
+- Clic izquierdo dispara babor (el costado izquierdo del barco, no de la pantalla), clic derecho estribor, espacio los dos. Q y E siguen andando.
+- **El viento es la mecánica central.** Sopla en una dirección que rota despacio; de popa o de aleta el barco anda más, ciñendo menos y de proa a menos de la mitad, pero nunca queda frenado. Las ráfagas (manchas que cruzan el mapa, se ven en el agua y en el minimapa) dan un 30 % extra con el viento a favor. Las latinas ciñen mejor y las cuadras rinden más de popa. Los bots sienten el mismo viento. Los números están en `VIENTO`, en `src/config.js`.
+- Se pelea de costado. Para abordar hay que arrimarse al otro barco, ir más o menos a su velocidad y apretar F con el cursor sobre su casco (no se elige solo). El abordaje es una pelea de varios segundos: las dos tripulaciones pierden gente según su fuerza, el costado trabado no dispara (el de ninguno de los dos) y cualquiera puede cortar las sogas con F perdiendo algo de gente. Gana el que hace rendir al otro. Los números están en `ABORDAJE`, en `src/juego.js`.
 - El oro saqueado está en riesgo hasta entrar al puerto. Los barcos capturados navegan en formación; con G atacan.
+- Cada civilización es un equipo: tus barcos y los de tu civilización (bots y otros jugadores) no se dañan ni se abordan; bots de civilizaciones distintas se pelean entre ellos. El galeón del tesoro y sus guardias son un equipo aparte, enemigo de todos los capitanes.
+- Cada barco lleva la bandera entera de su civilización en el asta de popa (no en el medio). Amigo o enemigo lo marca el color de la barra de vida.
+- Zoom de cámara con + / − o Z / X.
+- El galeón del tesoro es un evento: uno solo cada tanto, rumbo al puerto, con cuatro guardias. No recibe daño ni se lo aborda hasta hundir a los guardias.
+- En el puerto se puede comprar un casco más grande (nunca más chico), además de cañones, munición y velas: con oro suficiente se llega al mejor galeón.
 - Un barco dañado va más lento. Parado junto a una isla se repara hasta el 75 %.
 - Los remolinos son solo remolinos (sin monstruo). No hay Kraken.
 - Mapas y civilizaciones son de 1400 a 1700, con banderas de época (no las modernas).

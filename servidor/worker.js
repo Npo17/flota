@@ -2,7 +2,7 @@
 // Corre la misma simulación que el modo solo (src/juego.js) y manda el estado a todos 20 veces por segundo.
 // El servidor decide todo lo que importa (posiciones, daño, oro): el navegador solo manda a dónde apunta y qué dispara.
 import { crearMundo } from '../src/mundo.js';
-import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar } from '../src/juego.js';
+import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe } from '../src/juego.js';
 import { comprar } from '../src/puerto.js';
 import { costoDiseno } from '../src/barcos.js';
 import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES } from '../src/config.js';
@@ -98,6 +98,7 @@ export class Mar {
       const e = c.entrada;
       e.objetivo = Array.isArray(m.o) && Number.isFinite(m.o[0]) && Number.isFinite(m.o[1]) ? { x: m.o[0], y: m.o[1] } : null;
       e.quieto = !!m.q;
+      if (Number.isFinite(m.v)) e.velas = Math.max(0, Math.min(3, Math.round(m.v))); // sin esto, el jugador tiene una versión anterior del juego
       if (m.f) e.fuegoTodo = true;
       if (m.l === 1 || m.l === -1) e.fuego = m.l;
       if (m.g) e.abordar = true;
@@ -151,7 +152,7 @@ export class Mar {
     for (const c of this.clientes.values()) {
       if (!c.cap) continue;
       entradas[c.cap.id] = c.entrada;
-      c.entrada = { objetivo: c.entrada.objetivo, quieto: c.entrada.quieto }; // los toques (disparar, gancho) valen una sola vez
+      c.entrada = { objetivo: c.entrada.objetivo, quieto: c.entrada.quieto, velas: c.entrada.velas }; // los toques (disparar, gancho) valen una sola vez
     }
     j.eventos.length = 0;
     avanzar(j, dt, entradas);
@@ -165,6 +166,9 @@ export class Mar {
     const ganchos = [];
     for (const cap of j.capitanes) if (cap.gancho) ganchos.push([cap.id, cap.gancho.fase === 'vuelo' ? 0 : 1, r(cap.gancho.x), r(cap.gancho.y), cap.gancho.obj ? cap.gancho.obj.id : 0]);
     const comunes = j.eventos.filter((e) => !e.p);
+    // viento: rumbo (en centésimas de radián) y después x, y, radio de cada ráfaga
+    const viento = [r(j.viento.a * 100)];
+    for (const g of j.viento.rafagas) viento.push(r(g.x), r(g.y), r(g.r));
 
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;
@@ -175,12 +179,12 @@ export class Mar {
         const ver = b.ver || 0;
         if (c.conocidos.get(b.id) === ver) continue;
         c.conocidos.set(b.id, ver);
-        alta.push({ id: b.id, d: b.diseno, n: b.nombre, tipo: b.tipo, bd: b.bandera, cv: b.colorVela, cy: b.convoy ? 1 : 0 });
+        alta.push({ id: b.id, d: b.diseno, n: b.nombre, tipo: b.tipo, bd: b.bandera, cv: b.colorVela, cy: b.convoy ? 1 : 0, eq: equipoDe(b) });
       }
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
       const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps,
+        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, vi: viento,
         ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
         yo: {
           b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota,

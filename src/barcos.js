@@ -76,7 +76,7 @@ export function crearBarco(diseno, bando, x, y, extra = {}) {
 
 // Recalcula stats después de mejorar en el puerto sin perder el daño ni la gente.
 export function rearmar(b) {
-  const vidaFrac = b.vida / b.stats.vidaMax;
+  const vidaFrac = Math.min(1, b.vida / b.stats.vidaMax);
   b.stats = statsDe(b.diseno);
   b.vida = Math.min(b.stats.vidaMax, Math.max(1, Math.round(vidaFrac * b.stats.vidaMax)));
   b.trip = Math.min(b.trip, b.stats.tripMax);

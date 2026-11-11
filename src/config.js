@@ -84,6 +84,7 @@ export const PUERTO = {
   nivelCanones: (n) => 180 * n, // n = nivel que se compra
   escolta: (n) => 150 * n, // n = cantidad de lugares que vas a tener
   municion: { redonda: 60, metralla: 160, pesada: 220 },
+  cambioCasco: (diferencia) => Math.round(diferencia * 2.5), // pasar a un casco más grande: la diferencia de precio del astillero, por 2,5
 };
 
 export const ESCOLTAS_INICIALES = 2;
@@ -100,3 +101,19 @@ export const ENEMIGOS = {
 };
 
 export const MUNDO = { ancho: 6400, alto: 6400 };
+
+// Viento. "rinde" dice cuánto anda el barco según el ángulo entre su rumbo y hacia dónde sopla el viento:
+// 0° = viento de popa, 45° = de aleta, 90° = de través, 135° = ciñendo, 180° = de proa. De proa se pierde como mucho un tercio:
+// la primera versión quitaba más de la mitad y volver al puerto contra el viento se hacía imposible.
+// Las latinas ciñen mejor, las cuadras rinden más con el viento a favor y las mixtas quedan en el medio.
+export const VIENTO = {
+  rinde: {
+    latinas: [1.12, 1.18, 1.0, 0.9, 0.76],
+    cuadras: [1.3, 1.3, 1.0, 0.8, 0.64],
+    mixtas: [1.2, 1.25, 1.0, 0.86, 0.7],
+  },
+  rafaga: 1.3, // dentro de una ráfaga, con el viento a favor o de través
+  anguloRafaga: 100, // hasta qué ángulo la ráfaga empuja
+  rafagas: 9, radioRafaga: [260, 430], velRafaga: 70,
+  vaiven: 0.6, // cuánto rota el viento (en radianes) alrededor de su rumbo del día
+};

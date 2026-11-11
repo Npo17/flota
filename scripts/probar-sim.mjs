@@ -1,9 +1,11 @@
 // Prueba rápida de la simulación sin navegador: modo solo y varios capitanes. Uso: node scripts/probar-sim.mjs
 import { crearMundo } from '../src/mundo.js';
-import { crearPartida, crearMar, agregarCapitan, quitarCapitan, actualizar, avanzar, atracar } from '../src/juego.js';
+import { crearPartida, crearMar, agregarCapitan, quitarCapitan, actualizar, avanzar, atracar, rindeViento } from '../src/juego.js';
 import { MAPAS } from '../src/mapas.js';
 
 const diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
+// con equipos por civilización, un bot español sería aliado: en las pruebas los bots son de otra civilización
+const rivales = (j) => { for (const b of j.barcos) if (!b.cap) b.diseno.faccion = 'britanicos'; return j; };
 let fallas = 0;
 const ok = (c, m) => { if (!c) { fallas++; console.log('FALLA:', m); } };
 
@@ -17,18 +19,40 @@ for (const id of Object.keys(MAPAS)) {
 
 // --- solo: hundir, juntar oro, abordar, atracar, morir
 {
-  const j = crearPartida(crearMundo('malta'), diseno, 100);
+  const j = rivales(crearPartida(crearMundo('malta'), diseno, 100));
   const yo = j.jugador, e = j.barcos.find((b) => b.bando === 'enemigo');
   yo.x = 1500; yo.y = 4500; yo.a = 0; e.x = 1500; e.y = 4680; e.a = 0;
   let n = 0;
   while (!e.hundiendo && n++ < 60 * 120) { e.x = 1500; e.y = 4680; e.v = 0; yo.x = 1500; yo.y = 4500; yo.a = 0; yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, { fuego: 1 }); }
   ok(e.hundiendo > 0, 'solo: no se hundió el enemigo');
   ok(j.stats.hundidos === 1, 'solo: no contó el hundido: ' + j.stats.hundidos);
-  for (let i = 0; i < 300; i++) actualizar(j, 1 / 60, { objetivo: { x: 1500, y: 4680 } });
+  for (let i = 0; i < 900 && !j.oroBodega; i++) { yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, { objetivo: { x: 1500, y: 4680 }, velas: 3 }); } // con viento de proa tarda más
   ok(j.oroBodega > 0, 'solo: no juntó el oro');
-  // abordaje con gancho
+  // abordaje: lejos o sin apuntar no engancha; arrimado y con el cursor sobre el casco, sí, y la pelea lleva su tiempo
+  {
+    const l = j.barcos.find((b) => b.bando === 'enemigo' && !b.hundiendo);
+    yo.vida = 1e6; // que no lo hundan otros barcos mientras se prueba
+    yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; l.x = 3000; l.y = 5420; l.a = 0; l.v = 0; j.cdAbordaje = 0;
+    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x, y: l.y } });
+    ok(!j.gancho, 'abordaje: enganchó desde lejos');
+    l.y = 5260; l.v = 0; yo.trip = 30; l.trip = 20;
+    for (const o of j.barcos) if (o !== l && o !== yo) { o.x = 300; o.y = 300; }
+    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x + 600, y: l.y } });
+    ok(!!j.gancho && j.gancho.obj === l, 'abordaje: con el rival a tiro, F no lo enganchó aunque el cursor no estuviera encima');
+    j.gancho = null; j.yo.gancho = null; j.cdAbordaje = 0; l.trip = 30;
+    yo.trip = 30; l.trip = 30; l.x = 3000; l.y = 5260; l.v = 0;
+    actualizar(j, 1 / 60, { abordar: true, objetivo: { x: l.x, y: l.y } });
+    ok(!!j.gancho && j.gancho.obj === l, 'abordaje: no enganchó estando arrimado');
+    for (let i = 0; i < 60 * 2; i++) { l.v = 0; actualizar(j, 1 / 60, {}); }
+    ok(!!j.gancho && l.trip < 30 && yo.trip < 30, 'abordaje: la pelea no dura o no hay bajas: ' + yo.trip + ' / ' + l.trip);
+    const antes = yo.trip;
+    actualizar(j, 1 / 60, { abordar: true });
+    ok(!j.gancho && yo.trip < antes && l.bando === 'enemigo', 'abordaje: no cortó las sogas');
+    l.x = 800; l.y = 5900; j.cdAbordaje = 0; yo.vida = yo.stats.vidaMax;
+  }
+  // abordaje hasta capturar
   const m = j.barcos.find((b) => b.bando === 'enemigo' && !b.hundiendo);
-  yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; yo.trip = 200; m.x = 3000; m.y = 5370; m.vida = 5; j.cdAbordaje = 0;
+  yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; yo.trip = 200; m.x = 3000; m.y = 5260; m.a = 0; m.v = 0; m.vida = 5; j.cdAbordaje = 0;
   actualizar(j, 1 / 60, { abordar: true, objetivo: { x: m.x, y: m.y } });
   for (let i = 0; i < 60 * 15 && m.bando === 'enemigo' && !m.hundiendo; i++) { m.v = 0; actualizar(j, 1 / 60, {}); }
   ok(m.bando === 'escolta' && m.cap === j.yo, 'solo: el abordaje no capturó: ' + m.bando);
@@ -47,7 +71,7 @@ for (const id of Object.keys(MAPAS)) {
 {
   const j = crearMar(crearMundo('malta'), { servidor: true, enemigos: 10 });
   const A = agregarCapitan(j, { id: 'a', nombre: 'Ana', diseno, oro: 0 });
-  const B = agregarCapitan(j, { id: 'b', nombre: 'Beto', diseno, oro: 0 });
+  const B = agregarCapitan(j, { id: 'b', nombre: 'Beto', diseno: { ...diseno, faccion: 'franceses' }, oro: 0 });
   ok(A.barco !== B.barco && Math.hypot(A.barco.x - B.barco.x, A.barco.y - B.barco.y) > 20, 'multi: salen del mismo punto');
   // en el puerto no se pueden dañar
   for (let i = 0; i < 200; i++) avanzar(j, 0.05, { a: { fuegoTodo: true }, b: {} });
@@ -69,6 +93,93 @@ for (const id of Object.keys(MAPAS)) {
   ok(j.capitanes.length === 1 && !j.barcos.some((b) => b.cap === B), 'multi: no se quitó al capitán');
   for (let i = 0; i < 400; i++) avanzar(j, 0.05, { a: { objetivo: { x: 2000, y: 4000 } } });
   ok(Number.isFinite(A.barco.x), 'multi: posición inválida');
+}
+// --- viento: de popa se anda más que de proa, nunca frena del todo, las ráfagas empujan y las velas se eligen
+{
+  const correr = (velas, rumbo, seg = 12) => {
+    const j = crearPartida(crearMundo('malta'), { ...diseno, velas }, 100);
+    j.barcos = [j.jugador]; j.enemigosVivos = 0; j.viento.base = 0; j.viento.rafagas = [];
+    const yo = j.jugador; yo.x = 3200; yo.y = 5600; yo.a = rumbo;
+    const x0 = yo.x, y0 = yo.y;
+    for (let i = 0; i < 60 * seg; i++) { j.t = 0; actualizar(j, 1 / 60, { objetivo: { x: yo.x + Math.cos(rumbo) * 500, y: yo.y + Math.sin(rumbo) * 500 }, velas: 3 }); }
+    return Math.hypot(yo.x - x0, yo.y - y0);
+  };
+  for (const velas of ['latinas', 'cuadras', 'mixtas']) {
+    const popa = correr(velas, 0), traves = correr(velas, -Math.PI / 2), proa = correr(velas, Math.PI);
+    ok(popa > traves * 1.08 && traves > proa * 1.15, `viento ${velas}: popa ${popa | 0}, través ${traves | 0}, proa ${proa | 0}`);
+    ok(proa > traves * 0.6, `viento ${velas}: de proa casi no avanza (${proa | 0} contra ${traves | 0})`);
+  }
+  // las cuadras ya corren más de por sí: lo que se compara es cuánto pierde cada una contra el viento
+  ok(correr('latinas', Math.PI) / correr('latinas', -Math.PI / 2) > (correr('cuadras', Math.PI) / correr('cuadras', -Math.PI / 2)) * 1.08, 'viento: las latinas no ciñen mejor que las cuadras');
+  ok(correr('cuadras', 0) > correr('latinas', 0) * 1.05, 'viento: las cuadras no rinden más de popa');
+  const j = crearPartida(crearMundo('malta'), diseno, 100), yo = j.jugador;
+  j.viento.a = 0; yo.a = 0; j.viento.rafagas = [];
+  const sin = rindeViento(j, yo);
+  j.viento.rafagas = [{ x: yo.x, y: yo.y, r: 300 }];
+  ok(rindeViento(j, yo) > sin * 1.2 && yo.enRafaga, 'viento: la ráfaga no empuja');
+  yo.a = Math.PI;
+  ok(rindeViento(j, yo) < 1 && !yo.enRafaga, 'viento: la ráfaga empuja contra el viento');
+  // velas elegidas por el capitán, sin importar a qué distancia está el cursor
+  for (const v of [0, 1, 2, 3]) { actualizar(j, 1 / 60, { objetivo: { x: yo.x + 900, y: yo.y }, velas: v }); ok(yo.velas === v, `velas: pidió ${v} y quedó en ${yo.velas}`); }
+  actualizar(j, 1 / 60, { objetivo: { x: yo.x + 100, y: yo.y } });
+  ok(yo.velas === 1, 'velas: una entrada vieja (sin velas) ya no usa la distancia al cursor');
+  ok(j.viento.rafagas.every((g) => Number.isFinite(g.x)), 'viento: ráfaga con posición inválida');
+}
+// --- galeón del tesoro: uno solo, con guardias que lo cubren, y rumbo al puerto
+{
+  const j = crearPartida(crearMundo('malta'), diseno, 100);
+  j.proxConvoy = 0;
+  for (let i = 0; i < 30 && !j.barcos.some((b) => b.convoy); i++) actualizar(j, 1 / 60, {});
+  const tesoro = j.barcos.find((b) => b.convoy);
+  ok(!!tesoro, 'tesoro: no apareció');
+  if (tesoro) {
+    const guardias = j.barcos.filter((b) => b.ia && b.ia.lider === tesoro);
+    ok(guardias.length === 4, 'tesoro: guardias ' + guardias.length);
+    ok(j.barcos.filter((b) => b.tipo === 'tesoro').length === 1, 'tesoro: hay más de uno');
+    const p = j.mundo.puerto, d0 = Math.hypot(tesoro.x - p.x, tesoro.y - p.y), vida = tesoro.vida;
+    j.mundo.islas = j.mundo.islas.filter((i) => i.tipo === 'puerto'); j.mundo.remolinos = []; // sin encalladuras que raspen el casco
+    j.barcos = j.barcos.filter((b) => b === j.jugador || b === tesoro || guardias.includes(b));
+    j.enemigosVivos = 0;
+    // pegarle con guardias vivos no le hace nada
+    const yo = j.jugador; yo.vida = 1e6;
+    for (let i = 0; i < 60 * 8; i++) { for (const g of guardias) g.vida = g.stats.vidaMax; yo.x = tesoro.x + Math.sin(tesoro.a) * 170; yo.y = tesoro.y - Math.cos(tesoro.a) * 170; yo.a = tesoro.a; yo.v = 0; actualizar(j, 1 / 60, { fuegoTodo: true }); }
+    ok(tesoro.vida > vida - 25, 'tesoro: recibió daño de cañón con los guardias vivos: ' + Math.round(vida - tesoro.vida)); // encallar o un remolino sí lo raspan
+    // sin guardias, sí
+    for (const g of guardias) { g.vida = -1; }
+    for (let i = 0; i < 60 * 30 && tesoro.vida === vida; i++) { yo.x = tesoro.x + Math.sin(tesoro.a) * 170; yo.y = tesoro.y - Math.cos(tesoro.a) * 170; yo.a = tesoro.a; yo.v = 0; actualizar(j, 1 / 60, { fuegoTodo: true }); }
+    ok(tesoro.vida < vida, 'tesoro: no recibió daño sin guardias');
+    yo.x = 300; yo.y = 300;
+    tesoro.vida = tesoro.stats.vidaMax;
+    for (let i = 0; i < 60 * 40; i++) actualizar(j, 1 / 60, {});
+    ok(!j.barcos.includes(tesoro) || Math.hypot(tesoro.x - p.x, tesoro.y - p.y) < d0 - 300, 'tesoro: no avanza hacia el puerto');
+  }
+  // comprar un casco más grande en el puerto
+  const k = crearPartida(crearMundo('malta'), { ...diseno, casco: 'balandra', canones: 4 }, 5000);
+  const { comprar, catalogoPuerto } = await import('../src/puerto.js');
+  k.jugador.vida = 10;
+  ok(comprar(k, k.yo, 'cascoNuevo:galeon') && k.jugador.diseno.casco === 'galeon', 'puerto: no compró el galeón');
+  ok(k.jugador.vida === k.jugador.stats.vidaMax && k.jugador.stats.vidaMax > 200, 'puerto: el casco nuevo no salió entero: ' + k.jugador.vida);
+  ok(!comprar(k, k.yo, 'cascoNuevo:balandra'), 'puerto: dejó volver a un casco más chico');
+  ok(k.oroPuerto < 5000 && k.oroPuerto > 3000, 'puerto: cobró mal el casco: ' + k.oroPuerto);
+}
+// --- equipos por civilización: los de tu civilización no se dañan; bots de civilizaciones distintas se pelean
+{
+  const { equipoDe } = await import('../src/juego.js');
+  const j = crearPartida(crearMundo('malta'), diseno, 100), yo = j.jugador;
+  const [a, b] = j.barcos.filter((x) => x.bando === 'enemigo' && x.tipo !== 'mercante').slice(0, 2); // los mercantes huyen
+  j.barcos = [yo, a, b]; j.enemigosVivos = 0;
+  a.diseno.faccion = 'espanoles'; b.diseno.faccion = 'britanicos';
+  ok(equipoDe(a) === equipoDe(yo) && equipoDe(b) !== equipoDe(yo), 'equipos: mal armados');
+  yo.x = 300; yo.y = 300; j.mundo.islas = []; j.mundo.remolinos = []; a.x = 4200; a.y = 4800; b.x = 4200; b.y = 5050; a.vida = a.stats.vidaMax; b.vida = b.stats.vidaMax;
+  const va = a.vida, vb = b.vida;
+  let tiros = 0;
+  for (let i = 0; i < 60 * 40; i++) { yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, {}); tiros += j.balas.length ? 1 : 0; }
+  ok(tiros > 60, 'equipos: los bots de distinta civilización no se pelearon'); // a veces se tiran y erran: lo que importa es que se disparen
+  j.barcos = [yo, a]; a.hundiendo = 0; a.vida = a.stats.vidaMax; // ahora, sin el británico: le disparo al aliado
+  b.x = 5800; b.y = 800;
+  const vidaA = a.vida;
+  for (let i = 0; i < 60 * 10; i++) { yo.x = 1500; yo.y = 4500; yo.a = 0; yo.v = 0; a.x = 1500; a.y = 4680; a.v = 0; actualizar(j, 1 / 60, { fuego: 1 }); }
+  ok(a.vida === vidaA, 'equipos: le hice daño a un aliado');
 }
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);

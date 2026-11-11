@@ -1,7 +1,7 @@
 // Simulación del mar: barcos, balas, bots, abordajes, remolinos y tritones.
 // Maneja varios capitanes a la vez. El modo solo es el caso de un único capitán; en línea, esta misma
 // simulación corre en el servidor. No toca pantalla ni teclado: recibe entradas y avanza un paso.
-import { ENEMIGOS, ESCOLTAS_INICIALES } from './config.js';
+import { ENEMIGOS, ESCOLTAS_INICIALES, VIENTO } from './config.js';
 import { crearBarco, disenoEnemigo } from './barcos.js';
 import { nivelZona } from './mundo.js';
 import { azar } from './rng.js';
@@ -35,19 +35,57 @@ export function crearMar(mundo, opciones = {}) {
     proxConvoy: azar.rango(70, 100) * (mundo.reglas.convoy || 1),
     proxCofre: 1,
     yo: null,
+    viento: crearViento(mundo),
   };
   for (let i = 0; i < j.enemigosVivos; i++) spawnEnemigo(j, true);
   return j;
 }
 
-export function agregarCapitan(j, { id, nombre, diseno, oro = 0 }) {
+// ---------- Viento ----------
+// a = hacia dónde sopla. Rota despacio alrededor de su rumbo base. Las ráfagas son manchas redondas que viajan con el viento
+// y, al salir del mapa, entran por el borde contrario.
+function crearViento(mundo) {
+  const base = azar.rango(0, TAU);
+  const rafagas = [];
+  for (let i = 0; i < VIENTO.rafagas; i++) rafagas.push({ x: azar.rango(0, mundo.ancho), y: azar.rango(0, mundo.alto), r: azar.rango(VIENTO.radioRafaga[0], VIENTO.radioRafaga[1]) });
+  return { a: base, base, rafagas };
+}
+
+function actualizarViento(j, dt) {
+  const v = j.viento, m = j.mundo;
+  v.a = v.base + VIENTO.vaiven * Math.sin(j.t * 0.015) + VIENTO.vaiven * 0.4 * Math.sin(j.t * 0.041 + 1.7);
+  const dx = Math.cos(v.a) * VIENTO.velRafaga * dt, dy = Math.sin(v.a) * VIENTO.velRafaga * dt;
+  for (const g of v.rafagas) {
+    g.x += dx; g.y += dy;
+    if (g.x > m.ancho + g.r) g.x = -g.r; else if (g.x < -g.r) g.x = m.ancho + g.r;
+    if (g.y > m.alto + g.r) g.y = -g.r; else if (g.y < -g.r) g.y = m.alto + g.r;
+  }
+}
+
+// Cuánto rinde el barco con el viento de ahora (1 = sin efecto). Deja anotado en el barco si está en una ráfaga.
+// La usan la simulación y la pantalla (para el indicador).
+export function rindeViento(j, b) {
+  const v = j.viento;
+  if (!v) return 1;
+  const rel = Math.abs(difAng(b.a, v.a)) * 180 / Math.PI;
+  const tabla = VIENTO.rinde[b.diseno.velas] || VIENTO.rinde.mixtas;
+  const i = Math.min(3, Math.floor(rel / 45)), f = (rel - i * 45) / 45;
+  let r = tabla[i] + (tabla[i + 1] - tabla[i]) * f;
+  b.enRafaga = false;
+  if (rel < VIENTO.anguloRafaga) for (const g of v.rafagas) {
+    if (Math.abs(g.x - b.x) < g.r && Math.hypot(g.x - b.x, g.y - b.y) < g.r) { r *= VIENTO.rafaga; b.enRafaga = true; break; }
+  }
+  return r;
+}
+
+export function agregarCapitan(j, { id, nombre, diseno, oro = 0, equipo }) {
   const p = j.mundo.puerto;
   const n = j.capitanes.length;
   // cada uno sale de un punto distinto del puerto
   const ang = Math.PI / 2 + (n % 7 - 3) * 0.42, d = 60 + (Math.floor(n / 7) % 3) * 55;
   const barco = crearBarco(diseno, 'jugador', p.x + Math.cos(ang) * d, p.y + Math.sin(ang) * d, { a: ang, velas: 0, bandera: VERDE, nombre: nombre || 'Tu barco' });
   const cap = {
-    id, nombre: nombre || 'Capitán', barco,
+    id, nombre: nombre || 'Capitán', barco, equipo: equipo || diseno.faccion,
     oroBodega: 0, oroPuerto: oro, escoltasMax: ESCOLTAS_INICIALES,
     stats: { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 },
     proxTritones: azar.rango(25, 45), cdAbordaje: 0, gancho: null, ordenFlota: 'formacion',
@@ -87,8 +125,12 @@ export function aviso(quien, texto, tipo = 'info', p) {
   if (quien.avisos.length > 4) quien.avisos.shift();
 }
 
+// Equipos: cada civilización es un bando. Tus barcos (insignia y capturados) son de tu civilización; los bots, de la suya.
+// Mismo equipo = no se dañan ni se abordan. Bots de civilizaciones distintas se pelean entre ellos.
+// El galeón del tesoro y sus guardias son un equipo aparte ('tesoro'), enemigo de todos los capitanes.
 export function equipoDe(b) {
-  return b.cap ? b.cap.id : 'enemigo';
+  if (b.cap) return b.cap.equipo || b.cap.id;
+  return b.equipo || b.diseno.faccion;
 }
 
 const esInsignia = (b) => !!b.cap && b.cap.barco === b;
@@ -177,8 +219,8 @@ function elegirTipo(nivel, reglas = {}) {
   const pesos = nivel === 0
     ? { mercante: 6, balandro: 4 }
     : nivel === 1
-      ? { mercante: 3, balandro: 3, corsario: 4, tesoro: 1 }
-      : { balandro: 1, corsario: 3, cazador: 3, galeonGuerra: 3, tesoro: 1.5 };
+      ? { mercante: 3, balandro: 3, corsario: 4 }
+      : { balandro: 1, corsario: 3, cazador: 3, galeonGuerra: 3 }; // el galeón del tesoro no sale suelto: es un evento (ver actualizarConvoy)
   // cada mapa inclina la balanza: más comercio, más guerra o más piratas
   const mult = { mercante: reglas.comercio, tesoro: reglas.comercio, balandro: reglas.piratas, corsario: reglas.guerra, cazador: reglas.guerra, galeonGuerra: reglas.guerra };
   for (const k of Object.keys(pesos)) pesos[k] *= mult[k] ?? 1;
@@ -190,6 +232,8 @@ function elegirTipo(nivel, reglas = {}) {
 
 // ---------- Disparos ----------
 export function disparar(j, b, lado) {
+  // un barco abordado tampoco dispara por el costado donde tiene trabado al que lo aborda
+  for (const c of j.capitanes) if (c.gancho && c.gancho.obj === b && (difAng(Math.atan2(c.barco.y - b.y, c.barco.x - b.x), b.a) > 0 ? 1 : -1) === lado) return;
   if (b.hundiendo || b.recarga[lado] > 0 || b.diseno.canones < 2) return false;
   if (b.cap && enPuerto(j, b)) return false; // en el puerto no se pelea
   const s = b.stats;
@@ -256,6 +300,7 @@ export function actualizar(j, dt, entrada) {
 // entradas: { idDeCapitan: entrada }
 export function avanzar(j, dt, entradas) {
   j.t += dt;
+  actualizarViento(j, dt);
   for (const cap of j.capitanes) {
     if (cap.fin) continue;
     cap.stats.tiempo += dt;
@@ -297,16 +342,26 @@ function controlarCapitan(j, cap, e) {
   const b = cap.barco;
   if (b.hundiendo) return;
   if (e.objetivo) {
-    // el barco navega hacia el cursor: cuanto más lejos, más velas
+    // el barco pone la proa hacia el cursor; las velas las elige el capitán (e.velas, de 0 a 3)
     const d = Math.hypot(e.objetivo.x - b.x, e.objetivo.y - b.y);
     const cerca = b.stats.largo * 0.6 + 15;
     if (d > cerca) b.timon = Math.max(-1, Math.min(1, difAng(Math.atan2(e.objetivo.y - b.y, e.objetivo.x - b.x), b.a) * 2.5));
     else b.timon = 0;
-    b.velas = d <= cerca ? 0 : d < 150 ? 1 : d < 280 ? 2 : 3;
+    // una entrada sin "velas" es de una versión anterior del juego: ahí las velas salían de la distancia al cursor
+    if (Number.isFinite(e.velas)) b.velas = Math.max(0, Math.min(3, Math.round(e.velas)));
+    else b.velas = d <= cerca ? 0 : d < 150 ? 1 : d < 280 ? 2 : 3;
   } else if (e.quieto) { b.timon = 0; b.velas = 0; }
-  if (e.fuegoTodo) { disparar(j, b, -1); disparar(j, b, 1); }
-  if (e.fuego) disparar(j, b, e.fuego);
-  if (e.abordar) lanzarGancho(j, cap, e.objetivo);
+  else if (Number.isFinite(e.velas)) b.velas = Math.max(0, Math.min(3, Math.round(e.velas)));
+  // durante un abordaje, el costado trabado contra el otro barco no dispara
+  const trabado = cap.gancho ? (difAng(Math.atan2(cap.gancho.obj.y - b.y, cap.gancho.obj.x - b.x), b.a) > 0 ? 1 : -1) : 0;
+  if (e.fuegoTodo) { if (trabado !== -1) disparar(j, b, -1); if (trabado !== 1) disparar(j, b, 1); }
+  if (e.fuego && e.fuego !== trabado) disparar(j, b, e.fuego);
+  if (e.abordar) { // F: tirar los garfios o, si ya hay pelea, cortar las sogas (las propias o las del que te aborda)
+    const meAborda = j.capitanes.find((c) => c.gancho && c.gancho.obj === b);
+    if (cap.gancho) { if (cap.gancho.t > 0.6) cortarSogas(j, cap, false); }
+    else if (meAborda) { if (meAborda.gancho.t > 0.6) cortarSogas(j, meAborda, true); }
+    else intentarAbordaje(j, cap, e.objetivo);
+  }
   if (e.ordenFlota) {
     cap.ordenFlota = cap.ordenFlota === 'formacion' ? 'ataque' : 'formacion';
     aviso(cap, cap.ordenFlota === 'ataque' ? 'Flota: ¡al ataque!' : 'Flota: en formación, a tu lado', 'info');
@@ -321,7 +376,7 @@ function moverBarco(j, b, dt) {
   const pocaGente = b.trip < s.tripMax * 0.25 ? 0.65 : 1;
   // casco roto = barco lento: por debajo del 70 % de vida va perdiendo hasta la mitad de velocidad
   const averia = 0.5 + 0.5 * Math.min(1, b.vida / (s.vidaMax * 0.7));
-  const objetivo = (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1);
+  const objetivo = (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1) * rindeViento(j, b);
   b.frenoGancho = 1;
   b.v += (objetivo - b.v) * Math.min(1, dt * (objetivo > b.v ? 0.7 : 1.1));
   const agarre = 0.3 + 0.7 * Math.min(1, b.v / (s.velMax * 0.45));
@@ -415,7 +470,7 @@ function moverBalas(j, dt) {
         break;
       }
     }
-    if (!pego && bl.equipo !== 'enemigo') {
+    if (!pego && bl.dueno && bl.dueno.cap) { // los tritones solo los bajan los capitanes
       for (const tr of j.tritones) {
         if (!tr.muerto && Math.hypot(tr.x - bl.x, tr.y - bl.y) < 14 + bl.radio) {
           tr.muerto = true; pego = true;
@@ -437,6 +492,13 @@ function moverBalas(j, dt) {
 }
 
 function golpear(j, b, bl) {
+  // mientras le quede un guardia, el galeón del tesoro no recibe daño: primero hay que hundirlos
+  if (b.convoy && b.bando === 'enemigo' && guardiasDe(j, b) > 0) {
+    emitir(j, { k: 'g', x: Math.round(bl.x), y: Math.round(bl.y) });
+    const quien = bl.dueno && bl.dueno.cap ? bl.dueno.cap : null;
+    if (quien && Math.random() < 0.35) textoFlotante(j, bl.x, bl.y - 8, 'Primero los guardias', '#ffd166', quien);
+    return;
+  }
   b.vida -= bl.dano;
   b.ultimoGolpe = j.t;
   const agresor = bl.dueno && bl.dueno.cap ? bl.dueno.cap : null;
@@ -535,30 +597,59 @@ export function atracar(j, cap) {
 }
 
 // ---------- Abordaje con gancho ----------
-export const ALCANCE_GANCHO = 250;
+// Para abordar hay que arrimarse al otro barco, ir más o menos a su velocidad y tirar los garfios (F) con el cursor sobre
+// su casco: no se elige solo. Después viene la pelea, que dura varios segundos: las dos tripulaciones pierden gente según
+// su fuerza, ese costado no puede disparar y cualquiera de los dos puede cortar las sogas con F.
+export const ABORDAJE = {
+  arrime: 120, // separación máxima entre los dos cascos para tirar los garfios
+  velocidad: 130, // diferencia máxima de velocidad
+  bajasRival: 0.09, bajasPropias: 0.07, // parte de la tripulación inicial que cae por segundo en una pelea pareja
+  rendicion: 0.25, // el rival se rinde cuando le queda esta parte de su gente
+  retirada: 0.3, // y tu gente se retira cuando le queda esta
+  cortar: 0.1, // gente que pierde el que corta las sogas
+};
+export const ALCANCE_GANCHO = ABORDAJE.arrime;
 
-// Para la pantalla: el rival más cercano al que le llega el gancho, con una idea de cómo viene la pelea
-export function candidatoAbordaje(j) {
-  const yo = j.jugador;
-  if (!yo || yo.hundiendo) return null;
-  let mejor = null, mejorD = ALCANCE_GANCHO + 60;
+const entreCascos = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) - (a.stats.ancho + b.stats.ancho) / 2;
+
+// A qué barco van los garfios: el rival que está bajo el cursor (con margen generoso) o, si el cursor no está sobre
+// ninguno, el rival a tiro de garfio más cercano al cursor. Así basta con arrimarse y apuntar más o menos.
+function barcoBajo(j, cap, p) {
+  if (!p) return null;
+  const yo = cap.barco, mio = equipoDe(yo);
+  let bajo = null, bajoD = Infinity, aTiro = null, aTiroD = Infinity;
   for (const b of j.barcos) {
-    if (b.bando !== 'enemigo' || b.hundiendo) continue;
-    const d = Math.hypot(b.x - yo.x, b.y - yo.y);
-    if (d < mejorD) { mejor = b; mejorD = d; }
+    if (b.hundiendo || b.cap === cap || equipoDe(b) === mio) continue;
+    const dc = Math.hypot(b.x - p.x, b.y - p.y);
+    if (dc < b.stats.largo * 0.75 && dc < bajoD) { bajo = b; bajoD = dc; }
+    if (entreCascos(yo, b) <= ABORDAJE.arrime && dc < aTiroD) { aTiro = b; aTiroD = dc; }
   }
-  if (!mejor) return null;
-  const r = (yo.trip * yo.stats.abordaje) / Math.max(1, mejor.trip * mejor.stats.abordaje * 1.1);
-  return { b: mejor, debil: true, ventaja: r > 1.3 ? 'ventaja' : r > 0.8 ? 'parejo' : 'desventaja' };
+  return bajo || aTiro;
 }
 
-// El gancho sale recto hacia el cursor: hay que apuntarle al casco
-function lanzarGancho(j, cap, objetivo) {
-  if (cap.gancho || cap.cdAbordaje > 0 || !objetivo) return;
+// Para la pantalla: a qué barco irían los garfios, si está a tiro y cómo viene la mano
+export function candidatoAbordaje(j, p) {
+  const yo = j.jugador;
+  if (!yo || yo.hundiendo) return null;
+  const b = barcoBajo(j, j.yo, p);
+  if (!b) return null;
+  const r = (yo.trip * yo.stats.abordaje) / Math.max(1, b.trip * b.stats.abordaje * 1.1);
+  return { b, cerca: entreCascos(yo, b) <= ABORDAJE.arrime, ventaja: r > 1.3 ? 'ventaja' : r > 0.8 ? 'parejo' : 'desventaja' };
+}
+
+function intentarAbordaje(j, cap, objetivo) {
+  if (cap.gancho || cap.cdAbordaje > 0) return;
   const yo = cap.barco;
   if (enPuerto(j, yo)) return;
-  const a = Math.atan2(objetivo.y - yo.y, objetivo.x - yo.x);
-  cap.gancho = { fase: 'vuelo', x: yo.x, y: yo.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, lejos: 0, obj: null, t: 0 };
+  const e = barcoBajo(j, cap, objetivo);
+  if (!e) return aviso(cap, 'Arrimate más para tirar los garfios', 'info');
+  if (e.cap && enPuerto(j, e)) return;
+  if (e.convoy && guardiasDe(j, e) > 0) return aviso(cap, 'Primero los guardias', 'info');
+  if (entreCascos(yo, e) > ABORDAJE.arrime) return aviso(cap, 'Arrimate más para tirar los garfios', 'info');
+  if (Math.hypot(Math.cos(yo.a) * yo.v - Math.cos(e.a) * e.v, Math.sin(yo.a) * yo.v - Math.sin(e.a) * e.v) > ABORDAJE.velocidad) return aviso(cap, 'Van muy rápido: igualá la velocidad para abordar', 'info');
+  cap.gancho = { fase: 'enganchado', obj: e, t: 0, x: e.x, y: e.y, yo0: yo.trip, el0: e.trip, acYo: 0, acEl: 0, bajas: 0 };
+  aviso(cap, '¡Garfios al {barco}! Empieza el abordaje', 'bueno', { barco: e.nombre });
+  if (esInsignia(e)) aviso(e.cap, '¡{nombre} te aborda! Peleá o cortá las sogas con F', 'malo', { nombre: cap.nombre });
 }
 
 function soltarGancho(cap, espera, texto) {
@@ -567,63 +658,47 @@ function soltarGancho(cap, espera, texto) {
   if (texto) aviso(cap, texto, 'info');
 }
 
+// El que corta las sogas se suelta, pero deja gente en el intento
+function cortarSogas(j, cap, porRival) {
+  const e = cap.gancho.obj, corta = porRival ? e : cap.barco;
+  corta.trip = Math.max(1, corta.trip - Math.max(1, Math.round(corta.trip * ABORDAJE.cortar)));
+  soltarGancho(cap, 5, porRival ? 'Te cortaron las sogas' : 'Cortaste las sogas y te soltaste');
+  if (porRival && e.cap) aviso(e.cap, 'Cortaste las sogas y te soltaste', 'info');
+}
+
 function actualizarGancho(j, cap, dt) {
   const g = cap.gancho;
   if (!g) return;
-  const yo = cap.barco;
-  g.t += dt;
-  if (g.fase === 'vuelo') {
-    if (yo.hundiendo) return soltarGancho(cap, 2);
-    g.x += g.vx * dt;
-    g.y += g.vy * dt;
-    g.lejos += 520 * dt;
-    for (const b of j.barcos) {
-      if (b.cap === cap || b.hundiendo || (b.cap && enPuerto(j, b)) || !dentroDelCasco(b, g.x, g.y, 5)) continue;
-      g.fase = 'enganchado';
-      g.obj = b;
-      g.t = 0;
-      aviso(cap, '¡Enganchado! Tu gente tira de la soga del {barco}', 'bueno', { barco: b.nombre });
-      if (esInsignia(b)) aviso(b.cap, '¡{nombre} te enganchó! Alejate o bajale gente a cañonazos', 'malo', { nombre: cap.nombre });
-      return;
-    }
-    if (g.lejos > ALCANCE_GANCHO || j.mundo.islas.some((i) => Math.hypot(i.x - g.x, i.y - g.y) < i.r)) soltarGancho(cap, 4, 'Erraste el gancho');
-    return;
-  }
-  const e = g.obj;
+  const yo = cap.barco, e = g.obj;
   if (yo.hundiendo || e.hundiendo || e.cap === cap || !j.barcos.includes(e)) return soltarGancho(cap, 2);
-  const d = Math.hypot(e.x - yo.x, e.y - yo.y);
-  if (d > 400 || g.t > 14) return soltarGancho(cap, 6, 'Se cortó la soga: el barco estaba muy entero y se soltó');
-  // la soga acerca los dos barcos; el más chico se mueve más. Un barco entero se resiste.
-  const mYo = yo.stats.largo ** 2, mEl = e.stats.largo ** 2;
-  const entero = Math.max(0, Math.min(1, e.vida / e.stats.vidaMax));
-  e.frenoGancho = 0.3 + 0.55 * entero;
-  const tiron = (95 - 55 * entero) * dt, nx = (e.x - yo.x) / (d || 1), ny = (e.y - yo.y) / (d || 1);
-  e.x -= nx * tiron * (mYo / (mYo + mEl));
-  e.y -= ny * tiron * (mYo / (mYo + mEl));
-  yo.x += nx * tiron * (mEl / (mYo + mEl));
-  yo.y += ny * tiron * (mEl / (mYo + mEl));
-  if (d < (yo.stats.ancho + e.stats.ancho) * 0.5 + 48) {
-    cap.gancho = null;
-    cap.cdAbordaje = 5;
-    resolverAbordaje(j, cap, e);
+  g.t += dt; g.x = e.x; g.y = e.y;
+  // las sogas traban a los dos barcos y los van arrimando; el más chico se mueve más
+  yo.frenoGancho = 0.2; e.frenoGancho = 0.2;
+  const d = Math.hypot(e.x - yo.x, e.y - yo.y), junto = (yo.stats.ancho + e.stats.ancho) * 0.5 + 14;
+  if (d > junto + 220) return soltarGancho(cap, 4, 'Se cortaron las sogas');
+  if (d > junto) {
+    const mYo = yo.stats.largo ** 2, mEl = e.stats.largo ** 2, tiron = 45 * dt, nx = (e.x - yo.x) / (d || 1), ny = (e.y - yo.y) / (d || 1);
+    e.x -= nx * tiron * (mYo / (mYo + mEl)); e.y -= ny * tiron * (mYo / (mYo + mEl));
+    yo.x += nx * tiron * (mEl / (mYo + mEl)); yo.y += ny * tiron * (mEl / (mYo + mEl));
   }
+  // la pelea: cada bando pierde gente según la fuerza del otro
+  const fYo = yo.trip * yo.stats.abordaje, fEl = e.trip * e.stats.abordaje * 1.1, parte = fYo / Math.max(1, fYo + fEl);
+  g.acEl += g.el0 * ABORDAJE.bajasRival * 2 * parte * dt;
+  g.acYo += g.yo0 * ABORDAJE.bajasPropias * 2 * (1 - parte) * dt;
+  while (g.acEl >= 1 && e.trip > 0) { g.acEl--; e.trip--; }
+  while (g.acYo >= 1 && yo.trip > 1) { g.acYo--; yo.trip--; g.bajas++; }
+  if (e.trip <= Math.max(1, g.el0 * ABORDAJE.rendicion)) { cap.gancho = null; cap.cdAbordaje = 5; return resolverAbordaje(j, cap, e, true, g.bajas); }
+  if (yo.trip <= Math.max(1, g.yo0 * ABORDAJE.retirada) || g.t > 30) { cap.gancho = null; cap.cdAbordaje = 6; return resolverAbordaje(j, cap, e, false, g.bajas); }
 }
 
-function resolverAbordaje(j, cap, e) {
-  const yo = cap.barco;
-  const mio = yo.trip * yo.stats.abordaje * azar.rango(0.75, 1.25);
-  const suyo = e.trip * e.stats.abordaje * azar.rango(0.75, 1.25) * 1.1;
+// Fin de la pelea. gano: el rival se rindió. bajas: la gente que perdiste peleando.
+function resolverAbordaje(j, cap, e, gano, bajas) {
   const dueno = e.cap; // null si es un bot
-  if (mio <= suyo) {
-    const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(yo.trip * azar.rango(0.35, 0.55))));
-    yo.trip -= bajas;
-    e.trip = Math.max(1, e.trip - Math.round(e.trip * 0.3));
+  if (!gano) {
     aviso(cap, '¡Abordaje rechazado! Perdiste {n} marineros. Bajales gente a cañonazos y probá de nuevo', 'malo', { n: bajas });
     if (dueno) aviso(dueno, '¡Rechazaste el abordaje de {nombre}!', 'bueno', { nombre: cap.nombre });
     return;
   }
-  const bajas = Math.max(0, Math.min(yo.trip - 1, Math.round(e.trip * azar.rango(0.3, 0.6))));
-  yo.trip -= bajas;
   ganarOro(j, cap, e.oro, e.x, e.y);
   e.oro = 0;
   const escoltas = j.barcos.filter((b) => b.cap === cap && b.bando === 'escolta' && !b.hundiendo).length;
@@ -639,6 +714,8 @@ function resolverAbordaje(j, cap, e) {
     e.bandera = VERDE;
     e.ia = { estado: 'sigue' };
     e.ultimoAgresor = null;
+    e.equipo = null;
+    e.ver = (e.ver || 0) + 1; // cambió de equipo: en línea hay que volver a mandarlo
     cap.stats.capturados++;
     aviso(cap, '¡Abordaje ganado! El {barco} se suma a tu flota (−{n} marineros)', 'bueno', { barco: e.nombre, n: bajas });
   } else {
@@ -700,6 +777,7 @@ function masCercano(j, b, radio) {
   let mejor = null, mejorD = radio;
   for (const o of j.barcos) {
     if (o.hundiendo || equipoDe(o) === mio) continue;
+    if (!b.cap && !o.cap && (mio === 'tesoro' || equipoDe(o) === 'tesoro')) continue; // el tesoro es asunto de los capitanes
     if (Math.abs(o.x - b.x) > radio || Math.abs(o.y - b.y) > radio) continue;
     if (Math.hypot(o.x - p.x, o.y - p.y) < p.radio + 60) continue; // el puerto es zona segura
     const d = Math.hypot(o.x - b.x, o.y - b.y);
@@ -713,6 +791,20 @@ function iaEnemigo(j, b, dt) {
   const ia = b.ia;
   ia.t -= dt;
   ia.provocado = Math.max(0, (ia.provocado || 0) - dt);
+  if (b.convoy) { // el galeón del tesoro no pelea ni huye: lleva el oro al puerto
+    const p = j.mundo.puerto;
+    if (Math.hypot(b.x - p.x, b.y - p.y) < p.radio + 470) { // llegó: el oro quedó a salvo y los guardias se dispersan
+      for (const g of j.barcos) if (g.ia && g.ia.lider === b) g.ia.lider = null;
+      j.barcos = j.barcos.filter((x) => x !== b);
+      aviso(j, 'El galeón del tesoro llegó al puerto con todo el oro. Ya zarpará otro', 'info');
+      return;
+    }
+    timonHacia(b, Math.atan2(p.y - b.y, p.x - b.x));
+    b.velas = 1;
+    fuegoOportunista(j, b);
+    esquivarIslas(j, b);
+    return;
+  }
   const conducta = ENEMIGOS[b.tipo].conducta;
   const radioVista = 560 + (b.nivel || 0) * 120 + (ia.provocado ? 500 : 0);
   const cerca = masCercano(j, b, radioVista);
@@ -722,7 +814,8 @@ function iaEnemigo(j, b, dt) {
     const amenaza = masCercano(j, L, 560) || masCercano(j, b, 420);
     if (amenaza) combatir(j, b, amenaza.o, Math.hypot(amenaza.o.x - b.x, amenaza.o.y - b.y));
     else {
-      const tx = L.x - Math.sin(L.a) * 115 * ia.lado, ty = L.y + Math.cos(L.a) * 115 * ia.lado;
+      const atras = ia.atras || 0; // los guardias del tesoro van en dos filas
+      const tx = L.x - Math.sin(L.a) * 115 * ia.lado - Math.cos(L.a) * atras, ty = L.y + Math.cos(L.a) * 115 * ia.lado - Math.sin(L.a) * atras;
       const d = Math.hypot(tx - b.x, ty - b.y);
       timonHacia(b, d > 40 ? Math.atan2(ty - b.y, tx - b.x) : L.a);
       b.velas = d > 200 ? 3 : d > 70 ? 2 : L.velas;
@@ -793,6 +886,15 @@ function iaEscolta(j, b, dt) {
 }
 
 // ---------- Flota del tesoro ----------
+// cuántos guardias le quedan a un galeón del tesoro (un guardia capturado deja de serlo)
+function guardiasDe(j, tesoro) {
+  let n = 0;
+  for (const g of j.barcos) if (g.bando === 'enemigo' && !g.hundiendo && g.ia && g.ia.lider === tesoro) n++;
+  return n;
+}
+
+// Evento: cada tanto zarpa UN galeón cargado de oro desde mar adentro hacia el puerto, con cuatro guardias en formación.
+// Mientras quede un guardia no se lo puede dañar ni abordar. Si llega al puerto, el oro se pierde hasta el próximo.
 function actualizarConvoy(j, dt) {
   if (j.barcos.some((b) => b.convoy && !b.hundiendo && b.bando === 'enemigo')) return;
   j.proxConvoy -= dt;
@@ -802,27 +904,29 @@ function actualizarConvoy(j, dt) {
   for (let intento = 0; intento < 80; intento++) {
     const x = azar.rango(500, mundo.ancho - 500), y = azar.rango(500, mundo.alto - 500);
     const nivel = nivelZona(mundo, x, y);
-    if (nivel < 1 || !lejosDeCapitanes(j, x, y, 1300)) continue;
+    if (nivel < 2 || !lejosDeCapitanes(j, x, y, 1300)) continue;
     if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 200)) continue;
-    const a = azar.rango(0, TAU);
+    const a = Math.atan2(mundo.puerto.y - y, mundo.puerto.x - x); // sale apuntando al puerto
     const d = disenoEnemigo('tesoro', nivel, mundo.reglas.facciones);
     d.refuerzo = 160;
-    const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: Math.round(azar.rango(1000, 1400)) });
+    const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: Math.round(azar.rango(1600, 2200)) });
     tesoro.nivel = nivel;
     tesoro.convoy = true;
+    tesoro.equipo = 'tesoro';
     j.barcos.push(tesoro);
-    const guardia = nivel >= 2 ? 'galeonGuerra' : 'corsario';
-    for (const lado of [-1, 1]) {
-      const g = crearBarco(disenoEnemigo(guardia, nivel, mundo.reglas.facciones), 'enemigo', x - Math.sin(a) * 110 * lado, y + Math.cos(a) * 110 * lado, {
+    for (const [lado, atras, guardia] of [[-1, -90, 'galeonGuerra'], [1, -90, 'galeonGuerra'], [-1, 130, 'corsario'], [1, 130, 'corsario']]) {
+      const g = crearBarco(disenoEnemigo(guardia, nivel, mundo.reglas.facciones), 'enemigo', x - Math.sin(a) * 110 * lado - Math.cos(a) * atras, y + Math.cos(a) * 110 * lado - Math.sin(a) * atras, {
         a, velas: 1, bandera: ENEMIGOS[guardia].color, color: '#e9e1cc', nombre: 'Guardia del tesoro', tipo: guardia,
         oro: Math.round(azar.rango(ENEMIGOS[guardia].oro[0], ENEMIGOS[guardia].oro[1])),
       });
       g.nivel = nivel;
       g.ia.lider = tesoro;
       g.ia.lado = lado;
+      g.ia.atras = atras;
+      g.equipo = 'tesoro';
       j.barcos.push(g);
     }
-    aviso(j, '¡Flota del tesoro avistada! Un galeón cargado de oro con dos guardias. Mirá el minimapa', 'bueno');
+    aviso(j, '¡Flota del tesoro! Un galeón lleva el oro al puerto con cuatro guardias. Hundí primero a los guardias. Mirá el minimapa', 'bueno');
     return;
   }
 }

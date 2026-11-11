@@ -33,6 +33,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     oroBodega: 0, oroPuerto: 0, escoltasMax: 2, stats: { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 },
     cdAbordaje: 0, gancho: null, ordenFlota: 'formacion', sacudon: 0, fin: false, finEn: 0, causa: null,
     nombreJugador: nombre, jugadores: [],
+    viento: null, // llega con cada foto; si el servidor es de una versión anterior, no hay viento
   };
 
   try { ws = new WebSocket(WS); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
@@ -58,13 +59,18 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
   // Llega una foto del mar
   function foto(m) {
     if (!j.mundo) return;
+    if (m.vi) {
+      const rafagas = [];
+      for (let k = 1; k + 2 < m.vi.length; k += 3) rafagas.push({ x: m.vi[k], y: m.vi[k + 1], r: m.vi[k + 2] });
+      j.viento = { a: m.vi[0] / 100, rafagas };
+    }
     for (const [id, nom] of m.caps) nombres.set(id, nom);
     j.jugadores = m.caps;
     if (m.alta) for (const a of m.alta) {
       let b = porId.get(a.id);
       if (!b) { b = crearBarco(a.d, 'enemigo', 0, 0, { nombre: a.n, tipo: a.tipo, bandera: a.bd, colorVela: a.cv }); b.id = a.id; b.nuevo = true; porId.set(a.id, b); }
       else { b.diseno = { ...a.d }; b.stats = statsDe(b.diseno); }
-      b.nombreBot = a.n; b.banderaBot = a.bd; b.convoy = !!a.cy;
+      b.nombreBot = a.n; b.banderaBot = a.bd; b.convoy = !!a.cy; b.equipoAlta = a.eq || null; // equipo (civilización); un servidor anterior no lo manda
     }
     const vistos = new Set();
     const lista = [];
@@ -76,7 +82,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
       if (b.nuevo) { b.x = x; b.y = y; b.a = b.ta; b.v = v; b.nuevo = false; }
       b.velas = velas; b.vida = vida; b.trip = trip;
       if (hund && !b.hundiendo) b.hundiendo = 0.0001;
-      b.equipoSrv = capId || 'enemigo';
+      b.equipoSrv = b.equipoAlta || capId || 'enemigo';
       if (capId === miId) {
         b.cap = yo; b.bando = tipo === 'j' ? 'jugador' : 'escolta'; b.bandera = VERDE; b.esJugador = false; b.nombre = b.nombreBot;
       } else if (capId) {
@@ -126,6 +132,13 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     j.sacudon = Math.max(0, j.sacudon - dt * 12);
     objetivo = entrada.objetivo || null;
     quieto = !!entrada.quieto;
+    const velas = Number.isFinite(entrada.velas) ? entrada.velas : 3;
+    // Un servidor de una versión anterior saca las velas de la distancia al cursor: se le manda un punto en la misma
+    // dirección pero a la distancia que corresponde a las velas elegidas (salvo al tirar el gancho, que necesita el punto real)
+    if (objetivo && !j.viento && j.jugador && !entrada.abordar) {
+      const yo = j.jugador, dx = objetivo.x - yo.x, dy = objetivo.y - yo.y, d = Math.hypot(dx, dy) || 1, lejos = [0, 100, 215, 420][velas];
+      if (d > yo.stats.largo * 0.6 + 15) objetivo = { x: yo.x + (dx / d) * lejos, y: yo.y + (dy / d) * lejos };
+    }
     if (entrada.fuegoTodo) pulsos.f = 1;
     if (entrada.fuego) pulsos.l = entrada.fuego;
     if (entrada.abordar) pulsos.g = 1;
@@ -133,7 +146,7 @@ export function conectar({ nombre, diseno, alEntrar, alCerrar, alPuerto }) {
     const ahora = performance.now();
     if (abierta && miId && !j.fin && ws.readyState === 1 && (ahora - ultimoEnvio > 66 || pulsos.f || pulsos.l || pulsos.g)) {
       ultimoEnvio = ahora;
-      ws.send(JSON.stringify({ t: 'e', o: objetivo && !quieto ? [Math.round(objetivo.x), Math.round(objetivo.y)] : null, q: quieto ? 1 : 0, ...pulsos }));
+      ws.send(JSON.stringify({ t: 'e', o: objetivo && !quieto ? [Math.round(objetivo.x), Math.round(objetivo.y)] : null, q: quieto ? 1 : 0, v: velas, ...pulsos }));
       pulsos = {};
     }
 

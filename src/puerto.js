@@ -1,6 +1,6 @@
 // El puerto: qué se puede comprar y qué hace cada compra.
 // Lo usan la pantalla del puerto (para mostrar) y la simulación (para cobrar y aplicar), también en el servidor.
-import { MUNICIONES, VELAS, PUERTO, ESCOLTAS_MAX } from './config.js';
+import { MUNICIONES, VELAS, CASCOS, PUERTO, ESCOLTAS_MAX } from './config.js';
 import { rearmar } from './barcos.js';
 import { t } from './idioma.js';
 
@@ -30,6 +30,15 @@ export function catalogoPuerto(j, cap) {
       { id: 'nivel', t: t('Cañones nivel {n}', { n: nivel }), d: t('Cada bala hace 15 % más de daño.'), costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: t('Al máximo'),
         hacer: () => { d.nivelCanones = nivel; } },
     ]],
+    // casco: se puede pasar a uno más grande (nunca a uno más chico). El barco nuevo sale entero y conserva cañones, gente y mejoras.
+    [t('Casco'), Object.entries(CASCOS).map(([id, c]) => {
+      const sube = c.costo > CASCOS[d.casco].costo;
+      return {
+        id: 'cascoNuevo:' + id, t: t(c.nombre), d: t(c.desc), costo: sube ? PUERTO.cambioCasco(c.costo - CASCOS[d.casco].costo) : 0, ok: sube, elegida: id === d.casco,
+        listo: id === d.casco ? t('El que tenés') : t('Más chico que el tuyo'),
+        hacer: () => { d.casco = id; b.vida = Infinity; }, // rearmar() lo deja con el casco nuevo entero
+      };
+    })],
     // munición y velas: se ve cuál tenés puesta
     [t('Munición'), Object.entries(MUNICIONES).map(([id, m]) => ({
       id: 'mun:' + id, t: t(m.nombre), d: t(m.desc), costo: PUERTO.municion[id], ok: id !== d.municion, elegida: id === d.municion, listo: t('La que usás'),
