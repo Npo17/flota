@@ -560,6 +560,7 @@ function pintarViento(j, b) {
 let anterior = performance.now();
 let cuadros = 0, lentos = 0, medidos = 0;
 function cuadro(ahora) {
+  requestAnimationFrame(cuadro); // primero: si algo falla en este cuadro, el juego sigue en el próximo en vez de quedar congelado
   const real = ahora - anterior;
   const dt = Math.min(0.05, real / 1000);
   anterior = ahora;
@@ -590,7 +591,6 @@ function cuadro(ahora) {
     dibujarEscena(ctx, partida, vista);
     if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
   }
-  requestAnimationFrame(cuadro);
 }
 
 
@@ -733,6 +733,7 @@ pintarCuenta();
 pintarAstillero();
 pintarLinea();
 requestAnimationFrame(cuadro);
+document.documentElement.classList.remove('cargando'); // ya está todo pintado: se va la pantalla de carga (index.html)
 
 // Para probar desde la consola
 window.flota = { get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; } };

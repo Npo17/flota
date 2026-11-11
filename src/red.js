@@ -33,6 +33,7 @@ export async function salasPublicas() {
 export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto }) {
   let ws = null, miId = null, abierta = false, cerradaAProposito = false;
   let pulsos = {}, objetivo = null, quieto = false, ultimoEnvio = 0;
+  let barcoNuevo = true; // el servidor dio un barco nuevo (al entrar o al reaparecer) y todavía no llegó su primera foto
   let esperandoHola = false; // después de pedir reaparecer: se ignoran las fotos del barco hundido hasta que el servidor conteste
   const porId = new Map();
   const nombres = new Map();
@@ -59,7 +60,9 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   function recibir(m) {
     if (m.t === 'hola') {
       esperandoHola = false;
-      j.fin = false; j.finEn = 0; j.causa = null; j.jugador = null; yo.barco = null; j.gancho = null; // barco nuevo (al entrar o al reaparecer)
+      // barco nuevo (al entrar o al reaparecer). j.jugador NO se borra: hasta que llegue la primera foto sigue siendo el barco anterior,
+      // porque la pantalla lo usa en cada cuadro (cámara, cursor) y sin barco se cortaba el dibujo y el juego quedaba congelado.
+      j.fin = false; j.finEn = 0; j.causa = null; j.gancho = null; barcoNuevo = true;
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
       j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 4 ? 2 : m.v >= 3 ? 1 : false }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
       if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
@@ -120,7 +123,8 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     const y = m.yo;
     const mio = porId.get(y.b);
     if (mio) {
-      const primera = !j.jugador;
+      const primera = barcoNuevo;
+      barcoNuevo = false;
       j.jugador = mio; yo.barco = mio;
       mio.recarga = { '-1': y.rec[0], '1': y.rec[1] };
       if (y.recT) mio.recargaTotal = { '-1': y.recT[0], '1': y.recT[1] };

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-tema="oscuro">
+<html lang="es" data-tema="oscuro" class="cargando">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,8 +17,19 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <script>try { if (localStorage.getItem('aon-tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}</script>
-  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=7f0ff4f7","/src/arte-britanico.js":"/src/arte-britanico.js?v=7f0ff4f7","/src/arte-chino.js":"/src/arte-chino.js?v=7f0ff4f7","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=7f0ff4f7","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=7f0ff4f7","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=7f0ff4f7","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=7f0ff4f7","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=7f0ff4f7","/src/arte-espanol.js":"/src/arte-espanol.js?v=7f0ff4f7","/src/arte-frances.js":"/src/arte-frances.js?v=7f0ff4f7","/src/arte-holandes.js":"/src/arte-holandes.js?v=7f0ff4f7","/src/arte-japones.js":"/src/arte-japones.js?v=7f0ff4f7","/src/arte-motor.js":"/src/arte-motor.js?v=7f0ff4f7","/src/arte-otomano.js":"/src/arte-otomano.js?v=7f0ff4f7","/src/arte-portugues.js":"/src/arte-portugues.js?v=7f0ff4f7","/src/arte-sueco.js":"/src/arte-sueco.js?v=7f0ff4f7","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=7f0ff4f7","/src/banderas.js":"/src/banderas.js?v=7f0ff4f7","/src/barcos.js":"/src/barcos.js?v=7f0ff4f7","/src/config.js":"/src/config.js?v=7f0ff4f7","/src/cuenta.js":"/src/cuenta.js?v=7f0ff4f7","/src/dibujo.js":"/src/dibujo.js?v=7f0ff4f7","/src/idioma.js":"/src/idioma.js?v=7f0ff4f7","/src/juego.js":"/src/juego.js?v=7f0ff4f7","/src/main.js":"/src/main.js?v=7f0ff4f7","/src/mapas.js":"/src/mapas.js?v=7f0ff4f7","/src/mundo.js":"/src/mundo.js?v=7f0ff4f7","/src/puerto.js":"/src/puerto.js?v=7f0ff4f7","/src/red.js":"/src/red.js?v=7f0ff4f7","/src/rng.js":"/src/rng.js?v=7f0ff4f7","/src/textos-historia.js":"/src/textos-historia.js?v=7f0ff4f7","/src/textos.js":"/src/textos.js?v=7f0ff4f7"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=7f0ff4f7">
+  <!-- Mientras baja y arranca el juego se ve solo el logo: sin esto, al recargar aparecía un instante el astillero vacío (cajas sin texto ni barco).
+       main.js saca la clase "cargando" cuando ya pintó todo; si el juego no llega a arrancar, se saca sola a los 8 segundos. -->
+  <style>
+    html.cargando body { background: #071a2a; }
+    html.cargando body > *:not(#presentacion) { visibility: hidden !important; } /* #presentacion: la portada propia de la app de escritorio */
+    html.cargando body::before { content: ""; position: fixed; inset: 0; z-index: 99; background: radial-gradient(ellipse at center, #123a59 0%, #071a2a 75%); }
+    html.cargando body::after { content: ""; position: fixed; inset: 0; z-index: 100; background: url(img/logo.png) center / min(420px, 62vw) auto no-repeat; animation: carga-late 1.6s ease-in-out infinite; }
+    @keyframes carga-late { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  </style>
+  <script>setTimeout(function () { document.documentElement.classList.remove('cargando'); }, 8000);</script>
+  <noscript><style>html.cargando body > * { visibility: visible !important; } html.cargando body::before, html.cargando body::after { display: none; }</style></noscript>
+  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=f2c5586a","/src/arte-britanico.js":"/src/arte-britanico.js?v=f2c5586a","/src/arte-chino.js":"/src/arte-chino.js?v=f2c5586a","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=f2c5586a","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=f2c5586a","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=f2c5586a","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=f2c5586a","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=f2c5586a","/src/arte-espanol.js":"/src/arte-espanol.js?v=f2c5586a","/src/arte-frances.js":"/src/arte-frances.js?v=f2c5586a","/src/arte-holandes.js":"/src/arte-holandes.js?v=f2c5586a","/src/arte-japones.js":"/src/arte-japones.js?v=f2c5586a","/src/arte-motor.js":"/src/arte-motor.js?v=f2c5586a","/src/arte-otomano.js":"/src/arte-otomano.js?v=f2c5586a","/src/arte-portugues.js":"/src/arte-portugues.js?v=f2c5586a","/src/arte-sueco.js":"/src/arte-sueco.js?v=f2c5586a","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=f2c5586a","/src/banderas.js":"/src/banderas.js?v=f2c5586a","/src/barcos.js":"/src/barcos.js?v=f2c5586a","/src/config.js":"/src/config.js?v=f2c5586a","/src/cuenta.js":"/src/cuenta.js?v=f2c5586a","/src/dibujo.js":"/src/dibujo.js?v=f2c5586a","/src/idioma.js":"/src/idioma.js?v=f2c5586a","/src/juego.js":"/src/juego.js?v=f2c5586a","/src/main.js":"/src/main.js?v=f2c5586a","/src/mapas.js":"/src/mapas.js?v=f2c5586a","/src/mundo.js":"/src/mundo.js?v=f2c5586a","/src/puerto.js":"/src/puerto.js?v=f2c5586a","/src/red.js":"/src/red.js?v=f2c5586a","/src/rng.js":"/src/rng.js?v=f2c5586a","/src/textos-historia.js":"/src/textos-historia.js?v=f2c5586a","/src/textos.js":"/src/textos.js?v=f2c5586a"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=f2c5586a">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -192,7 +203,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=7f0ff4f7" defer></script>
-  <script type="module" src="src/main.js?v=7f0ff4f7"></script>
+  <script src="vendor/supabase.min.js?v=f2c5586a" defer></script>
+  <script type="module" src="src/main.js?v=f2c5586a"></script>
 </body>
 </html>

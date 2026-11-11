@@ -35,9 +35,11 @@ mar.paso();
 ok(j.fin, 'no se enteró de que lo hundieron');
 // toca "Volver al mar" enseguida: el pedido sale, pero antes de que el servidor lo reciba llega otra foto del barco hundido
 ok(red.reentrar(), 'no pudo pedir reaparecer');
+ok(j.jugador, 'al pedir reaparecer se quedó sin barco: la pantalla lo usa en cada cuadro y se congela');
 mar.paso();
 ok(entradas === 1, 'tomó la foto del barco hundido como el barco nuevo');
 entregar();
+ok(j.jugador, 'entre el aviso del servidor y la primera foto del barco nuevo se quedó sin barco (ahí se congelaba el juego)');
 mar.paso(); mar.paso();
 ok(entradas === 2, 'no avisó que entró de nuevo: ' + entradas);
 ok(!j.fin && j.jugador && j.jugador.id !== barco1 && j.jugador.vida > 0, 'no reapareció con un barco nuevo y entero');

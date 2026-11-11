@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-12 (arreglo de verdad de "Volver al mar" en línea, y pantalla de carga) — Nicolás + Claude
+
+**Estado: subido a `main` y publicado. No toca el servidor.**
+
+- **"Volver al mar" seguía congelando el juego en línea.** El arreglo de abajo era cierto pero no era la causa principal. La causa: al reaparecer, `src/red.js` dejaba `j.jugador` en `null` hasta la primera foto del barco nuevo, y `cuadro()` en `src/main.js` usa ese barco en cada cuadro (cursor, cámara). Saltaba un error, y como `requestAnimationFrame` se pedía al final de `cuadro()`, el bucle se cortaba para siempre: pantalla congelada con "Casco 0", aunque el barco nuevo ya existía en el servidor.
+- Ahora `j.jugador` no se borra nunca (sigue siendo el barco anterior hasta que llega el nuevo; una bandera `barcoNuevo` avisa la entrada), y `cuadro()` pide el próximo cuadro **al empezar**, así un error en un cuadro no congela el juego.
+- **Cómo se probó:** en la app contra `wrangler dev`, con un guion que lleva el barco a un remolino hasta hundirse, toca "Volver al mar" y repite. Antes: barco nuevo quieto y error en consola. Después: dos hundimientos seguidos, las dos veces reaparece y navega, sin errores. `probar-reaparecer` ahora también exige que nunca quede sin barco. Lección: la prueba sin red no corre `cuadro()`; lo de la pantalla hay que probarlo con el juego abierto.
+- **Pantalla de carga en la web:** al recargar se veía un instante el astillero vacío (cajas sin texto ni barco). Ahora `<html class="cargando">` muestra solo el logo hasta que `main.js` termina de pintar y saca la clase (a los 8 segundos se saca sola, por si el juego no arranca). La portada de la app (`#presentacion`) queda a la vista.
+
 ## 2026-11-12 (arreglo: reaparecer en línea quedaba trabado) — Nicolás + Claude
 
 **Estado: subido a `main` y publicado. No toca el servidor.**
