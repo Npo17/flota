@@ -5,7 +5,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-12 (tierras de un solo cuerpo y reaparecer en el puerto) — Nicolás + Claude
 
-**Estado: subido a `main` junto con la entrada de abajo. Ver al final de esta entrada si el servidor quedó republicado.**
+**Estado: subido a `main` y publicado en la web junto con la entrada de abajo. EL SERVIDOR DEL MAR SIGUE SIN REPUBLICAR** (lo tiene que correr Nicolás: `cd servidor && npx wrangler deploy`). Hasta entonces, en línea: no hay salas (el juego avisa que la sala no existe), no hay viento ni las reglas nuevas, y las costas son las viejas; reaparecer sí funciona.
 
 - **Tierras de un solo cuerpo.** Entre dos círculos de tierra grande que se tocaban quedaba un rincón en punta y los bots se metían ahí. `crearMundo` ahora rellena el tramo entre los dos centros con círculos de radio intermedio (no toca las aguas del puerto). Medido en los 20 mapas: las celdas de mar encajonadas entre tierras bajaron de 432 a 89. Quedan algunos rincones entre tres tierras. Los islotes de tres mapas (Gravelinas, Venecia, Nueva Zembla) cambiaron un poco de lugar, porque ahora también esquivan el relleno.
 - **Reaparecer.** Al hundirte ya no volvés a armar la flota: a los 6 segundos reaparecés en el puerto con el mismo barco, desde cero. "Cambiar de flota" o ESC (dos veces) llevan al astillero. Vale para un jugador, el mar de todos y las salas.
@@ -14,7 +14,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-12 (salas, reglas de la partida y gancho que vuela) — Nicolás + Claude
 
-**Estado: commiteado en `main` en la compu de Nicolás, SIN SUBIR. EL SERVIDOR DEL MAR TAMPOCO ESTÁ REPUBLICADO.** Probado en localhost contra `wrangler dev` (`probar-sim`, `probar-red`, `probar-textos` y a mano en el navegador). Al publicar: primero el servidor (es compatible con la web vieja) y después la web.
+**Estado: subido a `main` y publicado en la web. El servidor, ver la entrada de arriba.** Probado en localhost contra `wrangler dev` (`probar-sim`, `probar-red`, `probar-textos` y a mano en el navegador).
 
 - **Salas ("Jugar con amigos").** Botón nuevo en el astillero. Se crea una sala con el mapa elegido, de 2 a 12 jugadores, pública o privada, y con las reglas de abajo; da un código de 5 letras para pasarle a los amigos (o el enlace `?sala=CODIGO`). Las públicas aparecen en una lista para quien no tiene con quién jugar. Detalles de cómo está hecho en `CLAUDE.md`, "Juego en línea". No hay lista de amigos todavía: Google no da amigos y los de Steam llegan con la integración de Steam.
 - **Reglas de la partida:** viento sí o no y abordajes sí o no. Dos botones en el astillero, debajo del mapa; valen para el modo solo y para la sala que uno crea.
