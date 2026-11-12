@@ -231,6 +231,19 @@ for (const id of Object.keys(MAPAS)) {
     ok(v.cambios === 1 && giro > 2.3, `viento: no cambió de rumbo (cambios ${v.cambios}, giro ${giro.toFixed(2)})`);
     ok(anunciado, 'viento: el cambio de rumbo no se anunció');
   }
+  // galeón del tesoro: zarpa de una punta del mapa y llega al puerto entre 2 minutos y 2 y medio
+  for (const mapa of Object.keys(MAPAS)) {
+    const k = crearPartida(crearMundo(mapa), diseno, 100);
+    k.barcos = [k.jugador]; k.enemigosVivos = 0; k.proxConvoy = 0.01; k.jugador.x = 3200; k.jugador.y = 3600;
+    actualizar(k, 1 / 30, {});
+    const g = k.barcos.find((b) => b.convoy);
+    // de una punta si alguna tiene agua; si no (mapas de estrechos), del borde del mapa
+    const alBorde = g && Math.min(g.x, k.mundo.ancho - g.x, g.y, k.mundo.alto - g.y) <= 1000;
+    ok(alBorde, `tesoro (${mapa}): no zarpó del borde del mapa` + (g ? ` (${g.x | 0}, ${g.y | 0})` : ''));
+    let seg = 0;
+    while (g && k.barcos.includes(g) && seg < 240) { k.jugador.vida = k.jugador.stats.vidaMax; k.proxConvoy = 999; actualizar(k, 1 / 30, { quieto: true }); seg += 1 / 30; }
+    ok(seg >= 115 && seg <= 160, `tesoro (${mapa}): el viaje duró ${seg | 0} s en vez de 120 a 150`);
+  }
   // formaciones: la orden las recorre todas y vuelve a la primera; cada una pone a los barcos en lugares distintos
   {
     const k = crearPartida(crearMundo('malta'), diseno, 100);

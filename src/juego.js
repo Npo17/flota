@@ -430,7 +430,9 @@ function moverBarco(j, b, dt) {
   // casco roto = barco lento: por debajo del 70 % de vida va perdiendo hasta la mitad de velocidad
   const averia = 0.5 + 0.5 * Math.min(1, b.vida / (s.vidaMax * 0.7));
   const anclado = b.cap && b.cap.habilidad && b.cap.habilidad.id === 'ancla' && b.cap.barco === b; // ancla de combate: casi quieto y girando rápido
-  const objetivo = (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1) * rindeViento(j, b) * (anclado ? 0.12 : 1);
+  // velFija: el galeón del tesoro navega a la velocidad justa para llegar al puerto en el tiempo que dura el evento, sople como sople
+  const objetivo = b.velFija ? b.velFija * (b.frenoGancho || 1) * (anclado ? 0.12 : 1)
+    : (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1) * rindeViento(j, b) * (anclado ? 0.12 : 1);
   b.frenoGancho = 1;
   b.v += (objetivo - b.v) * Math.min(1, dt * (objetivo > b.v ? 0.7 : 1.1));
   const agarre = 0.3 + 0.7 * Math.min(1, b.v / (s.velMax * 0.45));
@@ -887,6 +889,9 @@ function iaEnemigo(j, b, dt) {
     }
     timonHacia(b, Math.atan2(p.y - b.y, p.x - b.x));
     b.velas = 1;
+    // el viaje dura lo que dura el evento (entre 2 y 2 minutos y medio): se ajusta la velocidad a lo que falta, así los rodeos por las islas no lo atrasan
+    const falta = Math.hypot(b.x - p.x, b.y - p.y) - p.radio - 470;
+    b.velFija = Math.max(14, Math.min(95, falta / Math.max(4, (ia.llega || 0) - j.t)));
     fuegoOportunista(j, b);
     esquivarIslas(j, b);
     return;
@@ -1010,10 +1015,24 @@ function actualizarConvoy(j, dt) {
   if (j.proxConvoy > 0) return;
   j.proxConvoy = azar.rango(200, 260) * (j.mundo.reglas.convoy || 1);
   const { mundo } = j;
-  for (let intento = 0; intento < 80; intento++) {
-    const x = azar.rango(500, mundo.ancho - 500), y = azar.rango(500, mundo.alto - 500);
-    const nivel = nivelZona(mundo, x, y);
-    if (nivel < 2 || !lejosDeCapitanes(j, x, y, 1300)) continue;
+  // Zarpa de una de las cuatro puntas del mapa (Nicolás, 13/11/2026: que salga bien de una punta y el viaje dure entre 2 y 2:30).
+  // Se prueban las puntas en orden al azar y, en cada una, cada vez más adentro, hasta dar con agua libre.
+  const puntas = [[0, 0], [1, 0], [0, 1], [1, 1]].sort(() => azar.rango(-1, 1));
+  const lugares = [];
+  for (const exigirLejos of [true, false]) for (const margen of [420, 600, 800, 1000]) for (const [px, py] of puntas) {
+    lugares.push([px ? mundo.ancho - margen : margen, py ? mundo.alto - margen : margen, exigirLejos]);
+  }
+  // En los mapas de estrechos las cuatro puntas son tierra: ahí zarpa del borde del mapa, del agua más alejada del puerto.
+  const borde = [];
+  for (const margen of [420, 700, 1000]) for (let q = margen; q <= mundo.ancho - margen; q += 380) {
+    borde.push([q, margen], [q, mundo.alto - margen], [margen, q], [mundo.ancho - margen, q]);
+  }
+  const alPuerto = ([x, y]) => Math.hypot(x - mundo.puerto.x, y - mundo.puerto.y);
+  borde.sort((a, b) => alPuerto(b) - alPuerto(a) + azar.rango(-250, 250));
+  for (const exigirLejos of [true, false]) for (const [x, y] of borde) lugares.push([x, y, exigirLejos]);
+  for (const [x, y, exigirLejos] of lugares) {
+    const nivel = Math.max(2, nivelZona(mundo, x, y));
+    if (exigirLejos && !lejosDeCapitanes(j, x, y, 1300)) continue; // mejor que no le aparezca encima a nadie; si no hay otra, igual sale
     if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 200)) continue;
     const a = Math.atan2(mundo.puerto.y - y, mundo.puerto.x - x); // sale apuntando al puerto
     const d = disenoEnemigo('tesoro', nivel, mundo.reglas.facciones);
@@ -1021,6 +1040,7 @@ function actualizarConvoy(j, dt) {
     const tesoro = crearBarco(d, 'enemigo', x, y, { a, velas: 1, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: Math.round(azar.rango(1600, 2200)) });
     tesoro.nivel = nivel;
     tesoro.convoy = true;
+    tesoro.ia.llega = j.t + azar.rango(120, 150); // cuándo tiene que estar entrando al puerto
     tesoro.equipo = 'tesoro';
     j.barcos.push(tesoro);
     // guardias sin mejoras de zona: dos corsarios adelante y dos balandros atrás (los galeones de guerra eran imposibles)
