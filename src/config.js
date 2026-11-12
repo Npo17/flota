@@ -128,4 +128,9 @@ export const VIENTO = {
   // hacia donde soplan, empujan fuerte aunque el viento general esté en contra.
   racha: 1.5, duraRacha: 6, radioRacha: [170, 240], cadaRacha: [3, 6], anguloRacha: 60,
   vaiven: 0.6, // cuánto rota el viento (en radianes) alrededor de su rumbo del día
+  // El viento no sopla igual en todo el mar: se curva de una zona a otra, como en un mapa del pronóstico, y esas curvas se corren despacio.
+  curva: 0.85, // cuánto se aparta, como mucho, del rumbo general (en radianes)
+  escala: 2 * Math.PI / 4200, // tamaño de las curvas: una vuelta completa cada 4200 de mar
+  cadaCambio: [150, 240], // cada cuántos segundos el viento cambia de rumbo de golpe (un evento que se anuncia)
+  giroCambio: 0.35, // a qué velocidad gira hasta el rumbo nuevo (radianes por segundo)
 };

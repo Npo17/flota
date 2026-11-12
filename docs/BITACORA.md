@@ -3,6 +3,19 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (viento curvo, tesoro con cartel, formaciones) — Nicolás + Claude
+
+**Estado: la web está subida a `main`. EL SERVIDOR DEL MAR HAY QUE REPUBLICARLO (lo hace Nicolás): hasta entonces, en línea sigue el viento de un solo rumbo, siguen las rachas y la tecla H no hace nada. En modo solo ya anda todo.**
+
+- **Se sacaron las rachas** (el círculo con flechitas que aparecía cerca de cada capitán; era de Cristian). Nicolás pidió dejar un solo tipo de brisa: la mancha que se va moviendo. `actualizarViento` ya no crea ninguna; el dibujo y la cuenta quedan por compatibilidad con un servidor anterior.
+- **Viento curvo:** ya no sopla igual en todo el mar. `vientoEn(j, x, y)` (`src/juego.js`) da el rumbo en cada punto: el general más una curva suave según la zona, que se corre despacio (como un mapa del pronóstico). Lo usan el rendimiento de las velas, las ráfagas (cada una viaja con el viento de donde está), los trazos de viento del mar y la brújula del HUD (muestra el viento donde está tu barco). Números en `VIENTO` (`curva`, `escala`).
+- **El viento cambia de rumbo:** cada 150 a 240 segundos gira en unos segundos hasta soplar casi al revés. Se anuncia con un cartel grande ("El viento cambió"), un aviso y un sonido. El servidor manda `vf: [fase1, fase2, cambios]`; sin `vf` el navegador entiende que es un servidor anterior y usa un solo rumbo.
+- **Galeón del tesoro:** cuando zarpa suena la campana de a bordo y aparece un cartel arriba con una barra y el tiempo que le queda para llegar al puerto (`pintarEventos` en `src/main.js`; se calcula en el navegador con la posición del galeón, no toca el servidor).
+- **Flota:** con barcos capturados aparecen dos botones en el panel: la orden (seguirme o atacar, tecla G) y la **formación** (tecla H): a tu lado, en línea, en cuña y en frente (`FORMACIONES` en `src/juego.js`). Nicolás pidió Q y W como en Age of Empires 3, pero Q ya dispara a babor y W sube las velas; quedó G y H hasta que decida si se cambian las otras.
+- **Sonido al agarrar una brisa:** un soplo y la lona que se hincha.
+- Pruebas nuevas en `probar-sim`: no se crean rachas, el viento es curvo y dentro de lo configurado, el cambio de rumbo gira y se anuncia, las formaciones se recorren todas y son distintas. 14 textos nuevos con sus 7 traducciones.
+- Pendiente: dar órdenes a un barco en particular o a grupos; los bots siguen sin usar el viento.
+
 ## 2026-11-12 (sonido y música) — Nicolás + Claude
 
 **Estado: subido a `main` y publicado. No toca el servidor.**

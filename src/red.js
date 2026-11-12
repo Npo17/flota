@@ -88,7 +88,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       for (let k = 1; k + 2 < m.vi.length; k += 3) rafagas.push({ x: m.vi[k], y: m.vi[k + 1], r: m.vi[k + 2] });
       const rachas = [];
       if (m.rc) for (let k = 0; k + 4 < m.rc.length; k += 5) rachas.push({ x: m.rc[k], y: m.rc[k + 1], r: m.rc[k + 2], a: m.rc[k + 3] / 100, t: m.rc[k + 4] / 10 });
-      j.viento = { a: m.vi[0] / 100, rafagas, rachas };
+      j.viento = { a: m.vi[0] / 100, rafagas, rachas, curvo: !!m.vf, f1: m.vf ? m.vf[0] / 100 : 0, f2: m.vf ? m.vf[1] / 100 : 0, cambios: m.vf ? m.vf[2] : 0 }; // sin vf: servidor anterior, un solo rumbo
     }
     for (const [id, nom] of m.caps) nombres.set(id, nom);
     j.jugadores = m.caps;
@@ -132,7 +132,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       if (primera) alEntrar(j);
     }
     j.oroBodega = yo.oroBodega = y.ob; j.oroPuerto = yo.oroPuerto = y.op; j.escoltasMax = yo.escoltasMax = y.em;
-    j.stats = y.st; j.cdAbordaje = y.cd; j.ordenFlota = y.of;
+    j.stats = y.st; j.cdAbordaje = y.cd; j.ordenFlota = y.of; j.formacion = y.fo || 0;
     if (y.hb) { j.cdHabilidad = y.hb[0]; j.habilidad = y.hb[1] ? { id: y.hb[1], t: 1 } : null; yo.habilidad = j.habilidad; }
     j.avisos = y.av.map(([texto, tipo, p]) => ({ texto, tipo, p }));
     j.sacudon = Math.max(j.sacudon, y.sac);
@@ -175,6 +175,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     if (entrada.abordar) pulsos.g = 1;
     if (entrada.ordenFlota) pulsos.r = 1;
     if (entrada.habilidad) pulsos.h = 1;
+    if (entrada.formacion) pulsos.fm = 1;
     const ahora = performance.now();
     if (abierta && miId && !j.fin && ws.readyState === 1 && (ahora - ultimoEnvio > 66 || pulsos.f || pulsos.l || pulsos.g)) {
       ultimoEnvio = ahora;

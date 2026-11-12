@@ -51,31 +51,43 @@ function crearViento(mundo) {
   const base = azar.rango(0, TAU);
   const rafagas = [];
   for (let i = 0; i < VIENTO.rafagas; i++) rafagas.push({ x: azar.rango(0, mundo.ancho), y: azar.rango(0, mundo.alto), r: azar.rango(VIENTO.radioRafaga[0], VIENTO.radioRafaga[1]) });
-  return { a: base, base, rafagas, rachas: [], proxRacha: 4 };
+  return { a: base, base, baseMeta: base, rafagas, rachas: [], curvo: true, f1: azar.rango(0, TAU), f2: azar.rango(0, TAU), cambios: 0, proxCambio: azar.rango(VIENTO.cadaCambio[0], VIENTO.cadaCambio[1]) };
+}
+
+// Hacia dónde sopla el viento en un punto del mar. El rumbo general se curva según la zona, como en un mapa del pronóstico.
+// (curvo es falso jugando contra un servidor anterior, que tenía un solo rumbo para todo el mar.)
+export function vientoEn(j, x, y) {
+  const v = j.viento;
+  if (!v) return 0;
+  if (!v.curvo) return v.a;
+  const K = VIENTO.escala;
+  return v.a + VIENTO.curva * (0.7 * Math.sin(x * K + v.f1) * Math.cos(y * K + v.f2) + 0.4 * Math.sin((x + y) * K * 0.6 + v.f2 * 1.3));
 }
 
 function actualizarViento(j, dt) {
   const v = j.viento, m = j.mundo;
   if (!v) return;
+  // las curvas se corren despacio, y muy cada tanto el viento cambia de rumbo: gira en unos segundos hasta soplar casi al revés
+  v.f1 += dt * 0.011; v.f2 += dt * 0.007;
+  v.proxCambio -= dt;
+  if (v.proxCambio <= 0) {
+    v.proxCambio = azar.rango(VIENTO.cadaCambio[0], VIENTO.cadaCambio[1]);
+    v.baseMeta = v.base + Math.PI + azar.rango(-0.7, 0.7);
+    v.cambios++;
+    aviso(j, '¡El viento cambió de rumbo!', 'info');
+  }
+  const falta = difAng(v.baseMeta, v.base);
+  v.base += Math.max(-VIENTO.giroCambio * dt, Math.min(VIENTO.giroCambio * dt, falta));
   v.a = v.base + VIENTO.vaiven * Math.sin(j.t * 0.015) + VIENTO.vaiven * 0.4 * Math.sin(j.t * 0.041 + 1.7);
-  const dx = Math.cos(v.a) * VIENTO.velRafaga * dt, dy = Math.sin(v.a) * VIENTO.velRafaga * dt;
-  for (const g of v.rafagas) {
-    g.x += dx; g.y += dy;
+  for (const g of v.rafagas) { // cada ráfaga viaja con el viento del lugar donde está
+    const ag = vientoEn(j, g.x, g.y);
+    g.x += Math.cos(ag) * VIENTO.velRafaga * dt; g.y += Math.sin(ag) * VIENTO.velRafaga * dt;
     if (g.x > m.ancho + g.r) g.x = -g.r; else if (g.x < -g.r) g.x = m.ancho + g.r;
     if (g.y > m.alto + g.r) g.y = -g.r; else if (g.y < -g.r) g.y = m.alto + g.r;
   }
-  // rachas: duran unos segundos y aparecen cerca de cada capitán, un poco adelante, soplando para cualquier lado
-  for (const k of v.rachas) k.t -= dt;
-  v.rachas = v.rachas.filter((k) => k.t > 0);
-  v.proxRacha -= dt;
-  if (v.proxRacha <= 0) {
-    v.proxRacha = azar.rango(VIENTO.cadaRacha[0], VIENTO.cadaRacha[1]);
-    for (const cap of j.capitanes) {
-      if (cap.fin || v.rachas.length >= 3 * j.capitanes.length) continue;
-      const b = cap.barco, ang = b.a + azar.rango(-1.2, 1.2), d = azar.rango(260, 560);
-      v.rachas.push({ x: b.x + Math.cos(ang) * d, y: b.y + Math.sin(ang) * d, r: azar.rango(VIENTO.radioRacha[0], VIENTO.radioRacha[1]), a: azar.rango(0, TAU), t: VIENTO.duraRacha });
-    }
-  }
+  // Las rachas (el círculo con flechitas que aparecía cerca de cada capitán) se sacaron: Nicolás pidió dejar un solo tipo de
+  // brisa, la mancha que se va moviendo (13/11/2026). Ya no se crea ninguna; lo que las dibuja y las cuenta queda por si
+  // se juega contra un servidor anterior que todavía las mande.
 }
 
 // Cuánto rinde el barco con el viento de ahora (1 = sin efecto). Deja anotado en el barco si está en una ráfaga.
@@ -83,7 +95,7 @@ function actualizarViento(j, dt) {
 export function rindeViento(j, b) {
   const v = j.viento;
   if (!v) return b.cap && b.cap.habilidad && b.cap.habilidad.id === 'trapo' && b.cap.barco === b ? 1.6 : 1; // sin viento solo cuenta la habilidad
-  const rel = Math.abs(difAng(b.a, v.a)) * 180 / Math.PI;
+  const rel = Math.abs(difAng(b.a, vientoEn(j, b.x, b.y))) * 180 / Math.PI;
   const tabla = VIENTO.rinde[b.diseno.velas] || VIENTO.rinde.mixtas;
   const i = Math.min(3, Math.floor(rel / 45)), f = (rel - i * 45) / 45;
   let r = tabla[i] + (tabla[i + 1] - tabla[i]) * f;
@@ -109,7 +121,7 @@ export function agregarCapitan(j, { id, nombre, diseno, oro = 0, equipo }) {
     id, nombre: nombre || 'Capitán', barco, equipo: equipo || diseno.faccion,
     oroBodega: 0, oroPuerto: oro, escoltasMax: ESCOLTAS_INICIALES,
     stats: { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 },
-    proxTritones: azar.rango(25, 45), cdAbordaje: 0, gancho: null, ordenFlota: 'formacion',
+    proxTritones: azar.rango(25, 45), cdAbordaje: 0, gancho: null, ordenFlota: 'formacion', formacion: 0,
     avisos: [], sacudon: 0, fin: false, finEn: 0,
     cdHabilidad: 0, habilidad: null, // habilidad en uso: { id, t (segundos que le quedan) }
   };
@@ -133,7 +145,7 @@ export function crearPartida(mundo, diseno, oroInicial, reglas) {
   const j = crearMar(mundo, { reglas });
   j.yo = agregarCapitan(j, { id: 'yo', nombre: 'Tu barco', diseno, oro: oroInicial });
   Object.defineProperty(j, 'jugador', { get: () => j.yo.barco, enumerable: true });
-  for (const k of ['oroBodega', 'oroPuerto', 'escoltasMax', 'stats', 'cdAbordaje', 'gancho', 'ordenFlota', 'avisos', 'sacudon', 'fin', 'finEn', 'cdHabilidad', 'habilidad']) {
+  for (const k of ['oroBodega', 'oroPuerto', 'escoltasMax', 'stats', 'cdAbordaje', 'gancho', 'ordenFlota', 'formacion', 'avisos', 'sacudon', 'fin', 'finEn', 'cdHabilidad', 'habilidad']) {
     Object.defineProperty(j, k, { get: () => j.yo[k], set: (v) => { j.yo[k] = v; }, enumerable: true });
   }
   return j;
@@ -402,6 +414,10 @@ function controlarCapitan(j, cap, e) {
   if (e.ordenFlota) {
     cap.ordenFlota = cap.ordenFlota === 'formacion' ? 'ataque' : 'formacion';
     aviso(cap, cap.ordenFlota === 'ataque' ? 'Flota: ¡al ataque!' : 'Flota: en formación, a tu lado', 'info');
+  }
+  if (e.formacion) { // cambia cómo se ordenan los barcos de tu flota alrededor del tuyo
+    cap.formacion = ((cap.formacion || 0) + 1) % FORMACIONES.length;
+    aviso(cap, FORMACIONES[cap.formacion].aviso, 'info');
   }
 }
 
@@ -945,6 +961,15 @@ function fuegoOportunista(j, b) {
   if (Math.abs(rel + Math.PI / 2) < 0.45) disparar(j, b, -1);
 }
 
+// Formaciones de la flota (los barcos que capturaste): dónde va cada uno respecto del tuyo. k = 0, 1, 2… es el número del barco;
+// lugar() devuelve [cuánto adelante (negativo = atrás), cuánto al costado (positivo = estribor)].
+export const FORMACIONES = [
+  { id: 'lado', nombre: 'A tu lado', aviso: 'Formación: a tu lado', lugar: (k) => [-25 - Math.floor(k / 2) * 95, (k % 2 ? 1 : -1) * 90] },
+  { id: 'linea', nombre: 'En línea', aviso: 'Formación: en línea, detrás tuyo', lugar: (k) => [-105 * (k + 1), 0] },
+  { id: 'cuna', nombre: 'En cuña', aviso: 'Formación: en cuña', lugar: (k) => [-70 * (Math.floor(k / 2) + 1), (k % 2 ? 1 : -1) * 85 * (Math.floor(k / 2) + 1)] },
+  { id: 'frente', nombre: 'En frente', aviso: 'Formación: en frente, abriendo paso', lugar: (k) => [110 + Math.floor(k / 2) * 40, (k % 2 ? 1 : -1) * (70 + Math.floor(k / 2) * 95)] },
+];
+
 function iaEscolta(j, b, dt) {
   if (b.hundiendo) return;
   if (bloqueado(j, b, dt)) return;
@@ -957,9 +982,8 @@ function iaEscolta(j, b, dt) {
     // en formación: a la par del jefe, una de cada lado
     const escoltas = j.barcos.filter((x) => x.cap === cap && x.bando === 'escolta' && !x.hundiendo);
     const k = escoltas.indexOf(b);
-    const fila = Math.floor(k / 2), costado = k % 2 ? 1 : -1;
     const ca = Math.cos(lider.a), sa = Math.sin(lider.a);
-    const atras = -25 - fila * 95, lateral = costado * 90;
+    const [atras, lateral] = FORMACIONES[cap.formacion || 0].lugar(k);
     const tx = lider.x + ca * atras - sa * lateral, ty = lider.y + sa * atras + ca * lateral;
     const d = Math.hypot(tx - b.x, ty - b.y);
     if (d > 40) timonHacia(b, Math.atan2(ty - b.y, tx - b.x));

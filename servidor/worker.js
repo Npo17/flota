@@ -146,6 +146,7 @@ export class Mar {
       if (m.g) e.abordar = true;
       if (m.r) e.ordenFlota = true;
       if (m.h) e.habilidad = true;
+      if (m.fm) e.formacion = true;
     } else if (m.t === 'puerto') {
       const ok = atracar(this.j, cap);
       if (ok) { c.entrada.objetivo = null; c.entrada.quieto = true; }
@@ -242,11 +243,11 @@ export class Mar {
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
       const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(viento ? { vi: viento, rc: rachas } : {}),
+        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}), // vf: las curvas del viento y cuántas veces cambió de rumbo
         ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
         yo: {
           hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],
-          b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota,
+          b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota, fo: cap.formacion || 0,
           rec: [+bq.recarga['-1'].toFixed(2), +bq.recarga['1'].toFixed(2)], recT: bq.recargaTotal ? [bq.recargaTotal['-1'] || 0, bq.recargaTotal['1'] || 0] : null,
           av: cap.avisos.map((a) => (a.p ? [a.texto, a.tipo, a.p] : [a.texto, a.tipo])), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,
         },

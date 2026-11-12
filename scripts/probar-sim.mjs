@@ -1,6 +1,6 @@
 // Prueba rápida de la simulación sin navegador: modo solo y varios capitanes. Uso: node scripts/probar-sim.mjs
 import { crearMundo } from '../src/mundo.js';
-import { crearPartida, crearMar, agregarCapitan, quitarCapitan, actualizar, avanzar, atracar, rindeViento } from '../src/juego.js';
+import { crearPartida, crearMar, agregarCapitan, quitarCapitan, actualizar, avanzar, atracar, rindeViento, vientoEn, FORMACIONES } from '../src/juego.js';
 import { MAPAS } from '../src/mapas.js';
 
 const diseno = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
@@ -115,7 +115,7 @@ for (const id of Object.keys(MAPAS)) {
 {
   const correr = (velas, rumbo, seg = 12) => {
     const j = crearPartida(crearMundo('malta'), { ...diseno, velas }, 100);
-    j.barcos = [j.jugador]; j.enemigosVivos = 0; j.viento.base = 0; j.viento.rafagas = []; j.viento.proxRacha = Infinity; // sin ráfagas ni rachas: se mide el viento parejo
+    j.barcos = [j.jugador]; j.enemigosVivos = 0; j.viento.base = 0; j.viento.baseMeta = 0; j.viento.rafagas = []; j.viento.curvo = false; j.viento.proxCambio = Infinity; // sin ráfagas, curvas ni cambios: se mide el viento parejo
     const yo = j.jugador; yo.x = 3200; yo.y = 5600; yo.a = rumbo;
     const x0 = yo.x, y0 = yo.y;
     for (let i = 0; i < 60 * seg; i++) { j.t = 0; actualizar(j, 1 / 60, { objetivo: { x: yo.x + Math.cos(rumbo) * 500, y: yo.y + Math.sin(rumbo) * 500 }, velas: 3 }); }
@@ -205,18 +205,41 @@ for (const id of Object.keys(MAPAS)) {
   const j = crearPartida(crearMundo('malta'), { ...diseno, habilidad: 'andanada' }, 5000), yo = j.jugador;
   j.barcos = [yo]; j.enemigosVivos = 0;
   // una racha a favor empuja aunque el viento general esté de proa; en contra no
-  j.viento.a = Math.PI; j.viento.rafagas = []; yo.a = 0;
+  j.viento.a = Math.PI; j.viento.rafagas = []; j.viento.curvo = false; yo.a = 0;
   const contra = rindeViento(j, yo);
   j.viento.rachas = [{ x: yo.x, y: yo.y, r: 200, a: 0.3, t: 5 }];
   ok(contra < 0.85 && rindeViento(j, yo) > 1.4, 'racha: no empuja con viento en contra');
   j.viento.rachas = [{ x: yo.x, y: yo.y, r: 200, a: Math.PI, t: 5 }];
   ok(rindeViento(j, yo) === contra, 'racha: empuja aunque sople para el otro lado');
-  j.viento.rachas = []; j.viento.proxRacha = 0;
+  // las rachas ya no se crean solas (se sacó el círculo con flechitas): solo queda la brisa que se mueve
+  j.viento.rachas = [];
   yo.x = 800; yo.y = 5600;
-  actualizar(j, 1 / 60, {});
-  ok(j.viento.rachas.length === 1 && Math.hypot(j.viento.rachas[0].x - yo.x, j.viento.rachas[0].y - yo.y) < 600, 'racha: no apareció cerca del capitán');
-  for (let i = 0; i < 60 * 7; i++) { j.viento.proxRacha = 99; actualizar(j, 1 / 60, {}); }
-  ok(j.viento.rachas.length === 0, 'racha: no se apagó a los 6 segundos');
+  for (let i = 0; i < 60 * 20; i++) actualizar(j, 1 / 60, {});
+  ok(j.viento.rachas.length === 0, 'racha: se siguen creando rachas');
+  // viento curvo: no sopla igual en todo el mar, y la diferencia nunca pasa de lo configurado
+  {
+    const k = crearPartida(crearMundo('malta'), diseno, 100), v = k.viento;
+    ok(v.curvo, 'viento: una partida nueva no tiene el viento curvo');
+    let menor = Infinity, mayor = -Infinity;
+    for (let x = 0; x < k.mundo.ancho; x += 300) for (let y = 0; y < k.mundo.alto; y += 300) { const d = vientoEn(k, x, y) - v.a; menor = Math.min(menor, d); mayor = Math.max(mayor, d); }
+    ok(mayor - menor > 0.8 && mayor < 1.0 && menor > -1.0, `viento: curva fuera de lo esperado (${menor.toFixed(2)} a ${mayor.toFixed(2)})`);
+    // cambio de rumbo: se anuncia una vez, y en unos segundos el viento queda soplando casi al revés
+    const antes = v.base; v.proxCambio = 0.01;
+    let anunciado = false;
+    for (let i = 0; i < 60 * 14; i++) { actualizar(k, 1 / 60, {}); anunciado = anunciado || k.avisos.some((q) => q.texto === '¡El viento cambió de rumbo!'); }
+    const giro = Math.abs(Math.atan2(Math.sin(v.base - antes), Math.cos(v.base - antes)));
+    ok(v.cambios === 1 && giro > 2.3, `viento: no cambió de rumbo (cambios ${v.cambios}, giro ${giro.toFixed(2)})`);
+    ok(anunciado, 'viento: el cambio de rumbo no se anunció');
+  }
+  // formaciones: la orden las recorre todas y vuelve a la primera; cada una pone a los barcos en lugares distintos
+  {
+    const k = crearPartida(crearMundo('malta'), diseno, 100);
+    const vistas = new Set([k.formacion]);
+    for (let i = 0; i < FORMACIONES.length; i++) { actualizar(k, 1 / 60, { formacion: true }); vistas.add(k.formacion); }
+    ok(vistas.size === FORMACIONES.length && k.formacion === 0, `formaciones: no las recorre todas (${[...vistas]})`);
+    const lugares = new Set(FORMACIONES.map((f) => [0, 1, 2].map((n) => f.lugar(n).join(',')).join(' ')));
+    ok(lugares.size === FORMACIONES.length, 'formaciones: dos formaciones ponen los barcos en el mismo lugar');
+  }
   // habilidades
   yo.recarga['1'] = 3; yo.recarga['-1'] = 3;
   actualizar(j, 1 / 60, { habilidad: true });

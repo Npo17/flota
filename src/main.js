@@ -3,7 +3,7 @@ import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO
 import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
-import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeViento, difAng } from './juego.js';
+import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeViento, difAng, vientoEn, FORMACIONES } from './juego.js';
 import { catalogoPuerto, comprar } from './puerto.js';
 import { conectar, estadoDelMar, salasPublicas } from './red.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
@@ -185,6 +185,7 @@ pintarMapa();
 
 function empezar() {
   estado = 'mar';
+  tesoroDist0 = 0; vientoCambios = -1; enBrisa = false; $('hud-tesoro').classList.add('oculto'); $('hud-cartel').classList.add('oculto');
   // el sonido de cada evento; para un cañonazo se busca qué barco disparó (el más cercano al fogonazo): según su casco y su munición suena distinto
   partida.alEfecto = (ev) => {
     let de = null;
@@ -427,6 +428,8 @@ function reaparecer() {
 }
 
 $('fin-volver').onclick = reaparecer;
+$('hud-orden').onclick = () => { pulsos.ordenFlota = true; };
+$('hud-formacion').onclick = () => { pulsos.formacion = true; };
 $('fin-otra').onclick = () => volverAlAstillero();
 
 // ---------- Entrada ----------
@@ -453,6 +456,7 @@ addEventListener('keydown', (e) => {
   if (k === 's' || k === 'arrowdown') cambiarVelas(-1);
   if (k === 'f') pulsos.abordar = true;
   if (k === 'g') pulsos.ordenFlota = true;
+  if (k === 'h') pulsos.formacion = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
   if (k === 'tab') e.preventDefault();
 });
@@ -502,6 +506,14 @@ function pintarHud() {
   $('hud-velas').textContent = '▰'.repeat(b.velas) + '▱'.repeat(3 - b.velas);
   const esc = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo).length;
   $('hud-flota').textContent = `${t('{a} de {b}', { a: esc, b: j.escoltasMax })} · ${t(j.ordenFlota === 'ataque' ? 'al ataque' : 'en formación')}`;
+  // con barcos capturados aparecen los dos botones de órdenes
+  $('hud-flota-botones').classList.toggle('oculto', esc === 0);
+  if (esc > 0) {
+    const orden = `${t(j.ordenFlota === 'ataque' ? 'Atacar' : 'Seguirme')} (G)`, forma = `${t(FORMACIONES[j.formacion || 0].nombre)} (H)`;
+    if ($('hud-orden').textContent !== orden) $('hud-orden').textContent = orden;
+    if ($('hud-formacion').textContent !== forma) $('hud-formacion').textContent = forma;
+  }
+  pintarEventos(j, b);
   $('hud-bodega').textContent = j.oroBodega;
   $('hud-puerto').textContent = j.oroPuerto;
   $('hud-hundidos').textContent = j.stats.hundidos;
@@ -541,12 +553,44 @@ function pintarHud() {
   if ($('pista').textContent !== pista) $('pista').textContent = pista;
 }
 
+// Lo que pasa en el mar y hay que avisar: el galeón del tesoro (cartel con el tiempo que le queda), el viento que cambia
+// de rumbo (cartel grande) y la brisa que agarra tu barco (solo sonido).
+let tesoroDist0 = 0, tesoroVel = 0, vientoCambios = -1, enBrisa = false, relojCartel = null;
+function cartel(texto) {
+  const c = $('hud-cartel');
+  c.textContent = texto;
+  c.classList.remove('oculto'); c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
+  clearTimeout(relojCartel); relojCartel = setTimeout(() => c.classList.add('oculto'), 3600);
+}
+function pintarEventos(j, b) {
+  // el galeón del tesoro: va de mar adentro al puerto; la barra muestra cuánto camino le queda
+  const galeon = j.barcos.find((x) => x.convoy && !x.hundiendo && x.bando === 'enemigo');
+  $('hud-tesoro').classList.toggle('oculto', !galeon);
+  if (galeon) {
+    const p = j.mundo.puerto, falta = Math.max(0, Math.hypot(galeon.x - p.x, galeon.y - p.y) - p.radio - 470);
+    if (!tesoroDist0) { tesoroDist0 = Math.max(falta, 1); tesoroVel = 60; sonido.tesoro(); }
+    tesoroVel += (Math.max(25, Math.abs(galeon.v || 0)) - tesoroVel) * 0.05;
+    const seg = Math.round(falta / tesoroVel);
+    $('hud-tesoro-barra').style.width = Math.max(0, Math.min(100, 100 * falta / tesoroDist0)) + '%';
+    const txt = t('Llega al puerto en {t}', { t: `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}` });
+    if ($('hud-tesoro-txt').textContent !== txt) $('hud-tesoro-txt').textContent = txt;
+  } else tesoroDist0 = 0;
+  // el viento cambió de rumbo
+  const cambios = j.viento ? j.viento.cambios || 0 : 0;
+  if (vientoCambios >= 0 && cambios > vientoCambios) { cartel(t('El viento cambió')); sonido.vientoCambio(); }
+  vientoCambios = cambios;
+  // agarraste una brisa
+  if (b.enRafaga && !enBrisa) sonido.brisa();
+  enBrisa = !!b.enRafaga;
+}
+
 // Brújula del viento: la flecha dorada apunta hacia donde sopla; el triángulo es tu barco
 function pintarViento(j, b) {
   const v = j.viento;
   $('hud-viento-fila').classList.toggle('oculto', !v);
   if (!v) return;
-  const rinde = rindeViento(j, b), rel = Math.abs(difAng(b.a, v.a)) * 180 / Math.PI;
+  const aca = vientoEn(j, b.x, b.y); // el viento donde está tu barco (cambia de una zona a otra)
+  const rinde = rindeViento(j, b), rel = Math.abs(difAng(b.a, aca)) * 180 / Math.PI;
   const nombre = rel < 30 ? 'Viento de popa' : rel < 75 ? 'Viento de aleta' : rel < 110 ? 'Viento de través' : rel < 155 ? 'Ciñendo' : 'Viento de proa';
   const pct = Math.round((rinde - 1) * 100);
   const txt = $('hud-viento-txt');
@@ -556,7 +600,7 @@ function pintarViento(j, b) {
   x.clearRect(0, 0, c.width, c.height);
   x.strokeStyle = 'rgba(255,255,255,0.4)'; x.lineWidth = 1.5;
   x.beginPath(); x.arc(R, R, R - 2, 0, Math.PI * 2); x.stroke();
-  x.save(); x.translate(R, R); x.rotate(v.a);
+  x.save(); x.translate(R, R); x.rotate(aca);
   x.strokeStyle = '#ffd166'; x.fillStyle = '#ffd166'; x.lineWidth = 3; x.lineCap = 'round';
   x.beginPath(); x.moveTo(-R + 6, 0); x.lineTo(R - 12, 0); x.stroke();
   x.beginPath(); x.moveTo(R - 3, 0); x.lineTo(R - 13, -6); x.lineTo(R - 13, 6); x.closePath(); x.fill();

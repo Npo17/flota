@@ -2,7 +2,7 @@
 import { hash2 } from './rng.js';
 import { FACCIONES } from './config.js';
 import { dibujarBandera } from './banderas.js';
-import { candidatoAbordaje, difAng, equipoDe } from './juego.js';
+import { candidatoAbordaje, difAng, equipoDe, vientoEn } from './juego.js';
 import { t as tx } from './idioma.js';
 import { pintarBritanico } from './arte-britanico.js';
 import { pintarVikingo } from './arte-vikingo.js';
@@ -477,6 +477,7 @@ function dibujarViento(ctx, j, x0, y0, vw, vh) {
     for (let gy = Math.floor((y0 - RECORRIDO) / C); gy <= Math.floor((y0 + vh + RECORRIDO) / C); gy++) {
       const h = hash2(gx + 7, gy - 3), h2 = hash2(gy + 31, gx + 57);
       const fase = (j.t * 0.35 + h * 7) % 1;
+      const al = vientoEn(j, gx * C, gy * C), cx = Math.cos(al), cy = Math.sin(al); // cada trazo sigue el viento de su zona: se ven las curvas
       const px = gx * C + h2 * C + cx * (fase - 0.5) * RECORRIDO, py = gy * C + h * C + cy * (fase - 0.5) * RECORRIDO;
       if (px < x0 - 70 || px > x0 + vw + 70 || py < y0 - 70 || py > y0 + vh + 70) continue;
       let enRafaga = false;

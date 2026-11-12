@@ -54,6 +54,22 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 .aviso.malo { border-color: #e5484d; }
 #pista { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(255, 236, 170, 0.92); color: #2a1c08; font-weight: 700; padding: 8px 16px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
 #pista:empty { display: none; }
+/* El evento del tesoro: cartel arriba con el tiempo que le queda al galeón para llegar al puerto */
+#hud-tesoro { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(380px, 46vw); padding: 8px 14px 10px; border-radius: 12px; text-align: center;
+  background: rgba(40, 28, 6, 0.86); border: 2px solid #e2b93b; color: #ffe9a8; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+#hud-tesoro b { display: block; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; }
+#hud-tesoro .barra { height: 9px; margin: 6px 0 4px; background: rgba(0, 0, 0, 0.45); }
+#hud-tesoro .barra i { background: linear-gradient(90deg, #ffd166, #e2a23b); }
+#hud-tesoro span { font-size: 12px; font-weight: 700; }
+#hud-tesoro:not(.oculto) ~ #avisos { top: 92px; }
+/* Cartel grande y breve en el medio (el viento cambió) */
+#hud-cartel { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); padding: 12px 30px; border-radius: 12px; font-size: clamp(20px, 3vw, 34px); font-weight: 900; letter-spacing: 3px;
+  text-transform: uppercase; color: #fff; background: rgba(8, 30, 48, 0.78); border: 2px solid rgba(255, 255, 255, 0.55); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); animation: cartel 3.6s ease both; }
+@keyframes cartel { 0% { opacity: 0; transform: translateX(-50%) scale(0.92); } 10%, 78% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) scale(1.03); } }
+/* Órdenes a la flota: dos botones en el panel, con su tecla */
+#hud-flota-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; pointer-events: auto; }
+#hud-flota-botones button { font: inherit; font-size: 12px; font-weight: 800; padding: 6px 4px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.10); color: inherit; cursor: pointer; }
+#hud-flota-botones button:hover { background: rgba(255, 209, 102, 0.28); }
 
 /* Pantallas */
 .pantalla { position: fixed; inset: 0; background: var(--velo); display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }

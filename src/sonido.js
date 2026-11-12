@@ -195,6 +195,51 @@ const CARGA = {
   metralla: { tono: 1.22, peso: 0.82, cola: 0.60, chasquido: 1.5, rasgado: 1, eco: 0.20 },
   pesada: { tono: 0.80, peso: 1.22, cola: 1.45, chasquido: 0.8, rasgado: 0, eco: 0.48 },
 };
+// ---------- Avisos del mar ----------
+// La brisa que agarra tu barco: un soplo que crece y la lona que se hincha de golpe (un golpe sordo de tela).
+export function brisa() {
+  if (!ctx || ctx.state !== 'running' || modoActual !== 'mar') return;
+  const ahora = ctx.currentTime;
+  const r = ctx.createBufferSource(); r.buffer = bufBlanco; r.playbackRate.value = 0.9;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.1;
+  f.frequency.setValueAtTime(350, ahora); f.frequency.exponentialRampToValueAtTime(1500, ahora + 0.55); f.frequency.exponentialRampToValueAtTime(700, ahora + 1.3);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ahora); g.gain.exponentialRampToValueAtTime(0.34, ahora + 0.5); g.gain.exponentialRampToValueAtTime(0.001, ahora + 1.4);
+  r.connect(f); f.connect(g); g.connect(gSonido); r.start(ahora, Math.random() * 1.5, 1.5);
+  // la vela que se hincha
+  const t = ctx.createBufferSource(); t.buffer = bufMarron; t.playbackRate.value = 2.2;
+  const ft = ctx.createBiquadFilter(); ft.type = 'lowpass'; ft.frequency.value = 520;
+  const gt = ctx.createGain(); gt.gain.setValueAtTime(0.0001, ahora + 0.42); gt.gain.exponentialRampToValueAtTime(0.9, ahora + 0.46); gt.gain.exponentialRampToValueAtTime(0.001, ahora + 0.75);
+  t.connect(ft); ft.connect(gt); gt.connect(gSonido); t.start(ahora + 0.4, Math.random() * 2, 0.5);
+}
+function campana(cuando, nivel, base) { // la campana de a bordo: una nota clara con sus armónicos de bronce, que queda sonando
+  const fin = ctx.createGain(); fin.gain.value = nivel; fin.connect(gSonido);
+  for (const [mult, peso, dura] of [[1, 1, 1.9], [2.0, 0.55, 1.4], [2.76, 0.38, 1.0], [4.07, 0.22, 0.7], [5.4, 0.12, 0.45]]) {
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = base * mult;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(peso, cuando + 0.004); g.gain.exponentialRampToValueAtTime(0.0006, cuando + dura);
+    o.connect(g); g.connect(fin); o.start(cuando); o.stop(cuando + dura + 0.05);
+  }
+}
+// Sale el galeón del tesoro: la campana de a bordo, dos toques dobles, como cuando el vigía canta una vela.
+export function tesoro() {
+  if (!ctx || ctx.state !== 'running') return;
+  const ahora = ctx.currentTime + 0.05;
+  for (const [cuando, nivel] of [[0, 0.30], [0.22, 0.26], [0.75, 0.30], [0.97, 0.26]]) campana(ahora + cuando, nivel, 880);
+}
+// El viento cambia de rumbo: una ráfaga larga que barre de un oído al otro y un toque grave de campana.
+export function vientoCambio() {
+  if (!ctx || ctx.state !== 'running') return;
+  const ahora = ctx.currentTime;
+  const r = ctx.createBufferSource(); r.buffer = bufBlanco; r.playbackRate.value = 0.8;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+  f.frequency.setValueAtTime(300, ahora); f.frequency.exponentialRampToValueAtTime(1300, ahora + 1.1); f.frequency.exponentialRampToValueAtTime(380, ahora + 2.6);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ahora); g.gain.exponentialRampToValueAtTime(0.5, ahora + 0.9); g.gain.exponentialRampToValueAtTime(0.001, ahora + 2.8);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  r.connect(f); f.connect(g);
+  if (pan) { pan.pan.setValueAtTime(-0.8, ahora); pan.pan.linearRampToValueAtTime(0.8, ahora + 2.6); g.connect(pan); pan.connect(gSonido); } else g.connect(gSonido);
+  r.start(ahora, Math.random() * 0.5, 2.9);
+  campana(ahora + 0.15, 0.22, 440);
+}
+
 // ---------- Abordaje ----------
 // Tres momentos: la soga que sale (un silbido de aire y el cabo desenrollándose), el gancho que muerde la borda (golpe de madera
 // y hierro) y la pelea entre las dos tripulaciones mientras dure: choques de sables, golpes en la madera, gritos y el tumulto de fondo.
@@ -496,6 +541,7 @@ export async function probar() {
   for (const [nombre, f] of [['remolinoLejos', 0.3], ['remolinoBorde', 0.6], ['remolinoCentro', 1]]) r[nombre] = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; gRemolino.gain.value = 0.12 * f + 1.6 * f * f * f; filtroRemolino.frequency.value = 200 + 620 * f * f; for (const o of giroRemolino) o.frequency.value = 0.55 + 2.6 * f * f; });
   r.gancho = await medir(1, () => { modoActual = 'mar'; estallido(0.05, 0.55, 0, { grave: 170, cola: 0.16, brillo: 1100 }); metal(0.06, 0.30, 0, 900, 0.22); });
   r.pelea = await medir(3, () => { modoActual = 'mar'; gPelea.gain.value = 1; if (grab.gritos.length) { gTumulto.gain.value = 0; const f = ctx.createBufferSource(); f.buffer = grab.gritos[0]; const g = ctx.createGain(); g.gain.value = 0.85; f.connect(g); g.connect(gPelea); f.start(0, 2); } for (let i = 0; i < 12; i++) { if (grab.espadas.length) { if (i % 2 === 0) espada(0.1 + i * 0.22, 0.45, 0); } else { metal(0.1 + i * 0.22, 0.27, 0, 1500 + i * 110, 0.2); if (i % 3 === 0) grito(0.2 + i * 0.22, 0.26, 0); } } });
+  r.campana = await medir(2, () => { modoActual = 'mar'; campana(0.05, 0.30, 880); });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });
   r.silencio = await medir(2, () => { modoActual = 'nada'; });
   [gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
