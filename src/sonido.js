@@ -18,7 +18,7 @@ let sonando = 0; // cañonazos que suenan ahora (para no apilar cien en una anda
 
 export const volumen = (cual) => vol[cual];
 export const estado = () => (ctx ? ctx.state : 'sin arrancar'); // para probar
-export const conGrabacion = () => !!bufCanon; // para probar: si ya cargó la grabación del cañón
+export const grabaciones = () => ({ canones: grab.canones.length, gritos: grab.gritos.length, espadas: grab.espadas.length }); // para probar: cuántas cargaron
 export function ponerVolumen(cual, v) {
   vol[cual] = Math.max(0, Math.min(1, v));
   try { localStorage.setItem(GUARDADO[cual], String(vol[cual])); } catch {}
@@ -101,7 +101,7 @@ function armar(c) {
   gPelea = c.createGain(); gPelea.gain.value = 0; gPelea.connect(gSonido);
   const tumulto = c.createBufferSource(); tumulto.buffer = bufMarron; tumulto.loop = true; tumulto.playbackRate.value = 1.9;
   const fTum = c.createBiquadFilter(); fTum.type = 'bandpass'; fTum.frequency.value = 520; fTum.Q.value = 0.9;
-  const gTum = c.createGain(); gTum.gain.value = 0.22;
+  const gTum = c.createGain(); gTum.gain.value = 0.22; gTumulto = gTum;
   const sube = c.createOscillator(); sube.frequency.value = 1.7; const gSube = c.createGain(); gSube.gain.value = 0.10;
   sube.connect(gSube); gSube.connect(gTum.gain);
   tumulto.connect(fTum); fTum.connect(gTum); gTum.connect(gPelea); tumulto.start(); sube.start();
@@ -198,7 +198,15 @@ const CARGA = {
 // ---------- Abordaje ----------
 // Tres momentos: la soga que sale (un silbido de aire y el cabo desenrollándose), el gancho que muerde la borda (golpe de madera
 // y hierro) y la pelea entre las dos tripulaciones mientras dure: choques de sables, golpes en la madera, gritos y el tumulto de fondo.
-let faseAbordaje = 'nada', relojPelea = null, gPelea = null;
+let faseAbordaje = 'nada', relojPelea = null, gPelea = null, gTumulto = null, fuenteGritos = null, gGritos = null;
+function espada(cuando, nivel, lado, velocidad) { // un choque de espadas grabado
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  const f = ctx.createBufferSource(); f.buffer = alAzar(grab.espadas); f.playbackRate.value = velocidad || 0.85 + Math.random() * 0.4;
+  const g = ctx.createGain(); g.gain.value = nivel;
+  f.connect(g);
+  if (pan) { pan.pan.value = lado; g.connect(pan); pan.connect(gPelea); } else g.connect(gPelea);
+  f.start(cuando);
+}
 function metal(cuando, nivel, lado, base, dura) { // hierro contra hierro: varias notas agudas que no afinan entre sí y se apagan rápido
   const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   const fin = ctx.createGain(); fin.gain.value = nivel;
@@ -240,6 +248,13 @@ function programarPelea() { // cada rato corto, uno o dos sonidos de la pelea, a
   if (!ctx || ctx.state !== 'running' || faseAbordaje !== 'pelea') return;
   const ahora = ctx.currentTime, lado = () => Math.random() * 1.2 - 0.6;
   const q = Math.random();
+  if (grab.espadas.length) { // con grabaciones: espadas de verdad, a ritmo desparejo (los gritos van aparte, de fondo)
+    if (q < 0.42) {
+      espada(ahora + 0.01, 0.30 + Math.random() * 0.30, lado());
+      if (Math.random() < 0.35) espada(ahora + 0.12 + Math.random() * 0.12, 0.25 + Math.random() * 0.2, lado());
+    } else if (q < 0.55) golpeSordo(ahora + 0.01, 0.22, lado());
+    return;
+  }
   if (q < 0.55) { // sables
     metal(ahora + 0.01, 0.20 + Math.random() * 0.14, lado(), 1500 + Math.random() * 1500, 0.14 + Math.random() * 0.16);
     if (Math.random() < 0.4) metal(ahora + 0.09 + Math.random() * 0.08, 0.16, lado(), 1700 + Math.random() * 1500, 0.12);
@@ -264,24 +279,38 @@ export function abordaje(fase) {
   if (fase === 'pelea') {
     if (antes === 'vuelo') { // el gancho muerde la borda
       estallido(ahora + 0.005, 0.55, 0, { grave: 170, cola: 0.16, brillo: 1100 });
-      metal(ahora + 0.012, 0.30, 0, 900, 0.22);
+      if (grab.espadas.length) espada(ahora + 0.012, 0.45, 0, 0.6); else metal(ahora + 0.012, 0.30, 0, 900, 0.22);
+    }
+    if (grab.gritos.length && !fuenteGritos) { // los gritos de las dos tripulaciones, grabados, de fondo y en bucle mientras dure la pelea
+      fuenteGritos = ctx.createBufferSource(); fuenteGritos.buffer = grab.gritos[0]; fuenteGritos.loop = true;
+      gGritos = ctx.createGain(); gGritos.gain.setValueAtTime(0, ahora); gGritos.gain.linearRampToValueAtTime(0.85, ahora + 0.5);
+      fuenteGritos.connect(gGritos); gGritos.connect(gPelea);
+      fuenteGritos.start(ahora, Math.random() * Math.max(0, grab.gritos[0].duration - 1));
+      if (gTumulto) gTumulto.gain.setTargetAtTime(0, ahora, 0.2); // el tumulto armado a mano no hace falta
     }
     gPelea.gain.setTargetAtTime(1, ahora, 0.25);
     clearInterval(relojPelea); relojPelea = setInterval(programarPelea, 170);
   } else {
     gPelea.gain.setTargetAtTime(0, ahora, 0.3);
     clearInterval(relojPelea); relojPelea = null;
+    if (fuenteGritos) { const f = fuenteGritos; fuenteGritos = null; gGritos.gain.setTargetAtTime(0, ahora, 0.35); try { f.stop(ahora + 1.8); } catch {} }
     if (antes === 'vuelo' && fase === 'nada') chasquido(ahora + 0.02, 0.22, 0, 2400, 0.25); // erró: el gancho cae al agua
   }
 }
 
-// La grabación del cañón (ver sonido/LEEME.md). Se baja una sola vez, cuando arranca el sonido.
-let bufCanon = null, pidiendoCanon = false;
-function cargarCanon() {
-  if (bufCanon || pidiendoCanon || !ctx || typeof fetch === 'undefined') return;
-  pidiendoCanon = true;
-  fetch(new URL('../sonido/canon.mp3', import.meta.url)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-    .then((datos) => ctx.decodeAudioData(datos)).then((b) => { bufCanon = b; }).catch(() => { pidiendoCanon = false; });
+// Las grabaciones (ver sonido/LEEME.md): cañonazos, gritos de combate y choques de espadas, todos de verdad.
+// Se bajan una sola vez, cuando arranca el sonido. Lo que no llegue a cargar se reemplaza por el sonido armado a mano.
+const GRABACIONES = { canones: ['canon-1.mp3', 'canon-2.mp3'], gritos: ['pelea-gritos.mp3'], espadas: ['espada-1.mp3', 'espada-2.mp3'] };
+const grab = { canones: [], gritos: [], espadas: [] };
+let pidiendoGrabaciones = false;
+const alAzar = (lista) => lista[Math.floor(Math.random() * lista.length)];
+function cargarGrabaciones() {
+  if (pidiendoGrabaciones || !ctx || typeof fetch === 'undefined') return;
+  pidiendoGrabaciones = true;
+  for (const [grupo, archivos] of Object.entries(GRABACIONES)) for (const archivo of archivos) {
+    fetch(new URL('../sonido/' + archivo, import.meta.url)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then((datos) => ctx.decodeAudioData(datos)).then((b) => { grab[grupo].push(b); }).catch(() => {});
+  }
 }
 let ronco = null;
 function canonazo(cuando, nivel, lado, cerca, casco, municion) {
@@ -300,7 +329,7 @@ function canonazo(cuando, nivel, lado, cerca, casco, municion) {
   if (cerca > 0.35) {
     const c = ctx.createBufferSource(); c.buffer = bufBlanco;
     const fc = ctx.createBiquadFilter(); fc.type = 'highpass'; fc.frequency.value = 1800;
-    const gc = ctx.createGain(); gc.gain.setValueAtTime(0.0001, cuando); gc.gain.exponentialRampToValueAtTime(0.75 * (cerca - 0.2) * carga.chasquido, cuando + 0.002); gc.gain.exponentialRampToValueAtTime(0.001, cuando + 0.055);
+    const gc = ctx.createGain(); gc.gain.setValueAtTime(0.0001, cuando); gc.gain.exponentialRampToValueAtTime(0.75 * (cerca - 0.2) * carga.chasquido * (grab.canones.length ? 0.3 : 1), cuando + 0.002); // la grabación ya trae su chasquido gc.gain.exponentialRampToValueAtTime(0.001, cuando + 0.055);
     c.connect(fc); fc.connect(gc); gc.connect(fin); c.start(cuando, Math.random() * 2, 0.08);
   }
   // la metralla: las bolitas salen rasgando el aire, un silbido áspero que baja enseguida
@@ -314,10 +343,11 @@ function canonazo(cuando, nivel, lado, cerca, casco, municion) {
   // Con la grabación de un cañón de verdad cargada (sonido/canon.mp3), el estampido es esa grabación: más lenta y grave en las
   // piezas grandes, más rápida en las chicas; apagada por la distancia; y con su eco. El chasquido y el silbido de la metralla
   // de arriba se le suman, porque la grabación es puro grave. Si no cargó (sin red, navegador viejo), sigue el estampido armado a mano.
+  const bufCanon = grab.canones.length ? alAzar(grab.canones) : null; // hay dos disparos grabados: no suena siempre el mismo
   if (bufCanon) {
     const g = ctx.createBufferSource(); g.buffer = bufCanon; g.playbackRate.value = Math.pow(tono, 0.65);
     const fg = ctx.createBiquadFilter(); fg.type = 'lowpass'; fg.frequency.value = 500 + 9000 * cerca * cerca;
-    const gg = ctx.createGain(); gg.gain.value = 1.25;
+    const gg = ctx.createGain(); gg.gain.value = 1.15;
     g.connect(fg); fg.connect(gg); gg.connect(fin); g.start(cuando);
     const vuelve = ctx.createDelay(1.0); vuelve.delayTime.value = 0.33 + Math.random() * 0.12;
     const fv = ctx.createBiquadFilter(); fv.type = 'lowpass'; fv.frequency.value = 380;
@@ -429,7 +459,7 @@ export function ambiente(modo, viento = 0, remolino = 0) {
 function despertar() {
   try {
     if (!ctx) armar(new (window.AudioContext || window.webkitAudioContext)());
-    cargarCanon();
+    cargarGrabaciones();
     if (ctx.state === 'suspended') ctx.resume().then(() => { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); });
     else { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); }
   } catch {} // sin audio en este navegador: el juego sigue igual, mudo
@@ -444,7 +474,7 @@ if (typeof window !== 'undefined') {
 
 // Para probar sin parlantes: arma todo en un contexto que no suena, toca unos segundos de cada cosa y devuelve cuánto se oyó.
 export async function probar() {
-  const guardado = [gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
+  const guardado = [gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
   const medir = async (segundos, preparar) => {
     const c = new OfflineAudioContext(2, 44100 * segundos, 44100);
     armar(c); relojMusica = null; proximoCompas = 0; compas = 0; ultimoAjuste = -1;
@@ -465,10 +495,10 @@ export async function probar() {
   r.andanada = await medir(4, () => { modoActual = 'mar'; for (let i = 0; i < 9; i++) canonazo(0.1 + i * 0.04, 0.62, 0, 0.95); });
   for (const [nombre, f] of [['remolinoLejos', 0.3], ['remolinoBorde', 0.6], ['remolinoCentro', 1]]) r[nombre] = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; gRemolino.gain.value = 0.12 * f + 1.6 * f * f * f; filtroRemolino.frequency.value = 200 + 620 * f * f; for (const o of giroRemolino) o.frequency.value = 0.55 + 2.6 * f * f; });
   r.gancho = await medir(1, () => { modoActual = 'mar'; estallido(0.05, 0.55, 0, { grave: 170, cola: 0.16, brillo: 1100 }); metal(0.06, 0.30, 0, 900, 0.22); });
-  r.pelea = await medir(3, () => { modoActual = 'mar'; gPelea.gain.value = 1; for (let i = 0; i < 12; i++) { metal(0.1 + i * 0.22, 0.27, 0, 1500 + i * 110, 0.2); if (i % 3 === 0) grito(0.2 + i * 0.22, 0.26, 0); if (i % 4 === 1) golpeSordo(0.15 + i * 0.22, 0.22, 0); } });
+  r.pelea = await medir(3, () => { modoActual = 'mar'; gPelea.gain.value = 1; if (grab.gritos.length) { gTumulto.gain.value = 0; const f = ctx.createBufferSource(); f.buffer = grab.gritos[0]; const g = ctx.createGain(); g.gain.value = 0.85; f.connect(g); g.connect(gPelea); f.start(0, 2); } for (let i = 0; i < 12; i++) { if (grab.espadas.length) { if (i % 2 === 0) espada(0.1 + i * 0.22, 0.45, 0); } else { metal(0.1 + i * 0.22, 0.27, 0, 1500 + i * 110, 0.2); if (i % 3 === 0) grito(0.2 + i * 0.22, 0.26, 0); } } });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });
   r.silencio = await medir(2, () => { modoActual = 'nada'; });
-  [gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
+  [gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
   ultimoAjuste = 0;
   return r;
 }
