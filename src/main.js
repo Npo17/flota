@@ -603,7 +603,7 @@ function cuadro(ahora) {
     if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
   }
   // sonido: en el astillero, la música; en el mar, las olas y el viento (más fuerte dentro de una ráfaga y con el barco lanzado)
-  if (estado === 'astillero' || !partida) sonido.ambiente('lobby');
+  if (estado === 'astillero' || !partida) { sonido.ambiente('lobby'); sonido.abordaje('nada'); }
   else {
     const yo = partida.jugador;
     const sopla = partida.viento ? 0.38 + (yo && yo.enRafaga ? 0.45 : 0) : 0.10;
@@ -613,6 +613,10 @@ function cuadro(ahora) {
       const alcance = w.radio * 1.6, d = Math.hypot(w.x - yo.x, w.y - yo.y);
       if (d < alcance) remolino = Math.max(remolino, 1 - d / alcance);
     }
+    // abordaje: la soga en el aire, y la pelea mientras estés enganchado (o te tengan enganchado a vos)
+    const g = estado === 'mar' && !partida.fin ? partida.gancho : null;
+    const meAbordan = estado === 'mar' && !partida.fin && (partida.meAbordan || (partida.capitanes || []).some((c) => c.gancho && c.gancho.fase === 'enganchado' && c.gancho.obj === yo && c.barco !== yo));
+    sonido.abordaje((g && g.fase === 'enganchado') || meAbordan ? 'pelea' : g ? 'vuelo' : 'nada');
     sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino);
   }
 }

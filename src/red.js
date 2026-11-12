@@ -141,6 +141,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     j.cofres = m.c.map(([id, x, yy]) => ({ id, x, y: yy }));
     j.tritones = m.tr.map(([x, yy, a100]) => ({ x, y: yy, a: a100 / 100, t: j.t }));
     const g = m.g.find((q) => q[0] === miId);
+    j.meAbordan = !!(yo.barco && m.g.some((q) => q[0] !== miId && q[1] && q[4] === yo.barco.id)); // otro capitán me tiene enganchado (para el sonido)
     j.gancho = g ? { fase: g[1] ? 'enganchado' : 'vuelo', x: g[2], y: g[3], obj: porId.get(g[4]) || null } : null;
     if (j.gancho && j.gancho.fase === 'enganchado' && !j.gancho.obj) j.gancho = null;
 

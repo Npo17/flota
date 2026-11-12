@@ -97,6 +97,15 @@ function armar(c) {
     giroRemolino.push(o);
   }
 
+  // --- La pelea de un abordaje: el tumulto de fondo (voces y pasos sobre la cubierta, todo junto); los golpes sueltos se le suman ---
+  gPelea = c.createGain(); gPelea.gain.value = 0; gPelea.connect(gSonido);
+  const tumulto = c.createBufferSource(); tumulto.buffer = bufMarron; tumulto.loop = true; tumulto.playbackRate.value = 1.9;
+  const fTum = c.createBiquadFilter(); fTum.type = 'bandpass'; fTum.frequency.value = 520; fTum.Q.value = 0.9;
+  const gTum = c.createGain(); gTum.gain.value = 0.22;
+  const sube = c.createOscillator(); sube.frequency.value = 1.7; const gSube = c.createGain(); gSube.gain.value = 0.10;
+  sube.connect(gSube); gSube.connect(gTum.gain);
+  tumulto.connect(fTum); fTum.connect(gTum); gTum.connect(gPelea); tumulto.start(); sube.start();
+
   // --- La música: pasa por un eco suave ---
   gMusicaModo = c.createGain(); gMusicaModo.gain.value = 0; gMusicaModo.connect(gMusica);
   eco = c.createDelay(1.5); eco.delayTime.value = 0.42;
@@ -186,6 +195,86 @@ const CARGA = {
   metralla: { tono: 1.22, peso: 0.82, cola: 0.60, chasquido: 1.5, rasgado: 1, eco: 0.20 },
   pesada: { tono: 0.80, peso: 1.22, cola: 1.45, chasquido: 0.8, rasgado: 0, eco: 0.48 },
 };
+// ---------- Abordaje ----------
+// Tres momentos: la soga que sale (un silbido de aire y el cabo desenrollándose), el gancho que muerde la borda (golpe de madera
+// y hierro) y la pelea entre las dos tripulaciones mientras dure: choques de sables, golpes en la madera, gritos y el tumulto de fondo.
+let faseAbordaje = 'nada', relojPelea = null, gPelea = null;
+function metal(cuando, nivel, lado, base, dura) { // hierro contra hierro: varias notas agudas que no afinan entre sí y se apagan rápido
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  const fin = ctx.createGain(); fin.gain.value = nivel;
+  if (pan) { pan.pan.value = lado; fin.connect(pan); pan.connect(gPelea || gSonido); } else fin.connect(gPelea || gSonido);
+  for (const [mult, peso] of [[1, 1], [1.47, 0.7], [2.09, 0.5], [2.83, 0.35], [3.91, 0.2]]) {
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = base * mult * (0.985 + Math.random() * 0.03);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(peso, cuando + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, cuando + dura * (0.5 + 0.5 / mult));
+    o.connect(g); g.connect(fin); o.start(cuando); o.stop(cuando + dura + 0.02);
+  }
+  const r = ctx.createBufferSource(); r.buffer = bufBlanco; // el raspón del filo
+  const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3500;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(0.5, cuando + 0.002); g.gain.exponentialRampToValueAtTime(0.001, cuando + 0.05);
+  r.connect(f); f.connect(g); g.connect(fin); r.start(cuando, Math.random() * 2, 0.07);
+}
+function grito(cuando, nivel, lado) { // una voz de hombre, corta: un tono grave que sube o baja, pasado por dos resonancias como una vocal
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  const fin = ctx.createGain(); fin.gain.value = nivel;
+  if (pan) { pan.pan.value = lado; fin.connect(pan); pan.connect(gPelea); } else fin.connect(gPelea);
+  const dura = 0.18 + Math.random() * 0.22, tono = 105 + Math.random() * 70;
+  const o = ctx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(tono, cuando); o.frequency.linearRampToValueAtTime(tono * (Math.random() < 0.5 ? 1.35 : 0.75), cuando + dura);
+  const aspero = ctx.createBufferSource(); aspero.buffer = bufBlanco;
+  const ga = ctx.createGain(); ga.gain.value = 0.25;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(1, cuando + 0.03); g.gain.exponentialRampToValueAtTime(0.001, cuando + dura);
+  const vocal = [[700, 1150], [550, 900], [450, 1500]][Math.floor(Math.random() * 3)];
+  aspero.connect(ga);
+  for (const hz of vocal) {
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = hz; f.Q.value = 6;
+    o.connect(f); ga.connect(f); f.connect(g);
+  }
+  g.connect(fin); o.start(cuando); o.stop(cuando + dura + 0.02); aspero.start(cuando, Math.random() * 2, dura + 0.02);
+}
+function golpeSordo(cuando, nivel, lado) { // un golpe en la cubierta
+  const viejo = gSonido; gSonido = gPelea;
+  estallido(cuando, nivel, lado, { grave: 120 + Math.random() * 60, cola: 0.14, brillo: 700 });
+  gSonido = viejo;
+}
+function programarPelea() { // cada rato corto, uno o dos sonidos de la pelea, al azar y repartidos a los costados
+  if (!ctx || ctx.state !== 'running' || faseAbordaje !== 'pelea') return;
+  const ahora = ctx.currentTime, lado = () => Math.random() * 1.2 - 0.6;
+  const q = Math.random();
+  if (q < 0.55) { // sables
+    metal(ahora + 0.01, 0.20 + Math.random() * 0.14, lado(), 1500 + Math.random() * 1500, 0.14 + Math.random() * 0.16);
+    if (Math.random() < 0.4) metal(ahora + 0.09 + Math.random() * 0.08, 0.16, lado(), 1700 + Math.random() * 1500, 0.12);
+  } else if (q < 0.80) grito(ahora + 0.01, 0.20 + Math.random() * 0.12, lado());
+  else golpeSordo(ahora + 0.01, 0.22, lado());
+}
+// fase: 'nada', 'vuelo' (el gancho en el aire) o 'pelea' (enganchado, o te están abordando). Se llama en cada cuadro.
+export function abordaje(fase) {
+  if (fase === faseAbordaje) return;
+  const antes = faseAbordaje; faseAbordaje = fase;
+  if (!ctx || ctx.state !== 'running') return;
+  const ahora = ctx.currentTime;
+  if (fase === 'vuelo') { // la soga sale: el aire que corta y el cabo que se desenrolla (un zumbido que tiembla)
+    const r = ctx.createBufferSource(); r.buffer = bufBlanco;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.2;
+    f.frequency.setValueAtTime(500, ahora); f.frequency.exponentialRampToValueAtTime(2400, ahora + 0.16); f.frequency.exponentialRampToValueAtTime(800, ahora + 0.5);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ahora); g.gain.exponentialRampToValueAtTime(0.55, ahora + 0.06); g.gain.exponentialRampToValueAtTime(0.001, ahora + 0.55);
+    const tiembla = ctx.createOscillator(); tiembla.frequency.value = 34; const gt = ctx.createGain(); gt.gain.value = 0.22;
+    tiembla.connect(gt); gt.connect(g.gain);
+    r.connect(f); f.connect(g); g.connect(gSonido); r.start(ahora, Math.random() * 2, 0.6); tiembla.start(ahora); tiembla.stop(ahora + 0.6);
+  }
+  if (fase === 'pelea') {
+    if (antes === 'vuelo') { // el gancho muerde la borda
+      estallido(ahora + 0.005, 0.55, 0, { grave: 170, cola: 0.16, brillo: 1100 });
+      metal(ahora + 0.012, 0.30, 0, 900, 0.22);
+    }
+    gPelea.gain.setTargetAtTime(1, ahora, 0.25);
+    clearInterval(relojPelea); relojPelea = setInterval(programarPelea, 170);
+  } else {
+    gPelea.gain.setTargetAtTime(0, ahora, 0.3);
+    clearInterval(relojPelea); relojPelea = null;
+    if (antes === 'vuelo' && fase === 'nada') chasquido(ahora + 0.02, 0.22, 0, 2400, 0.25); // erró: el gancho cae al agua
+  }
+}
+
 // La grabación del cañón (ver sonido/LEEME.md). Se baja una sola vez, cuando arranca el sonido.
 let bufCanon = null, pidiendoCanon = false;
 function cargarCanon() {
@@ -355,7 +444,7 @@ if (typeof window !== 'undefined') {
 
 // Para probar sin parlantes: arma todo en un contexto que no suena, toca unos segundos de cada cosa y devuelve cuánto se oyó.
 export async function probar() {
-  const guardado = [gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
+  const guardado = [gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
   const medir = async (segundos, preparar) => {
     const c = new OfflineAudioContext(2, 44100 * segundos, 44100);
     armar(c); relojMusica = null; proximoCompas = 0; compas = 0; ultimoAjuste = -1;
@@ -375,9 +464,11 @@ export async function probar() {
   r.canonLejos = await medir(4, () => { modoActual = 'mar'; canonazo(0.1, 0.80 * 0.25, 0, 0.5); });
   r.andanada = await medir(4, () => { modoActual = 'mar'; for (let i = 0; i < 9; i++) canonazo(0.1 + i * 0.04, 0.62, 0, 0.95); });
   for (const [nombre, f] of [['remolinoLejos', 0.3], ['remolinoBorde', 0.6], ['remolinoCentro', 1]]) r[nombre] = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; gRemolino.gain.value = 0.12 * f + 1.6 * f * f * f; filtroRemolino.frequency.value = 200 + 620 * f * f; for (const o of giroRemolino) o.frequency.value = 0.55 + 2.6 * f * f; });
+  r.gancho = await medir(1, () => { modoActual = 'mar'; estallido(0.05, 0.55, 0, { grave: 170, cola: 0.16, brillo: 1100 }); metal(0.06, 0.30, 0, 900, 0.22); });
+  r.pelea = await medir(3, () => { modoActual = 'mar'; gPelea.gain.value = 1; for (let i = 0; i < 12; i++) { metal(0.1 + i * 0.22, 0.27, 0, 1500 + i * 110, 0.2); if (i % 3 === 0) grito(0.2 + i * 0.22, 0.26, 0); if (i % 4 === 1) golpeSordo(0.15 + i * 0.22, 0.22, 0); } });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });
   r.silencio = await medir(2, () => { modoActual = 'nada'; });
-  [gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
+  [gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
   ultimoAjuste = 0;
   return r;
 }
