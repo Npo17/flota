@@ -438,6 +438,13 @@ $('fin-volver').onclick = reaparecer;
 $('hud-orden').onclick = () => { pulsos.ordenFlota = true; };
 $('hud-formacion').onclick = () => { pulsos.formacion = true; };
 $('hud-hab').onclick = () => { pulsos.habilidad = true; };
+// el gancho con el ratón: el cursor está sobre el botón, así que se apunta al barco a tiro más cercano
+$('hud-gancho').onclick = () => {
+  if (!partida || estado !== 'mar') return;
+  const cand = candidatoAbordaje(partida, vista.raton);
+  if (partida.gancho) pulsos.abordar = true; // ya enganchado: cortar las sogas
+  else if (cand && cand.cerca) { pulsos.abordar = true; pulsos.objetivo = { x: cand.b.x, y: cand.b.y }; }
+};
 $('fin-otra').onclick = () => volverAlAstillero();
 
 // ---------- Práctica guiada y guía del juego ----------
@@ -713,6 +720,21 @@ function pintarHud() {
 // y mientras se recupera el botón se oscurece de arriba hacia abajo y muestra los segundos que faltan.
 const ICONO_HAB = { andanada: '💥', ancla: '⚓', carpinteros: '🔨', trapo: '💨' };
 let accionesPintadas = '';
+function iconoGancho(c) { // el garfio de abordaje: la soga y tres uñas
+  const x = c.getContext('2d'), W = c.width;
+  x.clearRect(0, 0, W, W);
+  x.save(); x.scale(W / 96, W / 96); x.lineCap = 'round'; x.lineJoin = 'round';
+  x.strokeStyle = '#c9a36a'; x.lineWidth = 5; x.setLineDash([7, 4]);
+  x.beginPath(); x.moveTo(12, 12); x.quadraticCurveTo(26, 40, 48, 34); x.stroke(); x.setLineDash([]);
+  x.strokeStyle = '#cfd6dc'; x.lineWidth = 7;
+  x.beginPath(); x.moveTo(48, 30); x.lineTo(48, 70); x.stroke();
+  x.lineWidth = 6;
+  x.beginPath(); x.moveTo(48, 70); x.quadraticCurveTo(26, 72, 24, 52); x.stroke();
+  x.beginPath(); x.moveTo(48, 70); x.quadraticCurveTo(70, 72, 72, 52); x.stroke();
+  x.beginPath(); x.moveTo(48, 70); x.lineTo(48, 84); x.stroke();
+  x.fillStyle = '#cfd6dc'; for (const [px, py] of [[24, 50], [72, 50]]) { x.beginPath(); x.arc(px, py, 4, 0, Math.PI * 2); x.fill(); }
+  x.restore();
+}
 function iconoFormacion(c, n, ataque) { // tu barco (dorado) y tres de la flota, en el lugar que les toca
   const x = c.getContext('2d'), W = c.width;
   x.clearRect(0, 0, W, W);
@@ -729,11 +751,23 @@ function iconoFormacion(c, n, ataque) { // tu barco (dorado) y tres de la flota,
 function pintarAcciones(j, b, esc) {
   const hab = HABILIDADES[b.diseno.habilidad] ? b.diseno.habilidad : 'andanada', h = HABILIDADES[hab], cd = j.cdHabilidad || 0;
   const ataque = j.ordenFlota === 'ataque', forma = j.formacion || 0;
-  const clave = [esc > 0, ataque, forma, hab, Math.ceil(cd), idiomaActual()].join('|');
+  // el gancho: listo si hay un rival a tiro y pasó la espera; también se enciende con el abordaje en marcha (F corta las sogas)
+  const sinAbordajes = j.reglas && j.reglas.abordajes === false, cdG = j.cdAbordaje || 0;
+  const cand = sinAbordajes || j.gancho ? null : candidatoAbordaje(j, vista.raton);
+  const gancho = sinAbordajes ? 'no' : j.gancho ? 'pelea' : cdG > 0 ? 'espera' : cand && cand.cerca ? 'listo' : 'lejos';
+  const clave = [esc > 0, ataque, forma, hab, Math.ceil(cd), gancho, Math.ceil(cdG), idiomaActual()].join('|');
   if (clave !== accionesPintadas) {
     accionesPintadas = clave;
-    const bo = $('hud-orden'), bf = $('hud-formacion'), bh = $('hud-hab');
-    bo.classList.toggle('oculto', esc === 0); bf.classList.toggle('oculto', esc === 0);
+    const bo = $('hud-orden'), bf = $('hud-formacion'), bh = $('hud-hab'), bg = $('hud-gancho');
+    // Q y W se ven siempre: apagadas sin barcos capturados, de color cuando hay flota para mandar
+    bo.classList.toggle('apagada', esc === 0); bf.classList.toggle('apagada', esc === 0);
+    if (!bg.dataset.dibujado) { iconoGancho(bg.querySelector('canvas')); bg.dataset.dibujado = '1'; }
+    bg.classList.toggle('apagada', gancho !== 'listo' && gancho !== 'pelea');
+    bg.classList.toggle('lista', gancho === 'listo');
+    bg.classList.toggle('activa', gancho === 'pelea');
+    bg.querySelector('small').textContent = t(gancho === 'pelea' ? 'Cortar las sogas' : 'Abordaje');
+    bg.querySelector('.seg').textContent = gancho === 'espera' ? Math.ceil(cdG) : '';
+    bg.title = t(gancho === 'no' ? 'En esta partida no hay abordajes' : gancho === 'pelea' ? 'Cortar las sogas' : 'F: abordar el barco que tengas a tiro (con el cursor encima)');
     bo.classList.toggle('activa', ataque);
     bo.querySelector('.ico').textContent = ataque ? '⚔️' : '⛵';
     bo.querySelector('small').textContent = t(ataque ? 'Atacar' : 'Seguirme');
@@ -745,6 +779,7 @@ function pintarAcciones(j, b, esc) {
     bh.querySelector('small').textContent = t(h.nombre);
     bh.querySelector('.seg').textContent = cd > 0 ? Math.ceil(cd) : '';
     bh.classList.toggle('lista', cd <= 0);
+    bh.classList.toggle('apagada', cd > 0);
     bh.title = `R · ${t(h.nombre)}: ${t(h.desc)}`;
   }
   $('hud-hab').querySelector('.espera').style.height = `${Math.min(100, (cd / h.espera) * 100)}%`;

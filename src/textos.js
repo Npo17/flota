@@ -493,4 +493,7 @@ export const TEXTOS = [
   ["Controles", "Controls", "Controles", "Commandes", "Sterowanie", "Comandi", "Steuerung", "Kontroller"],
   ["La partida sigue mientras tenés los ajustes abiertos. ESC para volver.", "The match keeps running while settings are open. Press ESC to go back.", "A partida continua enquanto os ajustes estão abertos. ESC para voltar.", "La partie continue pendant que les paramètres sont ouverts. Échap pour revenir.", "Gra toczy się dalej, gdy ustawienia są otwarte. ESC, aby wrócić.", "La partita continua mentre le impostazioni sono aperte. ESC per tornare.", "Das Spiel läuft weiter, solange die Einstellungen offen sind. ESC zum Zurückkehren.", "Ayarlar açıkken oyun devam eder. Dönmek için ESC."],
   ["Dejar la partida", "Leave the match", "Sair da partida", "Quitter la partie", "Opuść grę", "Lascia la partita", "Spiel verlassen", "Oyundan çık"],
+  // botón del gancho
+  ["Cortar las sogas", "Cut the ropes", "Cortar as cordas", "Couper les cordages", "Przetnij liny", "Taglia le cime", "Taue kappen", "Halatları kes"],
+  ["F: abordar el barco que tengas a tiro (con el cursor encima)", "F: board the ship within range (with the cursor on it)", "F: abordar o navio ao alcance (com o cursor em cima)", "F : aborder le navire à portée (curseur dessus)", "F: abordaż statku w zasięgu (kursor na nim)", "F: abborda la nave a tiro (con il cursore sopra)", "F: das Schiff in Reichweite entern (Zeiger darauf)", "F: menzildeki gemiye borda et (imleç üstündeyken)"],
 ];

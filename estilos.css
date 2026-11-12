@@ -44,7 +44,7 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 .ayuda { margin-top: 8px; font-size: 11px; color: var(--suave); }
 .velas { letter-spacing: 3px; color: var(--texto); }
 .viento { display: flex; align-items: center; gap: 8px; margin: 6px 0 2px; font-size: 13px; }
-.viento canvas { width: 96px; height: 96px; flex: none; } /* 96 desde el 14/11/2026 (era 64): Nicolás la pidió más grande */
+.viento canvas { width: 128px; height: 128px; flex: none; } /* 128 desde el 14/11/2026 (era 64, después 96): Nicolás la pidió más grande */
 .viento .bien { color: var(--yo); }
 .viento .mal { color: var(--error); }
 #minimapa { position: absolute; right: 12px; bottom: 12px; border-radius: 8px; }
@@ -67,10 +67,10 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
   text-transform: uppercase; color: #fff; background: rgba(8, 30, 48, 0.78); border: 2px solid rgba(255, 255, 255, 0.55); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); animation: cartel 3.6s ease both; }
 @keyframes cartel { 0% { opacity: 0; transform: translateX(-50%) scale(0.92); } 10%, 78% { opacity: 1; transform: translateX(-50%) scale(1); } 100% { opacity: 0; transform: translateX(-50%) scale(1.03); } }
 /* Las acciones con su tecla (Q y W de la flota, R de la habilidad): botones cuadrados abajo, en el medio */
-#hud-acciones { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
+/* abajo a la izquierda (14/11/2026): en el medio los tapaba el cartel de ayuda ("Arrimate al Mercante…") */
+#hud-acciones { position: absolute; bottom: 12px; left: 12px; display: flex; gap: 10px; pointer-events: auto; }
 @media (min-width: 1800px) { #hud-acciones { zoom: 1.25; } }
 @media (min-width: 2300px) { #hud-acciones { zoom: 1.5; } } /* en pantallas grandes quedaban chicos */
-#hud.practica #hud-acciones { left: 12px; transform: none; } /* en la práctica el medio lo ocupa el panel de pasos */
 .accion { position: relative; width: 84px; height: 88px; padding: 0; border-radius: 12px; border: 2px solid var(--borde); background: var(--panel-fuerte); color: var(--texto); cursor: pointer; font: inherit; overflow: hidden; }
 .accion:hover { border-color: var(--acento); }
 .accion kbd { position: absolute; top: 4px; left: 4px; z-index: 2; min-width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; font: 800 12px system-ui, sans-serif; background: #efe6cc; color: #2a1c08; border-bottom: 2px solid #b9ab86; }
@@ -81,13 +81,18 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 .accion .seg { position: absolute; inset: 0 0 26px; display: grid; place-items: center; z-index: 2; font-size: 24px; font-weight: 900; color: #fff; text-shadow: 0 1px 4px #000; }
 .accion.lista { border-color: var(--acento); }
 .accion.activa { border-color: #ff8f8f; }
+/* apagada: todavía no se puede usar (sin flota, gancho fuera de alcance…): gris y oscura; se enciende de color cuando se puede */
+.accion.apagada { border-color: rgba(255, 255, 255, 0.12); background: rgba(6, 16, 24, 0.9); cursor: default; }
+.accion.apagada > :not(.seg):not(.espera) { filter: grayscale(1) brightness(0.5); } /* los segundos de espera siguen blancos, para leerlos */
+.accion.apagada:hover { border-color: rgba(255, 255, 255, 0.12); }
 #pantalla-ajustes .ayuda { margin: 0; font-size: 12px; line-height: 1.5; }
 #aj-sigue { margin: 10px 0 0; color: var(--titulo); font-weight: 700; }
 #aj-dejar { background: #8a2d2d; }
 
 /* Práctica guiada: el panel de abajo con el paso y el teclado dibujado */
-#practica { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(clamp(680px, 44vw, 900px), calc(100vw - 540px)); min-width: 430px; background: var(--panel-fuerte); border: 2px solid var(--acento); border-radius: 12px; padding: 9px 14px 11px; pointer-events: auto; }
+#practica { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(clamp(680px, 44vw, 900px), calc(100vw - 800px)); min-width: 430px; /* deja lugar a los botones de abajo a la izquierda y al minimapa */ background: var(--panel-fuerte); border: 2px solid var(--acento); border-radius: 12px; padding: 9px 14px 11px; pointer-events: auto; }
 #hud.practica #pista { bottom: auto; top: 23%; }
+@media (max-width: 1240px) { #hud.practica #hud-acciones { bottom: 250px; } } /* pantalla angosta: los botones suben para no pisar el panel de la práctica */
 .pra-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--rotulo); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
 .pra-botones { display: flex; gap: 6px; }
 .pra-botones button { font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; font-weight: 700; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--borde); background: none; color: var(--suave); cursor: pointer; }

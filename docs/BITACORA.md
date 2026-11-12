@@ -12,7 +12,8 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 - **Botones de acción abajo, en el medio:** Q (orden a la flota), W (formación, con un dibujito de cómo quedan los barcos) y R (habilidad). Q y W aparecen solo con barcos capturados. El botón R se oscurece y muestra los segundos mientras la habilidad se recupera. Se pueden tocar con el ratón. `pintarAcciones` en `src/main.js`.
 - **Se sacó el panel de abajo a la izquierda** (la barrita de la habilidad y las tres líneas de ayuda). Las líneas de ayuda pasaron a Ajustes → Controles. En la práctica guiada los botones van abajo a la izquierda, porque el medio lo ocupa el panel de pasos.
 - **La flota obedece más rápido:** en formación, el barco que está lejos de su lugar aprieta el paso (+35 %, o +60 % si quedó muy atrás) hasta alcanzarlo (`b.apuro` en `iaEscolta` y `moverBarco`). Antes un galeón capturado nunca llegaba a formar detrás de una balandra y parecía que no hacía caso.
-- **Brújula del viento más grande:** de 64 a 96 px.
+- **Brújula del viento más grande:** de 64 a 128 px (primero 96; Nicolás la pidió más grande todavía).
+- **Botones abajo a la izquierda** (segunda vuelta, pedido de Nicolás): en el medio el cartel de ayuda ("Arrimate al Mercante…") tapaba el botón R. Ahora van Q, W, R y **F (gancho, con su dibujo)**, siempre visibles: **apagados (grises y oscuros) mientras no se pueden usar** y de color cuando sí. Q y W se encienden con barcos capturados; F, con un rival a tiro y sin espera (durante el abordaje se pone roja y dice "Cortar las sogas"); R, cuando la habilidad está lista. Los segundos de espera quedan en blanco encima. Tocar F con el ratón apunta al barco a tiro más cercano (el cursor está sobre el botón). En la práctica guiada el panel de pasos se angostó para no pisarlos.
 - Pendiente: nadie lo probó a mano; revisar el balance con cañones nivel 10 (+150 % de daño).
 
 ## 2026-11-13 (práctica guiada y guía del juego) — Nicolás + Claude
