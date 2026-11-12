@@ -18,6 +18,7 @@ let sonando = 0; // cañonazos que suenan ahora (para no apilar cien en una anda
 
 export const volumen = (cual) => vol[cual];
 export const estado = () => (ctx ? ctx.state : 'sin arrancar'); // para probar
+export const conGrabacion = () => !!bufCanon; // para probar: si ya cargó la grabación del cañón
 export function ponerVolumen(cual, v) {
   vol[cual] = Math.max(0, Math.min(1, v));
   try { localStorage.setItem(GUARDADO[cual], String(vol[cual])); } catch {}
@@ -185,6 +186,14 @@ const CARGA = {
   metralla: { tono: 1.22, peso: 0.82, cola: 0.60, chasquido: 1.5, rasgado: 1, eco: 0.20 },
   pesada: { tono: 0.80, peso: 1.22, cola: 1.45, chasquido: 0.8, rasgado: 0, eco: 0.48 },
 };
+// La grabación del cañón (ver sonido/LEEME.md). Se baja una sola vez, cuando arranca el sonido.
+let bufCanon = null, pidiendoCanon = false;
+function cargarCanon() {
+  if (bufCanon || pidiendoCanon || !ctx || typeof fetch === 'undefined') return;
+  pidiendoCanon = true;
+  fetch(new URL('../sonido/canon.mp3', import.meta.url)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then((datos) => ctx.decodeAudioData(datos)).then((b) => { bufCanon = b; }).catch(() => { pidiendoCanon = false; });
+}
 let ronco = null;
 function canonazo(cuando, nivel, lado, cerca, casco, municion) {
   const pieza = PIEZA[casco] || PIEZA.bergantin, carga = CARGA[municion] || CARGA.redonda;
@@ -212,6 +221,20 @@ function canonazo(cuando, nivel, lado, cerca, casco, municion) {
     fm.frequency.setValueAtTime(5200, cuando); fm.frequency.exponentialRampToValueAtTime(1500, cuando + 0.32);
     const gm = ctx.createGain(); gm.gain.setValueAtTime(0.0001, cuando + 0.004); gm.gain.exponentialRampToValueAtTime(0.55 * cerca, cuando + 0.02); gm.gain.exponentialRampToValueAtTime(0.001, cuando + 0.36);
     m.connect(fm); fm.connect(gm); gm.connect(fin); m.start(cuando, Math.random() * 2, 0.45);
+  }
+  // Con la grabación de un cañón de verdad cargada (sonido/canon.mp3), el estampido es esa grabación: más lenta y grave en las
+  // piezas grandes, más rápida en las chicas; apagada por la distancia; y con su eco. El chasquido y el silbido de la metralla
+  // de arriba se le suman, porque la grabación es puro grave. Si no cargó (sin red, navegador viejo), sigue el estampido armado a mano.
+  if (bufCanon) {
+    const g = ctx.createBufferSource(); g.buffer = bufCanon; g.playbackRate.value = Math.pow(tono, 0.65);
+    const fg = ctx.createBiquadFilter(); fg.type = 'lowpass'; fg.frequency.value = 500 + 9000 * cerca * cerca;
+    const gg = ctx.createGain(); gg.gain.value = 1.25;
+    g.connect(fg); fg.connect(gg); gg.connect(fin); g.start(cuando);
+    const vuelve = ctx.createDelay(1.0); vuelve.delayTime.value = 0.33 + Math.random() * 0.12;
+    const fv = ctx.createBiquadFilter(); fv.type = 'lowpass'; fv.frequency.value = 380;
+    const gv = ctx.createGain(); gv.gain.value = carga.eco * (1.1 - 0.4 * cerca);
+    fg.connect(vuelve); vuelve.connect(fv); fv.connect(gv); gv.connect(fin);
+    return;
   }
   // 2. el estampido: un golpe muy grave que cae, pasado por la curva ronca
   const o = ctx.createOscillator(); o.type = 'triangle';
@@ -317,6 +340,7 @@ export function ambiente(modo, viento = 0, remolino = 0) {
 function despertar() {
   try {
     if (!ctx) armar(new (window.AudioContext || window.webkitAudioContext)());
+    cargarCanon();
     if (ctx.state === 'suspended') ctx.resume().then(() => { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); });
     else { ultimoAjuste = 0; ambiente(modoActual, fuerzaViento, cercaRemolino); }
   } catch {} // sin audio en este navegador: el juego sigue igual, mudo

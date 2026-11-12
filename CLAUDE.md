@@ -97,7 +97,8 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/idioma.js`, `src/textos.js`, `src/textos-historia.js` | Idiomas: la función `t()` y las traducciones (una fila por texto, una columna por idioma) |
 | `src/puerto.js` | Qué se compra en el puerto y qué hace cada compra (lo usan la pantalla y el servidor) |
 | `src/red.js` | Juego en línea: se conecta al mar compartido y arma una partida con lo que manda el servidor |
-| `src/sonido.js` | Música del lobby, mar, viento y cañones. Sin archivos de audio: todo se genera con Web Audio. Dos volúmenes aparte (efectos y música) que se cambian en Ajustes y se guardan en el navegador. Los cañonazos llegan por `partida.alEfecto` (lo llama `efecto()` de `juego.js`, el mismo evento que dibuja el humo). `window.flota.sonido.probar()` mide cada sonido sin parlantes |
+| `sonido/` | Las pocas grabaciones que se usan (hoy, el estampido del cañón), con su origen y licencia en `sonido/LEEME.md` |
+| `src/sonido.js` | Música del lobby, mar, viento y cañones. Casi todo se genera con Web Audio; el estampido del cañón es una grabación (`sonido/canon.mp3`). Dos volúmenes aparte (efectos y música) que se cambian en Ajustes y se guardan en el navegador. Los cañonazos llegan por `partida.alEfecto` (lo llama `efecto()` de `juego.js`, el mismo evento que dibuja el humo). `window.flota.sonido.probar()` mide cada sonido sin parlantes |
 | `servidor/` | Servidor del mar compartido (Cloudflare Workers + Durable Object). Corre la misma `juego.js` |
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
 | `supabase/migrations/` | Tablas y funciones de la base |
