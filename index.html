@@ -28,8 +28,8 @@
   </style>
   <script>setTimeout(function () { document.documentElement.classList.remove('cargando'); }, 8000);</script>
   <noscript><style>html.cargando body > * { visibility: visible !important; } html.cargando body::before, html.cargando body::after { display: none; }</style></noscript>
-  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=8a431dec","/src/arte-britanico.js":"/src/arte-britanico.js?v=8a431dec","/src/arte-chino.js":"/src/arte-chino.js?v=8a431dec","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=8a431dec","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=8a431dec","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=8a431dec","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=8a431dec","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=8a431dec","/src/arte-espanol.js":"/src/arte-espanol.js?v=8a431dec","/src/arte-frances.js":"/src/arte-frances.js?v=8a431dec","/src/arte-holandes.js":"/src/arte-holandes.js?v=8a431dec","/src/arte-japones.js":"/src/arte-japones.js?v=8a431dec","/src/arte-motor.js":"/src/arte-motor.js?v=8a431dec","/src/arte-otomano.js":"/src/arte-otomano.js?v=8a431dec","/src/arte-portugues.js":"/src/arte-portugues.js?v=8a431dec","/src/arte-sueco.js":"/src/arte-sueco.js?v=8a431dec","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=8a431dec","/src/banderas.js":"/src/banderas.js?v=8a431dec","/src/barcos.js":"/src/barcos.js?v=8a431dec","/src/config.js":"/src/config.js?v=8a431dec","/src/cuenta.js":"/src/cuenta.js?v=8a431dec","/src/dibujo.js":"/src/dibujo.js?v=8a431dec","/src/idioma.js":"/src/idioma.js?v=8a431dec","/src/juego.js":"/src/juego.js?v=8a431dec","/src/main.js":"/src/main.js?v=8a431dec","/src/mapas.js":"/src/mapas.js?v=8a431dec","/src/mundo.js":"/src/mundo.js?v=8a431dec","/src/puerto.js":"/src/puerto.js?v=8a431dec","/src/red.js":"/src/red.js?v=8a431dec","/src/rng.js":"/src/rng.js?v=8a431dec","/src/sonido.js":"/src/sonido.js?v=8a431dec","/src/textos-historia.js":"/src/textos-historia.js?v=8a431dec","/src/textos.js":"/src/textos.js?v=8a431dec"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=8a431dec">
+  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=f7d138e3","/src/arte-britanico.js":"/src/arte-britanico.js?v=f7d138e3","/src/arte-chino.js":"/src/arte-chino.js?v=f7d138e3","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=f7d138e3","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=f7d138e3","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=f7d138e3","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=f7d138e3","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=f7d138e3","/src/arte-espanol.js":"/src/arte-espanol.js?v=f7d138e3","/src/arte-frances.js":"/src/arte-frances.js?v=f7d138e3","/src/arte-holandes.js":"/src/arte-holandes.js?v=f7d138e3","/src/arte-japones.js":"/src/arte-japones.js?v=f7d138e3","/src/arte-motor.js":"/src/arte-motor.js?v=f7d138e3","/src/arte-otomano.js":"/src/arte-otomano.js?v=f7d138e3","/src/arte-portugues.js":"/src/arte-portugues.js?v=f7d138e3","/src/arte-sueco.js":"/src/arte-sueco.js?v=f7d138e3","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=f7d138e3","/src/banderas.js":"/src/banderas.js?v=f7d138e3","/src/barcos.js":"/src/barcos.js?v=f7d138e3","/src/config.js":"/src/config.js?v=f7d138e3","/src/cuenta.js":"/src/cuenta.js?v=f7d138e3","/src/dibujo.js":"/src/dibujo.js?v=f7d138e3","/src/idioma.js":"/src/idioma.js?v=f7d138e3","/src/juego.js":"/src/juego.js?v=f7d138e3","/src/main.js":"/src/main.js?v=f7d138e3","/src/mapas.js":"/src/mapas.js?v=f7d138e3","/src/mundo.js":"/src/mundo.js?v=f7d138e3","/src/puerto.js":"/src/puerto.js?v=f7d138e3","/src/red.js":"/src/red.js?v=f7d138e3","/src/rng.js":"/src/rng.js?v=f7d138e3","/src/sonido.js":"/src/sonido.js?v=f7d138e3","/src/textos-historia.js":"/src/textos-historia.js?v=f7d138e3","/src/textos.js":"/src/textos.js?v=f7d138e3"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=f7d138e3">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -68,8 +68,6 @@
     <div id="avisos"></div>
     <div id="pista"></div>
     <div class="panel abajo-izq">
-      <div class="recarga"><span data-t>Babor · clic izquierdo</span><div class="barra chica"><i id="hud-rec-izq"></i></div></div>
-      <div class="recarga"><span data-t>Estribor · clic derecho</span><div class="barra chica"><i id="hud-rec-der"></i></div></div>
       <div class="recarga"><span id="hud-hab-txt"></span><div class="barra chica"><i id="hud-hab"></i></div></div>
       <div class="ayuda"><span data-t>El barco sigue al cursor · clic izquierdo: babor · clic derecho: estribor · espacio: los dos</span><br><span data-t>↑ / ↓ o la rueda: velas · F abordar (con el cursor sobre el barco) · Q orden a la flota · W formación · P puerto</span><br><span data-t>R: tu habilidad · Ctrl + rueda: zoom · menos vela = recarga más rápida · parado junto a una isla reparás</span></div>
     </div>
@@ -216,7 +214,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=8a431dec" defer></script>
-  <script type="module" src="src/main.js?v=8a431dec"></script>
+  <script src="vendor/supabase.min.js?v=f7d138e3" defer></script>
+  <script type="module" src="src/main.js?v=f7d138e3"></script>
 </body>
 </html>

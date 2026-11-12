@@ -687,16 +687,25 @@ export function dibujarEscena(ctx, j, vista) {
     const ab = yo.stats.perdigones > 1 ? 0.3 : 0.2;
     for (const lado of [-1, 1]) {
       const centro = yo.a + lado * Math.PI / 2;
+      // El abanico también es la barra de recarga de ese costado (antes había dos barritas en el panel de abajo): al disparar
+      // queda vacío, apenas el contorno, y se va llenando desde el barco hacia afuera; lleno = cañones listos.
+      const total = (yo.recargaTotal && yo.recargaTotal[lado]) || yo.stats.recarga || 1;
+      const carga = Math.max(0, Math.min(1, 1 - yo.recarga[lado] / total));
       const listo = yo.recarga[lado] <= 0;
-      ctx.fillStyle = listo ? 'rgba(255,240,170,0.11)' : 'rgba(255,255,255,0.04)';
-      ctx.strokeStyle = listo ? 'rgba(255,240,170,0.45)' : 'rgba(255,255,255,0.15)';
+      const radio = yo.stats.alcance + yo.stats.ancho / 2;
+      const sector = (r) => { ctx.beginPath(); ctx.moveTo(yo.x, yo.y); ctx.arc(yo.x, yo.y, r, centro - ab, centro + ab); ctx.closePath(); };
       ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(yo.x, yo.y);
-      ctx.arc(yo.x, yo.y, yo.stats.alcance + yo.stats.ancho / 2, centro - ab, centro + ab);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      sector(radio); // el contorno entero: tenue mientras recarga
+      ctx.fillStyle = listo ? 'rgba(255,240,170,0.13)' : 'rgba(255,255,255,0.025)';
+      ctx.strokeStyle = listo ? 'rgba(255,240,170,0.50)' : 'rgba(255,255,255,0.16)';
+      ctx.fill(); ctx.stroke();
+      if (!listo && carga > 0.01) { // lo ya cargado, con un filo más claro en el frente que avanza
+        sector(radio * carga);
+        ctx.fillStyle = 'rgba(255,240,170,0.16)';
+        ctx.fill();
+        ctx.beginPath(); ctx.arc(yo.x, yo.y, radio * carga, centro - ab, centro + ab);
+        ctx.strokeStyle = 'rgba(255,240,170,0.75)'; ctx.lineWidth = 2.2; ctx.stroke();
+      }
     }
     // abordaje: el barco que tenés bajo el cursor se marca en dorado si le llega el gancho, o punteado si falta arrimarse
     if (!j.gancho && j.cdAbordaje <= 0) {
