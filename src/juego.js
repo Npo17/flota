@@ -877,6 +877,7 @@ function masCercano(j, b, radio) {
 
 function iaEnemigo(j, b, dt) {
   if (b.hundiendo) return;
+  if (b.quieto) { b.velas = 0; b.timon = 0; return; } // los barcos de la práctica guiada: anclados, no navegan ni disparan
   const ia = b.ia;
   ia.t -= dt;
   ia.provocado = Math.max(0, (ia.provocado || 0) - dt);
@@ -1034,6 +1035,8 @@ function actualizarConvoy(j, dt) {
     const nivel = Math.max(2, nivelZona(mundo, x, y));
     if (exigirLejos && !lejosDeCapitanes(j, x, y, 1300)) continue; // mejor que no le aparezca encima a nadie; si no hay otra, igual sale
     if (mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r * 1.2 + 200)) continue;
+    // ni al lado de un remolino: en Malta y Lepanto hay uno justo en una punta, y el galeón zarpaba, lo chupaba y se hundía solo a los 30 segundos
+    if (mundo.remolinos.some((w) => Math.hypot(w.x - x, w.y - y) < w.radio * 2 + 320)) continue;
     const a = Math.atan2(mundo.puerto.y - y, mundo.puerto.x - x); // sale apuntando al puerto
     const d = disenoEnemigo('tesoro', nivel, mundo.reglas.facciones);
     d.refuerzo = 160;

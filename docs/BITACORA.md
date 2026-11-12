@@ -3,6 +3,20 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (práctica guiada y guía del juego) — Nicolás + Claude
+
+**Estado: subido a `main`. La práctica y la guía no tocan el servidor; el arreglo del galeón sí (falta republicarlo).**
+
+- **Práctica guiada** (pedido de Nicolás, para que la primera vez se entienda el juego): botón "🎓 Práctica guiada" en el astillero (y "Práctica guiada" en el menú de la app). Es una partida de un jugador en Malta, sin viento, sin bots, sin galeón del tesoro ni tritones. Son 11 pasos: navegar, velas, babor, estribor, andanada, hundir el barco de práctica, juntar el botín, la habilidad, abordar un mercante, mandar la flota (Q y W) y volver al puerto. La lista de pasos y cuándo se cumple cada uno están en `src/practica.js`; la pantalla, en `src/main.js` (`iniciarPractica`, `pintarPractica`).
+- **Teclado dibujado:** el panel de abajo muestra un teclado chico (Q W R / A D F / P / espacio / flechas) y un ratón. Las teclas del paso van **pintadas de oscuro con borde dorado**; al apretarlas se encienden. Un círculo dorado marca a dónde ir y, si queda fuera de la pantalla, una flecha apunta hacia ahí (`j.marca`, dibujada en `src/dibujo.js`).
+- Los barcos de la práctica están anclados y no disparan (`b.quieto`, en `iaEnemigo`). El de práctica no se hunde hasta que el paso lo pide; el mercante lleva 5 marineros para que el abordaje salga. Se puede saltar un paso o salir. La práctica no suma a las estadísticas ni al récord.
+- Al entrar al puerto termina: se ve el puerto con una nota y, al salir, se abre la **guía**.
+- **Guía del juego** (botón "📖 Guía del juego", también en el menú de la app): 8 láminas con dibujo y texto corto: el viento, las brisas, remolinos y costas, el galeón del tesoro, las civilizaciones, tu barco, las mejoras del puerto, y el mar y los modos de juego (`GUIA` en `src/practica.js`, láminas en `pintarLamina`).
+- La primera vez el botón de práctica late en dorado, con una línea que invita a empezar por ahí (se guarda `aon-practica` en el navegador al terminarla).
+- 50 textos nuevos en los 8 idiomas. Prueba nueva: `node scripts/probar-practica.mjs` recorre la práctica entera y la salta en los 20 mapas.
+- **Arreglo del galeón del tesoro:** en Malta y Lepanto una de las puntas tiene un remolino al lado; cuando zarpaba de ahí, lo chupaba y se hundía solo a los 30 segundos (la prueba `probar-sim` fallaba a veces por eso). Ahora no zarpa cerca de un remolino (`actualizarConvoy` en `src/juego.js`). **En línea rige cuando Nicolás republique el servidor**, igual que la salida desde una punta y las 14 brisas.
+- Pendiente: nadie la jugó todavía a mano de punta a punta (se probó por programa); un paso en vivo para el viento y las brisas (hoy se explican solo en la guía); práctica en el celular (no hay controles táctiles).
+
 ## 2026-11-13 (viento curvo, tesoro con cartel, formaciones) — Nicolás + Claude
 
 **Estado: la web está subida a `main`. EL SERVIDOR DEL MAR HAY QUE REPUBLICARLO (lo hace Nicolás): hasta entonces, en línea sigue el viento de un solo rumbo, siguen las rachas y la tecla H no hace nada. En modo solo ya anda todo.**

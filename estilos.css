@@ -71,6 +71,51 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 #hud-flota-botones button { font: inherit; font-size: 12px; font-weight: 800; padding: 6px 4px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.10); color: inherit; cursor: pointer; }
 #hud-flota-botones button:hover { background: rgba(255, 209, 102, 0.28); }
 
+/* Práctica guiada: el panel de abajo con el paso y el teclado dibujado */
+#practica { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: min(clamp(680px, 44vw, 900px), calc(100vw - 540px)); min-width: 430px; background: var(--panel-fuerte); border: 2px solid var(--acento); border-radius: 12px; padding: 9px 14px 11px; pointer-events: auto; }
+#hud.practica #pista { bottom: auto; top: 23%; }
+#hud.practica .ayuda { display: none; }
+.pra-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--rotulo); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
+.pra-botones { display: flex; gap: 6px; }
+.pra-botones button { font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; font-weight: 700; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--borde); background: none; color: var(--suave); cursor: pointer; }
+.pra-botones button:hover { color: var(--texto); border-color: var(--acento); }
+.pra-cuerpo { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: center; margin-top: 4px; }
+.pra-texto { flex: 1; min-width: 250px; }
+.pra-texto b { font-size: 18px; color: var(--titulo); }
+.pra-texto p { margin: 4px 0 0; font-size: clamp(13.5px, 0.95vw, 16px); line-height: 1.4; }
+#practica.hecho { animation: pra-hecho 0.9s ease; }
+@keyframes pra-hecho { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 4px rgba(62, 207, 94, 0.85); border-color: #3ecf5e; } }
+#pra-teclas { display: flex; gap: 12px; align-items: flex-end; flex: none; }
+.teclado, .flechas { display: flex; flex-direction: column; gap: 4px; }
+.teclado > div, .flechas > div { display: flex; gap: 4px; }
+.teclado .corrida { margin-left: 9px; }
+.flechas { align-items: center; }
+#practica kbd { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; font: 800 13px system-ui, sans-serif; background: #efe6cc; color: #2a1c08; border-bottom: 3px solid #b9ab86; opacity: 0.4; transition: transform 0.05s; }
+#practica kbd.hueco { opacity: 0.16; }
+#practica kbd.suelta { margin-left: 12px; }
+#practica kbd.espacio { width: 132px; height: 24px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-left: 22px; }
+/* la tecla que pide el paso: pintada de oscuro, con el borde dorado */
+#practica kbd.pide { opacity: 1; background: #17120a; color: #ffd166; border-bottom-color: #000; box-shadow: 0 0 0 2px #ffd166; }
+#practica kbd.apretada { opacity: 1; background: #ffd166; color: #2a1c08; border-bottom-color: #b9812a; transform: translateY(2px); }
+.raton { width: 46px; height: 69px; flex: none; }
+.raton [data-k] { fill: #efe6cc; opacity: 0.4; stroke: #2a1c08; stroke-width: 1.5; }
+.raton .cruz { fill: #2a1c08; opacity: 0.25; }
+.raton [data-k].pide { opacity: 1; fill: #17120a; stroke: #ffd166; stroke-width: 2.5; }
+.raton [data-k="mover"].pide ~ .cruz { fill: #ffd166; opacity: 1; }
+.raton [data-k].apretada { opacity: 1; fill: #ffd166; }
+/* Astillero: aprender a jugar */
+.aprender { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.aprender .boton { padding: 10px 6px; font-size: 13.5px; }
+.aprender .boton.nuevo { background: #ffd166; color: #2a1c08; animation: carga-late 1.6s ease-in-out infinite; }
+#ast-primera { color: var(--titulo); font-weight: 700; }
+/* Guía del juego */
+#pantalla-guia .caja { width: min(760px, 100%); }
+#pantalla-guia { z-index: 7; } /* por encima del menú de la app de escritorio */
+#guia-dibujo { width: 100%; height: auto; border-radius: 10px; display: block; margin: 8px 0 4px; }
+#guia-texto { font-size: 16px; line-height: 1.5; min-height: 112px; }
+#guia-cerrar { display: block; margin: 8px auto 0; }
+#pto-practica { text-align: left; margin-bottom: 10px; }
+
 /* Pantallas */
 .pantalla { position: fixed; inset: 0; background: var(--velo); display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; }
 .caja { background: var(--caja); border: 1px solid var(--borde); border-radius: 14px; padding: 22px 26px; width: min(560px, 100%); max-height: 100%; overflow: auto; }

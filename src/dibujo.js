@@ -682,6 +682,27 @@ export function dibujarEscena(ctx, j, vista) {
     ctx.fillRect(c.x - 1.5, c.y - 6 + sube, 3, 12);
   }
 
+  // la marca de la práctica guiada: un círculo dorado que late donde hay que ir y, si queda fuera de la pantalla, una flecha que apunta hacia ahí
+  if (j.marca) {
+    const m = j.marca, late = 0.5 + 0.5 * Math.sin(j.t * 4);
+    ctx.setLineDash([16, 10]);
+    ctx.lineDashOffset = -j.t * 30;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = `rgba(255,209,102,${0.65 + 0.3 * late})`;
+    ctx.beginPath(); ctx.arc(m.x, m.y, m.r + late * 6, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    if (!m.suave) { ctx.fillStyle = `rgba(255,209,102,${0.10 + 0.08 * late})`; ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, TAU); ctx.fill(); }
+    const dm = Math.hypot(m.x - yo.x, m.y - yo.y), borde = Math.min(vw, vh) * 0.36;
+    if (dm > borde + m.r) {
+      const am = Math.atan2(m.y - yo.y, m.x - yo.x), d = borde + late * 10;
+      ctx.save(); ctx.translate(yo.x + Math.cos(am) * d, yo.y + Math.sin(am) * d); ctx.rotate(am);
+      ctx.fillStyle = '#ffd166'; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(26, 0); ctx.lineTo(-2, -17); ctx.lineTo(-2, -7); ctx.lineTo(-26, -7); ctx.lineTo(-26, 7); ctx.lineTo(-2, 7); ctx.lineTo(-2, 17); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   // abanicos de puntería: uno por costado
   if (!yo.hundiendo && yo.diseno.canones >= 2) {
     const ab = yo.stats.perdigones > 1 ? 0.3 : 0.2;

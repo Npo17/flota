@@ -6,6 +6,7 @@ import { TEXTOS_HISTORIA } from '../src/textos-historia.js';
 import { COLUMNAS } from '../src/idioma.js';
 import { FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS, HABILIDADES } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
+import { PASOS, GUIA } from '../src/practica.js';
 
 let errores = 0;
 const mal = (m) => { errores++; console.log('✗', m); };
@@ -27,12 +28,13 @@ for (const f of filas) {
 const usados = new Set();
 for (const cat of [FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, ENEMIGOS, HABILIDADES]) for (const o of Object.values(cat)) for (const k of ['nombre', 'desc', 'bono']) if (o[k]) usados.add(o[k]);
 for (const m of Object.values(MAPAS)) for (const k of ['nombre', 'lugar', 'desc', 'rasgo']) usados.add(m[k]);
+for (const o of [...PASOS, ...GUIA]) { usados.add(o.titulo); usados.add(o.texto); } // la práctica guiada y la guía
 const html = readFileSync('index.html', 'utf8');
 for (const m of html.matchAll(/<[a-z0-9]+[^>]*\sdata-t>([^<]+)</g)) usados.add(m[1].trim());
 for (const m of html.matchAll(/placeholder="([^"]+)" data-t-ph/g)) usados.add(m[1]);
 // literales entre comillas simples que parecen frases para el jugador
 const pareceTexto = (s) => /[a-záéíóúñ]{3}/i.test(s) && (/[áéíóúñ¡¿…]/.test(s) || /^[A-ZÁÉÍÓÚ¡¿+\-{][^_]*$/.test(s) && /[a-z]/.test(s)) && !/px|rgba|system-ui|^#|\.js$|^[A-Z][a-z]+[A-Z]|^Enter$|^Escape$|^Upgrade$|^Origin$|^Content-Type|^Access-Control|^Cache-Control|^No se pudo guardar el progreso$/.test(s);
-for (const archivo of ['src/main.js', 'src/puerto.js', 'src/red.js', 'src/juego.js', 'src/dibujo.js', 'src/cuenta.js', 'src/mundo.js', 'src/barcos.js', 'servidor/worker.js']) {
+for (const archivo of ['src/main.js', 'src/puerto.js', 'src/red.js', 'src/juego.js', 'src/dibujo.js', 'src/cuenta.js', 'src/mundo.js', 'src/barcos.js', 'src/practica.js', 'servidor/worker.js']) {
   const codigo = readFileSync(archivo, 'utf8').split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/ .*$/, '')).join('\n');
   for (const m of codigo.matchAll(/'((?:[^'\\\n]|\\.)*)'/g)) if (pareceTexto(m[1])) usados.add(m[1]);
 }

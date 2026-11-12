@@ -28,8 +28,8 @@
   </style>
   <script>setTimeout(function () { document.documentElement.classList.remove('cargando'); }, 8000);</script>
   <noscript><style>html.cargando body > * { visibility: visible !important; } html.cargando body::before, html.cargando body::after { display: none; }</style></noscript>
-  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=bc0f7924","/src/arte-britanico.js":"/src/arte-britanico.js?v=bc0f7924","/src/arte-chino.js":"/src/arte-chino.js?v=bc0f7924","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=bc0f7924","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=bc0f7924","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=bc0f7924","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=bc0f7924","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=bc0f7924","/src/arte-espanol.js":"/src/arte-espanol.js?v=bc0f7924","/src/arte-frances.js":"/src/arte-frances.js?v=bc0f7924","/src/arte-holandes.js":"/src/arte-holandes.js?v=bc0f7924","/src/arte-japones.js":"/src/arte-japones.js?v=bc0f7924","/src/arte-motor.js":"/src/arte-motor.js?v=bc0f7924","/src/arte-otomano.js":"/src/arte-otomano.js?v=bc0f7924","/src/arte-portugues.js":"/src/arte-portugues.js?v=bc0f7924","/src/arte-sueco.js":"/src/arte-sueco.js?v=bc0f7924","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=bc0f7924","/src/banderas.js":"/src/banderas.js?v=bc0f7924","/src/barcos.js":"/src/barcos.js?v=bc0f7924","/src/config.js":"/src/config.js?v=bc0f7924","/src/cuenta.js":"/src/cuenta.js?v=bc0f7924","/src/dibujo.js":"/src/dibujo.js?v=bc0f7924","/src/idioma.js":"/src/idioma.js?v=bc0f7924","/src/juego.js":"/src/juego.js?v=bc0f7924","/src/main.js":"/src/main.js?v=bc0f7924","/src/mapas.js":"/src/mapas.js?v=bc0f7924","/src/mundo.js":"/src/mundo.js?v=bc0f7924","/src/puerto.js":"/src/puerto.js?v=bc0f7924","/src/red.js":"/src/red.js?v=bc0f7924","/src/rng.js":"/src/rng.js?v=bc0f7924","/src/sonido.js":"/src/sonido.js?v=bc0f7924","/src/textos-historia.js":"/src/textos-historia.js?v=bc0f7924","/src/textos.js":"/src/textos.js?v=bc0f7924"}}</script>
-  <link rel="stylesheet" href="estilos.css?v=bc0f7924">
+  <script type="importmap">{"imports":{"/src/arte-aleman.js":"/src/arte-aleman.js?v=8a0ec454","/src/arte-britanico.js":"/src/arte-britanico.js?v=8a0ec454","/src/arte-chino.js":"/src/arte-chino.js?v=8a0ec454","/src/arte-elegidos.js":"/src/arte-elegidos.js?v=8a0ec454","/src/arte-emblemas.js":"/src/arte-emblemas.js?v=8a0ec454","/src/arte-emblemas2.js":"/src/arte-emblemas2.js?v=8a0ec454","/src/arte-emblemas3.js":"/src/arte-emblemas3.js?v=8a0ec454","/src/arte-emblemas4.js":"/src/arte-emblemas4.js?v=8a0ec454","/src/arte-espanol.js":"/src/arte-espanol.js?v=8a0ec454","/src/arte-frances.js":"/src/arte-frances.js?v=8a0ec454","/src/arte-holandes.js":"/src/arte-holandes.js?v=8a0ec454","/src/arte-japones.js":"/src/arte-japones.js?v=8a0ec454","/src/arte-motor.js":"/src/arte-motor.js?v=8a0ec454","/src/arte-otomano.js":"/src/arte-otomano.js?v=8a0ec454","/src/arte-portugues.js":"/src/arte-portugues.js?v=8a0ec454","/src/arte-sueco.js":"/src/arte-sueco.js?v=8a0ec454","/src/arte-vikingo.js":"/src/arte-vikingo.js?v=8a0ec454","/src/banderas.js":"/src/banderas.js?v=8a0ec454","/src/barcos.js":"/src/barcos.js?v=8a0ec454","/src/config.js":"/src/config.js?v=8a0ec454","/src/cuenta.js":"/src/cuenta.js?v=8a0ec454","/src/dibujo.js":"/src/dibujo.js?v=8a0ec454","/src/idioma.js":"/src/idioma.js?v=8a0ec454","/src/juego.js":"/src/juego.js?v=8a0ec454","/src/main.js":"/src/main.js?v=8a0ec454","/src/mapas.js":"/src/mapas.js?v=8a0ec454","/src/mundo.js":"/src/mundo.js?v=8a0ec454","/src/practica.js":"/src/practica.js?v=8a0ec454","/src/puerto.js":"/src/puerto.js?v=8a0ec454","/src/red.js":"/src/red.js?v=8a0ec454","/src/rng.js":"/src/rng.js?v=8a0ec454","/src/sonido.js":"/src/sonido.js?v=8a0ec454","/src/textos-historia.js":"/src/textos-historia.js?v=8a0ec454","/src/textos.js":"/src/textos.js?v=8a0ec454"}}</script>
+  <link rel="stylesheet" href="estilos.css?v=8a0ec454">
 </head>
 <body>
   <canvas id="mar"></canvas>
@@ -65,6 +65,28 @@
       <span id="hud-tesoro-txt"></span>
     </div>
     <div id="hud-cartel" class="oculto"></div>
+    <!-- Práctica guiada: qué hay que hacer y con qué tecla. Las teclas del paso van pintadas de oscuro; al apretarlas se encienden. -->
+    <div id="practica" class="oculto">
+      <div class="pra-cab"><span id="pra-paso"></span><span class="pra-botones"><button id="pra-saltar" type="button" data-t>Saltar este paso</button><button id="pra-salir" type="button" data-t>Salir de la práctica</button></span></div>
+      <div class="pra-cuerpo">
+        <div class="pra-texto"><b id="pra-titulo"></b><p id="pra-texto"></p></div>
+        <div id="pra-teclas">
+          <div class="teclado">
+            <div><kbd data-k="q">Q</kbd><kbd data-k="w">W</kbd><kbd class="hueco">E</kbd><kbd data-k="r">R</kbd></div>
+            <div class="corrida"><kbd data-k="a">A</kbd><kbd class="hueco">S</kbd><kbd data-k="d">D</kbd><kbd data-k="f">F</kbd><kbd data-k="p" class="suelta">P</kbd></div>
+            <div><kbd data-k=" " class="espacio" data-t>espacio</kbd></div>
+          </div>
+          <div class="flechas"><kbd data-k="arrowup">↑</kbd><div><kbd class="hueco">←</kbd><kbd data-k="arrowdown">↓</kbd><kbd class="hueco">→</kbd></div></div>
+          <svg class="raton" viewBox="0 0 64 96" aria-hidden="true">
+            <path data-k="m0" d="M30 4 C14 4 4 16 4 32 V40 H30 Z"/>
+            <path data-k="m2" d="M34 4 C50 4 60 16 60 32 V40 H34 Z"/>
+            <path data-k="mover" d="M4 44 H60 V62 C60 80 48 92 32 92 C16 92 4 80 4 62 Z"/>
+            <rect data-k="rueda" x="26" y="12" width="12" height="22" rx="6"/>
+            <path class="cruz" d="M32 54 l5 6 h-3 v5 h5 v-3 l6 5 -6 5 v-3 h-5 v5 h3 l-5 6 -5 -6 h3 v-5 h-5 v3 l-6 -5 6 -5 v3 h5 v-5 h-3 z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
     <div id="avisos"></div>
     <div id="pista"></div>
     <div class="panel abajo-izq">
@@ -101,6 +123,11 @@
           <p id="ast-linea-info" class="suave centro"></p>
           <button id="ast-salas" class="boton secundario" type="button" data-t>👥 Jugar con amigos</button>
           <button id="ast-zarpar" class="boton secundario">Jugar solo contra bots</button>
+          <div class="aprender">
+            <button id="ast-practica" class="boton secundario" type="button" data-t>🎓 Práctica guiada</button>
+            <button id="ast-guia" class="boton secundario" type="button" data-t>📖 Guía del juego</button>
+          </div>
+          <p id="ast-primera" class="suave centro oculto" data-t>¿Primera vez? Empezá por la práctica guiada: son tres minutos.</p>
           <p id="ast-mejor" class="suave"></p>
         </div>
       </div>
@@ -111,6 +138,7 @@
     <div class="caja ancha">
       <h2 data-t>Puerto</h2>
       <p class="sub" data-t>Tu oro quedó a salvo. Tocá lo que quieras comprar: cada tarjeta dice qué hace y cuánto cuesta.</p>
+      <p id="pto-practica" class="aviso bueno oculto" data-t>¡Práctica terminada! Mirá tranquilo qué se puede comprar. Al salir del puerto te mostramos una guía corta del resto del juego.</p>
       <div class="astillero">
         <div id="pto-opciones"></div>
         <div class="resumen">
@@ -129,6 +157,19 @@
       <div id="fin-datos"></div>
       <button id="fin-volver" class="boton principal" type="button"></button>
       <button id="fin-otra" class="boton secundario" type="button" data-t>Cambiar de flota</button>
+    </div>
+  </div>
+
+  <div id="pantalla-guia" class="pantalla oculto">
+    <div class="caja">
+      <div class="cabecera"><h2 id="guia-titulo"></h2><span id="guia-n" class="suave"></span></div>
+      <canvas id="guia-dibujo" width="1016" height="360"></canvas>
+      <p id="guia-texto" class="sub"></p>
+      <div class="botones">
+        <button id="guia-atras" class="boton" type="button" data-t>Atrás</button>
+        <button id="guia-sig" class="boton principal" type="button"></button>
+      </div>
+      <button id="guia-cerrar" class="boton enlace" type="button" data-t>Cerrar la guía</button>
     </div>
   </div>
 
@@ -214,7 +255,7 @@
     </div>
   </div>
 
-  <script src="vendor/supabase.min.js?v=bc0f7924" defer></script>
-  <script type="module" src="src/main.js?v=bc0f7924"></script>
+  <script src="vendor/supabase.min.js?v=8a0ec454" defer></script>
+  <script type="module" src="src/main.js?v=8a0ec454"></script>
 </body>
 </html>

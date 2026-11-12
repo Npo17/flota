@@ -12,6 +12,7 @@ import { t, IDIOMAS, registrarTextos, idiomaActual, idiomaInicial, elegirIdioma 
 import { TEXTOS } from './textos.js';
 import { TEXTOS_HISTORIA } from './textos-historia.js';
 import * as sonido from './sonido.js';
+import { PASOS, GUIA, crearPractica, avanzarPractica, pasoActual, datosPaso, saltarPaso } from './practica.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
 
 const $ = (id) => document.getElementById(id);
@@ -219,6 +220,9 @@ function volverAlAstillero(mensaje) {
   clearInterval(relojFin);
   if (red) { red.cerrar(); red = null; }
   partida = null;
+  practica = null;
+  $('practica').classList.add('oculto'); $('hud').classList.remove('practica'); $('pto-practica').classList.add('oculto');
+  pintarPrimeraVez();
   estado = 'astillero';
   for (const id of ['pantalla-puerto', 'pantalla-fin']) $(id).classList.add('oculto');
   $('hud').classList.add('oculto');
@@ -317,6 +321,7 @@ function entrarPuerto() {
 
 function abrirPuerto() {
   reportar(false);
+  if (practica && pasoActual(practica)?.id === 'puerto') { practica.hecho = true; partida.marca = null; $('practica').classList.add('oculto'); $('pto-practica').classList.remove('oculto'); }
   estado = 'puerto';
   oroPuertoPintado = -1;
   $('pantalla-puerto').classList.remove('oculto');
@@ -377,6 +382,7 @@ function clavePuertoDe() {
 }
 
 $('pto-salir').onclick = () => {
+  if (practica && practica.hecho) return terminarPractica(); // fin de la práctica: al astillero, con la guía abierta
   estado = 'mar';
   $('pantalla-puerto').classList.add('oculto');
 };
@@ -390,7 +396,7 @@ function mostrarFin() {
   let mejor = 0;
   try {
     mejor = +localStorage.getItem('flota-mejor') || 0;
-    if (total > mejor) localStorage.setItem('flota-mejor', String(total));
+    if (total > mejor && !partida.practica) localStorage.setItem('flota-mejor', String(total));
   } catch {}
   const min = Math.floor(st.tiempo / 60), seg = Math.floor(st.tiempo % 60);
   $('fin-datos').innerHTML = `
@@ -422,6 +428,7 @@ function reaparecer() {
     if (!red || !red.reentrar()) volverAlAstillero(t('Se cortó la conexión con el mar.')); // al llegar el barco nuevo, red avisa y arranca solo
     return;
   }
+  if (practica) return iniciarPractica(); // te hundiste practicando (una costa, un remolino): la práctica empieza de nuevo
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida || reglas);
   partida.nombreJugador = cuenta.perfil?.nombre || '';
   empezar();
@@ -431,6 +438,162 @@ $('fin-volver').onclick = reaparecer;
 $('hud-orden').onclick = () => { pulsos.ordenFlota = true; };
 $('hud-formacion').onclick = () => { pulsos.formacion = true; };
 $('fin-otra').onclick = () => volverAlAstillero();
+
+// ---------- Práctica guiada y guía del juego ----------
+// La práctica es una partida de un jugador en un mar sin enemigos (src/practica.js). Abajo aparece un panel con lo que hay que
+// hacer y un teclado dibujado: las teclas del paso van pintadas de oscuro y se encienden al apretarlas.
+let practica = null;
+let practicaHecha = false;
+try { practicaHecha = localStorage.getItem('aon-practica') === '1'; } catch {}
+function pintarPrimeraVez() {
+  $('ast-practica').classList.toggle('nuevo', !practicaHecha);
+  $('ast-primera').classList.toggle('oculto', practicaHecha);
+}
+function iniciarPractica() {
+  mundo = crearMundo('malta');
+  reglasPartida = { viento: false, abordajes: true }; // sin viento: primero las maniobras; el viento se explica en la guía
+  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida);
+  partida.nombreJugador = cuenta.perfil?.nombre || '';
+  practica = crearPractica(partida);
+  empezar();
+  $('hud').classList.add('practica');
+  $('practica').classList.remove('oculto');
+  pintarPractica();
+}
+function pintarPractica() {
+  const paso = practica && pasoActual(practica);
+  if (!paso) { $('practica').classList.add('oculto'); return; }
+  $('pra-paso').textContent = t('Práctica · paso {a} de {b}', { a: practica.paso + 1, b: PASOS.length });
+  $('pra-titulo').textContent = t(paso.titulo);
+  $('pra-texto').textContent = t(paso.texto, datosPaso(practica, partida));
+  for (const el of $('pra-teclas').querySelectorAll('[data-k]')) el.classList.toggle('pide', paso.teclas.includes(el.dataset.k));
+  const caja = $('practica'); // un destello verde: paso cumplido
+  if (practica.paso > 0) { caja.classList.remove('hecho'); void caja.offsetWidth; caja.classList.add('hecho'); sonido.clic(); }
+}
+// Enciende en el teclado dibujado la tecla (o la parte del ratón) que se está usando
+const relojTecla = {};
+function teclaDibujada(k, apretada, breve) {
+  if (!practica) return;
+  const el = [...$('pra-teclas').querySelectorAll('[data-k]')].find((x) => x.dataset.k === k);
+  if (!el) return;
+  el.classList.toggle('apretada', apretada);
+  clearTimeout(relojTecla[k]);
+  if (apretada && breve) relojTecla[k] = setTimeout(() => el.classList.remove('apretada'), breve);
+}
+function terminarPractica() {
+  practicaHecha = true;
+  try { localStorage.setItem('aon-practica', '1'); } catch {}
+  volverAlAstillero();
+  abrirGuia();
+}
+$('ast-practica').onclick = iniciarPractica;
+$('pra-saltar').onclick = () => { if (practica) { saltarPaso(practica, partida); pintarPractica(); } };
+$('pra-salir').onclick = () => volverAlAstillero();
+
+// La guía: ocho láminas cortas con lo que la práctica no muestra (viento, brisas, tesoro, civilizaciones, mejoras…)
+let laminaGuia = 0;
+function abrirGuia() { laminaGuia = 0; $('pantalla-guia').classList.remove('oculto'); pintarGuia(); }
+function pintarGuia() {
+  const l = GUIA[laminaGuia];
+  $('guia-titulo').textContent = t(l.titulo);
+  $('guia-n').textContent = t('{a} de {b}', { a: laminaGuia + 1, b: GUIA.length });
+  $('guia-texto').textContent = t(l.texto);
+  $('guia-atras').disabled = laminaGuia === 0;
+  $('guia-sig').textContent = t(laminaGuia === GUIA.length - 1 ? '¡A navegar!' : 'Siguiente');
+  pintarLamina(l.dibujo);
+}
+$('ast-guia').onclick = abrirGuia;
+$('guia-atras').onclick = () => { laminaGuia = Math.max(0, laminaGuia - 1); pintarGuia(); };
+$('guia-sig').onclick = () => { if (laminaGuia >= GUIA.length - 1) $('pantalla-guia').classList.add('oculto'); else { laminaGuia++; pintarGuia(); } };
+$('guia-cerrar').onclick = () => $('pantalla-guia').classList.add('oculto');
+
+function pintarLamina(cual) {
+  const c = $('guia-dibujo'), x = c.getContext('2d'), W = c.width, H = c.height, TAU = Math.PI * 2;
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  const mar = x.createLinearGradient(0, 0, 0, H); mar.addColorStop(0, '#2a7aa3'); mar.addColorStop(1, '#174f73');
+  x.fillStyle = mar; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(255,255,255,0.13)'; x.lineWidth = 2; x.lineCap = 'round';
+  for (let q = 0; q < 46; q++) { const ox = (q * 137) % W, oy = (q * 89) % H; x.beginPath(); x.moveTo(ox, oy); x.quadraticCurveTo(ox + 9, oy - 6, ox + 18, oy); x.quadraticCurveTo(ox + 27, oy + 6, ox + 36, oy); x.stroke(); }
+  const barco = (d, px, py, a, escala, extra) => {
+    const b = crearBarco(d, 'jugador', 0, 0, { a, velas: 3, bandera: '#1f7a3f', ...extra });
+    x.save(); x.translate(px, py); x.scale(escala, escala); dibujarBarco(x, b, { sinBarra: true }); x.restore();
+  };
+  const flecha = (px, py, a, largo, color, ancho) => {
+    x.save(); x.translate(px, py); x.rotate(a); x.strokeStyle = color; x.fillStyle = color; x.lineWidth = ancho; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(-largo / 2, 0); x.lineTo(largo / 2 - ancho * 2, 0); x.stroke();
+    x.beginPath(); x.moveTo(largo / 2, 0); x.lineTo(largo / 2 - ancho * 3, -ancho * 2); x.lineTo(largo / 2 - ancho * 3, ancho * 2); x.closePath(); x.fill();
+    x.restore();
+  };
+  const rotulo = (txt, px, py, tam = 26, color = '#fff') => {
+    x.font = `800 ${tam}px system-ui, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = 'rgba(0,0,0,0.55)'; x.fillText(txt, px + 2, py + 2); x.fillStyle = color; x.fillText(txt, px, py);
+  };
+  const soplo = (px, py, r) => { // una brisa: mancha clara con rayitas
+    const g = x.createRadialGradient(px, py, r * 0.2, px, py, r); g.addColorStop(0, 'rgba(255,255,255,0.34)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,0.7)'; x.lineWidth = 3;
+    for (let q = 0; q < 7; q++) { const oy = py - r * 0.55 + q * r * 0.18, ox = px - r * 0.5 + ((q * 53) % 60); x.beginPath(); x.moveTo(ox, oy); x.lineTo(ox + r * 0.42, oy); x.stroke(); }
+  };
+  if (cual === 'viento') {
+    for (let q = 0; q < 5; q++) flecha(170 + q * 170, 70 + (q % 2) * 26, 0.12 * Math.sin(q * 1.7), 110, 'rgba(255,255,255,0.45)', 5);
+    barco(diseno, 300, 225, 0.05, 2.3);
+    barco(diseno, 730, 235, Math.PI - 0.05, 2.3);
+    rotulo('+', 300, 320, 44, '#b8ffcb'); rotulo('−', 730, 320, 44, '#ff8f8f');
+    flecha(W / 2, 170, 0, 190, '#ffd166', 9);
+  } else if (cual === 'brisas') {
+    soplo(250, 190, 170); soplo(640, 130, 120); soplo(860, 260, 110);
+    barco(diseno, 250, 200, 0.1, 2.2);
+    flecha(250, 300, 0.1, 120, '#ffd166', 7); rotulo('+30 %', 420, 300, 34, '#ffd166');
+  } else if (cual === 'remolino') {
+    const px = 300, py = 185, R = 150;
+    const g = x.createRadialGradient(px, py, 5, px, py, R); g.addColorStop(0, 'rgba(3,18,35,0.9)'); g.addColorStop(0.4, 'rgba(8,45,75,0.55)'); g.addColorStop(1, 'rgba(8,45,75,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, R, 0, TAU); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,0.5)'; x.lineWidth = 3;
+    for (let br = 0; br < 4; br++) { x.beginPath(); for (let k = 0; k <= 30; k++) { const f = k / 30, a = br * TAU / 4 + f * 4.2, r = 12 + f * (R - 20); if (k) x.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r); else x.moveTo(px + Math.cos(a) * r, py + Math.sin(a) * r); } x.stroke(); }
+    x.fillStyle = '#d9c48a'; x.beginPath(); x.ellipse(820, 150, 170, 105, 0.2, 0, TAU); x.fill();
+    x.fillStyle = '#4f8f45'; x.beginPath(); x.ellipse(825, 145, 130, 72, 0.2, 0, TAU); x.fill();
+    barco(diseno, 700, 280, -0.3, 1.9);
+    rotulo('+', 640, 220, 50, '#b8ffcb');
+  } else if (cual === 'tesoro') {
+    const oro = { faccion: 'espanoles', casco: 'galeon', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada' };
+    const guardia = { faccion: 'espanoles', casco: 'bergantin', velas: 'latinas', canones: 8, municion: 'redonda', trip: 'curtida' };
+    barco(guardia, 250, 120, 0.15, 1.7); barco(guardia, 270, 290, 0.15, 1.7);
+    barco(oro, 520, 205, 0.15, 2.5, { color: '#f6e7b0', colorVela: '#f3d98b' });
+    flecha(800, 240, 0.15, 150, '#ffd166', 8);
+    x.fillStyle = 'rgba(8,26,40,0.8)'; x.fillRect(700, 40, 270, 62);
+    x.fillStyle = 'rgba(0,0,0,0.5)'; x.fillRect(716, 76, 238, 12);
+    x.fillStyle = '#ffd166'; x.fillRect(716, 76, 150, 12);
+    rotulo('2:10', 835, 58, 24, '#ffd166');
+  } else if (cual === 'civs') {
+    const ids = Object.keys(FACCIONES), bw = 84, bh = 56;
+    ids.forEach((id, q) => {
+      const col = q % 10, fila = Math.floor(q / 10);
+      x.save(); x.translate(22 + col * 98, 46 + fila * 150);
+      x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(3, 4, bw, bh);
+      dibujarBandera(x, id, bw, bh);
+      x.restore();
+      rotulo(t(FACCIONES[id].nombre), 22 + col * 98 + bw / 2, 46 + fila * 150 + bh + 22, 15);
+    });
+  } else if (cual === 'cascos') {
+    Object.keys(CASCOS).forEach((id, q) => {
+      const px = 190 + q * 320;
+      barco({ ...diseno, casco: id, canones: Math.min(CASCOS[id].maxCanones, 4 + q * 4) }, px, 160, -0.2, 1.7 + q * 0.15);
+      rotulo(t(CASCOS[id].nombre), px, 310, 28, '#ffe9a8');
+    });
+  } else if (cual === 'puerto') {
+    [['Cañones', 3], ['Casco', 2], ['Flota', 4]].forEach(([nombre, n], q) => {
+      const py = 75 + q * 105;
+      x.textAlign = 'left'; rotulo(t(nombre), 170, py, 30, '#ffe9a8');
+      for (let k = 0; k < 6; k++) { x.fillStyle = k < n ? '#ffd166' : 'rgba(0,0,0,0.4)'; x.fillRect(340 + k * 100, py - 18, 86, 36); if (k >= n) rotulo(String(k + 1), 383 + k * 100, py, 20, 'rgba(255,255,255,0.5)'); else rotulo(String(k + 1), 383 + k * 100, py, 20, '#2a1c08'); }
+    });
+  } else if (cual === 'mar') {
+    ['malta', 'portroyal', 'nagasaki'].forEach((id, q) => {
+      x.save(); x.translate(110 + q * 290, 40); dibujarVistaMapa(x, mundoVista(id), 220); x.restore();
+      rotulo(t(MAPAS[id].nombre), 220 + q * 290, 310, 22, '#ffe9a8');
+    });
+  }
+}
+pintarPrimeraVez();
 
 // ---------- Entrada ----------
 addEventListener('keydown', (e) => {
@@ -448,6 +611,7 @@ addEventListener('keydown', (e) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
+  teclaDibujada(k, true);
   // Teclas (13/11/2026, pedido de Nicolás): Q y W son de la flota, como en los juegos de estrategia. El disparo por teclado pasó
   // a A (babor) y D (estribor) — además del ratón y la barra — y las velas quedan en las flechas y la rueda.
   if (k === 'a') pulsos.fuego = -1;
@@ -462,15 +626,17 @@ addEventListener('keydown', (e) => {
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
   if (k === 'tab') e.preventDefault();
 });
-addEventListener('keyup', (e) => teclas.delete(e.key.toLowerCase()));
+addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); teclas.delete(k); teclaDibujada(k, false); });
 addEventListener('blur', () => teclas.clear());
 let ratonVisto = false;
-addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; });
+addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; teclaDibujada('mover', true, 200); });
+addEventListener('mouseup', (e) => teclaDibujada(e.button === 0 ? 'm0' : 'm2', false));
 // clic izquierdo: costado de babor (el izquierdo del barco); clic derecho: estribor. Los dos a la vez, la andanada completa.
 canvas.addEventListener('mousedown', (e) => {
   if (estado !== 'mar' || (e.button !== 0 && e.button !== 2)) return;
   vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true;
   const lado = e.button === 0 ? -1 : 1;
+  teclaDibujada(e.button === 0 ? 'm0' : 'm2', true);
   if (pulsos.fuego && pulsos.fuego !== lado) pulsos.fuegoTodo = true;
   else pulsos.fuego = lado;
 });
@@ -481,6 +647,7 @@ canvas.addEventListener('wheel', (e) => {
   if (estado === 'mar' && e.ctrlKey && e.deltaY) { cambiarZoom(e.deltaY < 0 ? 1.1 : 1 / 1.1); return; } // Ctrl + rueda: zoom de la cámara
   if (estado !== 'mar' || !e.deltaY || e.timeStamp - ultimaRueda < 130) return; // una muesca por vez, también con panel táctil
   ultimaRueda = e.timeStamp;
+  teclaDibujada('rueda', true, 220);
   cambiarVelas(e.deltaY < 0 ? 1 : -1);
 }, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -633,6 +800,7 @@ function cuadro(ahora) {
       pulsos = {};
       if (partida.enLinea) red.cuadro(dt, entrada);
       else actualizar(partida, dt, entrada);
+      if (practica && !partida.enLinea && avanzarPractica(practica, partida, entrada, dt)) pintarPractica();
       if (partida.fin && partida.t - partida.finEn > 2.2) mostrarFin();
     } else if (partida.enLinea && (estado === 'puerto' || estado === 'fin')) {
       // en línea el mar no se detiene: el barco queda quieto en el puerto, que es zona segura
@@ -729,7 +897,7 @@ $('per-cambiar').onclick = () => abrirNombre();
 
 // Manda al perfil lo hecho desde el último reporte (al entrar al puerto y al terminar la partida)
 function reportar(fin) {
-  if (!partida || !cuenta.perfil) return;
+  if (!partida || !cuenta.perfil || partida.practica) return; // la práctica no suma a las estadísticas
   const st = partida.stats, r = partida.reportado || (partida.reportado = { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 });
   const d = {
     hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, eliminados: (st.eliminados || 0) - (r.eliminados || 0), oro: Math.round(st.saqueado - r.saqueado),
@@ -790,6 +958,8 @@ function cambiarIdioma(id) {
   pintarLinea();
   pintarAjustes();
   if (estado === 'puerto') pintarPuerto();
+  if (practica) pintarPractica();
+  if (!$('pantalla-guia').classList.contains('oculto')) pintarGuia();
   avisosPintados = ''; tablaPintada = '';
 }
 
@@ -814,4 +984,4 @@ requestAnimationFrame(cuadro);
 document.documentElement.classList.remove('cargando'); // ya está todo pintado: se va la pantalla de carga (index.html)
 
 // Para probar desde la consola
-window.flota = { sonido, get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; } };
+window.flota = { sonido, get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; }, get practica() { return practica; }, cuadro };

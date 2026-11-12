@@ -55,7 +55,7 @@ Lo que encuentren `/qa` y `/review` se arregla antes de mostrarle el cambio al s
 - **Flujo:** cada cambio se prueba primero en localhost y se muestra al socio. **No se sube nada sin su OK explícito.**
 - **Al terminar un cambio:** actualizar `docs/BITACORA.md` y este archivo, como dice la regla de arriba.
 - **Ramas:** si trabajaste en una rama, apenas sus cambios estén en `main` **borrala**, en GitHub y en tu compu (`git push origin --delete <rama>` y `git branch -d <rama>`). Antes comprobá que no le quede nada sin unir (`git log origin/main..origin/<rama>` tiene que salir vacío). En el repo solo quedan `main` y las ramas con trabajo en curso (pedido de Nicolás, 12/11/2026).
-- **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`.
+- **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`. Si se tocó la práctica guiada o algo que usa (disparos, abordaje, cofres, puerto), también `node scripts/probar-practica.mjs`.
 - **Commits:** en español, describiendo el cambio para un jugador, con la línea `Co-Authored-By` de Claude.
 - **Originalidad:** es un juego propio. Sirven de referencia de género otros juegos de barcos y de estrategia, pero no se copian nombres, arte, unidades ni bonificaciones de ningún juego existente. Las civilizaciones, banderas y mapas salen de la historia real.
 
@@ -98,6 +98,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/puerto.js` | Qué se compra en el puerto y qué hace cada compra (lo usan la pantalla y el servidor) |
 | `src/red.js` | Juego en línea: se conecta al mar compartido y arma una partida con lo que manda el servidor |
 | `sonido/` | Las pocas grabaciones que se usan (hoy, el estampido del cañón), con su origen y licencia en `sonido/LEEME.md` |
+| `src/practica.js` | Práctica guiada (11 pasos en un mar sin enemigos: qué pide cada uno, qué teclas se pintan y cuándo se da por hecho) y la guía del juego (8 láminas). La pantalla la arma `main.js`; el círculo que marca a dónde ir es `j.marca` en `dibujo.js`. Prueba: `node scripts/probar-practica.mjs` |
 | `src/sonido.js` | Música del lobby, mar, viento y cañones. Casi todo se genera con Web Audio; el estampido del cañón es una grabación (`sonido/canon.mp3`). Dos volúmenes aparte (efectos y música) que se cambian en Ajustes y se guardan en el navegador. Los cañonazos llegan por `partida.alEfecto` (lo llama `efecto()` de `juego.js`, el mismo evento que dibuja el humo). `window.flota.sonido.probar()` mide cada sonido sin parlantes |
 | `servidor/` | Servidor del mar compartido (Cloudflare Workers + Durable Object). Corre la misma `juego.js` |
 | `src/main.js` | Une todo: pantallas, controles y el ciclo del juego |
