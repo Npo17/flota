@@ -123,7 +123,7 @@ export const VIENTO = {
   },
   rafaga: 1.3, // dentro de una ráfaga, con el viento a favor o de través
   anguloRafaga: 100, // hasta qué ángulo la ráfaga empuja
-  rafagas: 9, radioRafaga: [260, 430], velRafaga: 70,
+  rafagas: 14, radioRafaga: [260, 430], velRafaga: 70, // 14 desde el 13/11/2026 (eran 9): al sacar las rachas quedaban pocas brisas; cubren cerca de un séptimo del mar
   // rachas: soplos cortos que aparecen cerca de cada capitán, en cualquier dirección. Si los tomás con la proa más o menos
   // hacia donde soplan, empujan fuerte aunque el viento general esté en contra.
   racha: 1.5, duraRacha: 6, radioRacha: [170, 240], cadaRacha: [3, 6], anguloRacha: 60,
