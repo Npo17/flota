@@ -437,6 +437,7 @@ function reaparecer() {
 $('fin-volver').onclick = reaparecer;
 $('hud-orden').onclick = () => { pulsos.ordenFlota = true; };
 $('hud-formacion').onclick = () => { pulsos.formacion = true; };
+$('hud-hab').onclick = () => { pulsos.habilidad = true; };
 $('fin-otra').onclick = () => volverAlAstillero();
 
 // ---------- Práctica guiada y guía del juego ----------
@@ -581,10 +582,10 @@ function pintarLamina(cual) {
       rotulo(t(CASCOS[id].nombre), px, 310, 28, '#ffe9a8');
     });
   } else if (cual === 'puerto') {
-    [['Cañones', 3], ['Casco', 2], ['Flota', 4]].forEach(([nombre, n], q) => {
-      const py = 75 + q * 105;
-      x.textAlign = 'left'; rotulo(t(nombre), 170, py, 30, '#ffe9a8');
-      for (let k = 0; k < 6; k++) { x.fillStyle = k < n ? '#ffd166' : 'rgba(0,0,0,0.4)'; x.fillRect(340 + k * 100, py - 18, 86, 36); if (k >= n) rotulo(String(k + 1), 383 + k * 100, py, 20, 'rgba(255,255,255,0.5)'); else rotulo(String(k + 1), 383 + k * 100, py, 20, '#2a1c08'); }
+    [['Cañones', 4, 10], ['Casco', 3, 10], ['Flota', 4, 6]].forEach(([nombre, n, tope], q) => {
+      const py = 75 + q * 105, paso = 640 / tope;
+      rotulo(t(nombre), 170, py, 30, '#ffe9a8');
+      for (let k = 0; k < tope; k++) { x.fillStyle = k < n ? '#ffd166' : 'rgba(0,0,0,0.4)'; x.fillRect(320 + k * paso, py - 18, paso - 10, 36); rotulo(String(k + 1), 320 + k * paso + (paso - 10) / 2, py, 20, k < n ? '#2a1c08' : 'rgba(255,255,255,0.5)'); }
     });
   } else if (cual === 'mar') {
     ['malta', 'portroyal', 'nagasaki'].forEach((id, q) => {
@@ -597,14 +598,12 @@ pintarPrimeraVez();
 
 // ---------- Entrada ----------
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !e.repeat) { // ESC: dejar la partida para armar otra flota (dos veces seguidas en el mar, para no salir sin querer)
+  if (e.key === 'Escape' && !e.repeat) {
+    // ESC abre los ajustes (y los cierra). En una partida el mar NO se detiene (Nicolás, 14/11/2026: quería bajar el sonido jugando
+    // en línea y tuvo que salir y perder la partida). Para dejar la partida está el botón rojo de los ajustes.
+    if (!$('pantalla-ajustes').classList.contains('oculto')) return cerrarAjustes();
     if (estado === 'fin') return volverAlAstillero();
-    if (estado === 'mar' && partida && !partida.fin) {
-      const ahora = performance.now();
-      if (ahora - escapeEn < 3500) { escapeEn = 0; reportar(true); return volverAlAstillero(); }
-      escapeEn = ahora;
-    }
-    return;
+    return abrirAjustes();
   }
   if (estado !== 'mar') return;
   const k = e.key.toLowerCase();
@@ -676,12 +675,7 @@ function pintarHud() {
   const esc = j.barcos.filter((x) => x.bando === 'escolta' && !x.hundiendo).length;
   $('hud-flota').textContent = `${t('{a} de {b}', { a: esc, b: j.escoltasMax })} · ${t(j.ordenFlota === 'ataque' ? 'al ataque' : 'en formación')}`;
   // con barcos capturados aparecen los dos botones de órdenes
-  $('hud-flota-botones').classList.toggle('oculto', esc === 0);
-  if (esc > 0) {
-    const orden = `${t(j.ordenFlota === 'ataque' ? 'Atacar' : 'Seguirme')} (Q)`, forma = `${t(FORMACIONES[j.formacion || 0].nombre)} (W)`;
-    if ($('hud-orden').textContent !== orden) $('hud-orden').textContent = orden;
-    if ($('hud-formacion').textContent !== forma) $('hud-formacion').textContent = forma;
-  }
+  pintarAcciones(j, b, esc);
   pintarEventos(j, b);
   $('hud-bodega').textContent = j.oroBodega;
   $('hud-puerto').textContent = j.oroPuerto;
@@ -699,9 +693,6 @@ function pintarHud() {
   const averia = b.vida < s.vidaMax * 0.7 ? ` · ${t('averiado, vas más lento')}` : '';
   $('hud-velas-txt').textContent = t(b.velas >= 3 ? 'A toda vela: recarga lenta' : b.velas === 2 ? 'Media vela' : b.velas === 1 ? 'Velas de combate: recarga rápida' : 'Velas aferradas: el barco se detiene') + averia;
   pintarViento(j, b);
-  const hab = HABILIDADES[b.diseno.habilidad] || HABILIDADES.andanada, cdH = j.cdHabilidad || 0;
-  $('hud-hab-txt').textContent = `${t(hab.nombre)} (R)${cdH > 0 ? ` · ${Math.ceil(cdH)} s` : ''}`;
-  $('hud-hab').style.width = `${100 - Math.min(100, (cdH / hab.espera) * 100)}%`;
 
   const clave = j.avisos.map((a) => a.texto + (a.p ? JSON.stringify(a.p) : '')).join('|');
   if (clave !== avisosPintados) {
@@ -711,12 +702,52 @@ function pintarHud() {
   let pista = '';
   const cand = candidatoAbordaje(j, vista.raton);
   if (j.fin) pista = '';
-  else if (performance.now() - escapeEn < 3500) pista = t('ESC otra vez para dejar la partida y cambiar de flota');
   else if (cercaDelPuerto()) pista = j.oroBodega ? t('P: entrar al puerto y guardar {n} de oro', { n: j.oroBodega }) : t('P: entrar al puerto');
   else if (j.gancho && j.gancho.fase === 'enganchado') pista = t('Abordando el {barco}: tu gente {a} contra {b} · F para cortar las sogas', { barco: j.gancho.obj.nombre, a: b.trip, b: j.gancho.obj.trip });
   else if (b.reparando) pista = t('Reparando el casco en la costa (hasta el 75 %)');
   else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = t(cand.cerca ? 'F: abordar el {barco} · tu gente {a} contra {b} ({ventaja})' : 'Arrimate al {barco} para abordarlo · tu gente {a} contra {b} ({ventaja})', { barco: cand.b.nombre, a: b.trip, b: cand.b.trip, ventaja: cand.ventaja });
   if ($('pista').textContent !== pista) $('pista').textContent = pista;
+}
+
+// Los botones de abajo: Q (orden a la flota) y W (formación) aparecen cuando tenés barcos capturados; R es tu habilidad,
+// y mientras se recupera el botón se oscurece de arriba hacia abajo y muestra los segundos que faltan.
+const ICONO_HAB = { andanada: '💥', ancla: '⚓', carpinteros: '🔨', trapo: '💨' };
+let accionesPintadas = '';
+function iconoFormacion(c, n, ataque) { // tu barco (dorado) y tres de la flota, en el lugar que les toca
+  const x = c.getContext('2d'), W = c.width;
+  x.clearRect(0, 0, W, W);
+  const pts = [[0, 0], ...[0, 1, 2].map((k) => FORMACIONES[n].lugar(k))]; // [adelante, al costado]
+  const ys = pts.map((p) => -p[0]), xs = pts.map((p) => p[1]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const esc = (W - 30) / Math.max(200, Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  pts.forEach((p, q) => {
+    const px = W / 2 + (p[1] - cx) * esc, py = W / 2 + (-p[0] - cy) * esc, r = q ? 9 : 11;
+    x.fillStyle = q ? (ataque ? '#ff8f8f' : '#f3ead2') : '#ffd166';
+    x.beginPath(); x.moveTo(px, py - r * 1.3); x.lineTo(px + r * 0.8, py + r); x.lineTo(px, py + r * 0.5); x.lineTo(px - r * 0.8, py + r); x.closePath(); x.fill();
+  });
+}
+function pintarAcciones(j, b, esc) {
+  const hab = HABILIDADES[b.diseno.habilidad] ? b.diseno.habilidad : 'andanada', h = HABILIDADES[hab], cd = j.cdHabilidad || 0;
+  const ataque = j.ordenFlota === 'ataque', forma = j.formacion || 0;
+  const clave = [esc > 0, ataque, forma, hab, Math.ceil(cd), idiomaActual()].join('|');
+  if (clave !== accionesPintadas) {
+    accionesPintadas = clave;
+    const bo = $('hud-orden'), bf = $('hud-formacion'), bh = $('hud-hab');
+    bo.classList.toggle('oculto', esc === 0); bf.classList.toggle('oculto', esc === 0);
+    bo.classList.toggle('activa', ataque);
+    bo.querySelector('.ico').textContent = ataque ? '⚔️' : '⛵';
+    bo.querySelector('small').textContent = t(ataque ? 'Atacar' : 'Seguirme');
+    bo.title = `Q · ${t(ataque ? 'Flota: ¡al ataque!' : 'Flota: en formación, a tu lado')}`;
+    iconoFormacion(bf.querySelector('canvas'), forma, ataque);
+    bf.querySelector('small').textContent = t(FORMACIONES[forma].nombre);
+    bf.title = `W · ${t(FORMACIONES[forma].aviso)}`;
+    bh.querySelector('.ico').textContent = ICONO_HAB[hab] || '✨';
+    bh.querySelector('small').textContent = t(h.nombre);
+    bh.querySelector('.seg').textContent = cd > 0 ? Math.ceil(cd) : '';
+    bh.classList.toggle('lista', cd <= 0);
+    bh.title = `R · ${t(h.nombre)}: ${t(h.desc)}`;
+  }
+  $('hud-hab').querySelector('.espera').style.height = `${Math.min(100, (cd / h.espera) * 100)}%`;
 }
 
 // Lo que pasa en el mar y hay que avisar: el galeón del tesoro (cartel con el tiempo que le queda), el viento que cambia
@@ -762,8 +793,9 @@ function pintarViento(j, b) {
   const txt = $('hud-viento-txt');
   txt.textContent = `${t(nombre)} · ${pct > 0 ? '+' : pct < 0 ? '−' : ''}${Math.abs(pct)} %${b.enRafaga ? ` · ${t('ráfaga')}` : ''}`;
   txt.className = pct > 4 ? 'bien' : pct < -4 ? 'mal' : '';
-  const c = $('hud-viento'), x = c.getContext('2d'), R = c.width / 2;
-  x.clearRect(0, 0, c.width, c.height);
+  const c = $('hud-viento'), x = c.getContext('2d'), R = 64; // el dibujo está pensado para 128 de lado; se escala al lienzo
+  x.setTransform(c.width / 128, 0, 0, c.width / 128, 0, 0);
+  x.clearRect(0, 0, 128, 128);
   x.strokeStyle = 'rgba(255,255,255,0.4)'; x.lineWidth = 1.5;
   x.beginPath(); x.arc(R, R, R - 2, 0, Math.PI * 2); x.stroke();
   x.save(); x.translate(R, R); x.rotate(aca);
@@ -960,11 +992,20 @@ function cambiarIdioma(id) {
   if (estado === 'puerto') pintarPuerto();
   if (practica) pintarPractica();
   if (!$('pantalla-guia').classList.contains('oculto')) pintarGuia();
-  avisosPintados = ''; tablaPintada = '';
+  avisosPintados = ''; tablaPintada = ''; accionesPintadas = '';
 }
 
-$('aj-abrir').onclick = () => { pintarAjustes(); $('pantalla-ajustes').classList.remove('oculto'); };
-$('aj-cerrar').onclick = () => $('pantalla-ajustes').classList.add('oculto');
+function abrirAjustes() {
+  pintarAjustes();
+  const jugando = !!partida && (estado === 'mar' || estado === 'puerto') && !partida.fin;
+  $('aj-sigue').classList.toggle('oculto', !jugando);
+  $('aj-dejar').classList.toggle('oculto', !jugando);
+  $('pantalla-ajustes').classList.remove('oculto');
+}
+function cerrarAjustes() { $('pantalla-ajustes').classList.add('oculto'); }
+$('aj-abrir').onclick = abrirAjustes;
+$('aj-cerrar').onclick = cerrarAjustes;
+$('aj-dejar').onclick = () => { cerrarAjustes(); if (partida) { reportar(true); volverAlAstillero(); } };
 ponerTema(tema);
 traducirPagina();
 pintarMapa();

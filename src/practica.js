@@ -46,7 +46,7 @@ export const GUIA = [
   { dibujo: 'cascos', titulo: 'Tu barco',
     texto: 'En el astillero armás tu barco con 1000 de oro. Tres cascos: balandra (rápida), bergantín (equilibrado) y galeón (una fortaleza lenta). Además elegís las velas, cuántos cañones, la munición (bala redonda, metralla contra la tripulación o bala pesada contra el casco), la tripulación y una habilidad.' },
   { dibujo: 'puerto', titulo: 'Las mejoras del puerto',
-    texto: 'Con el oro que guardás en el puerto mejorás el barco: cañones de nivel 1 a 6 (cada nivel, 15 % más de daño), casco reforzado hasta nivel 6, más cañones, un casco más grande, otra munición u otras velas, y lugar para más barcos capturados (hasta 6). También reparás y reclutás marineros.' },
+    texto: 'Con el oro que guardás en el puerto mejorás el barco: cañones de nivel 1 a 10 (cada nivel, 15 % más de daño), casco reforzado hasta nivel 10, más cañones, un casco más grande, otra munición u otras velas, y lugar para más barcos capturados (hasta 6). También reparás y reclutás marineros.' },
   { dibujo: 'mar', titulo: 'El mar y los modos de juego',
     texto: 'Cerca del puerto hay mercantes y piratas chicos; mar adentro, barcos más fuertes y más oro. Podés jugar solo contra bots, en línea con todos en el mismo mar, o en una sala con tus amigos. Si te hunden, volvés al puerto con tu barco y perdés el oro que llevabas en la bodega.' },
 ];

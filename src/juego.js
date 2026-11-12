@@ -432,8 +432,8 @@ function moverBarco(j, b, dt) {
   const anclado = b.cap && b.cap.habilidad && b.cap.habilidad.id === 'ancla' && b.cap.barco === b; // ancla de combate: casi quieto y girando rápido
   // velFija: el galeón del tesoro navega a la velocidad justa para llegar al puerto en el tiempo que dura el evento, sople como sople
   const objetivo = b.velFija ? b.velFija * (b.frenoGancho || 1) * (anclado ? 0.12 : 1)
-    : (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1) * rindeViento(j, b) * (anclado ? 0.12 : 1);
-  b.frenoGancho = 1;
+    : (s.velMax * b.velas) / 3 * pocaGente * averia * (b.frenoGancho || 1) * rindeViento(j, b) * (anclado ? 0.12 : 1) * (b.apuro || 1);
+  b.frenoGancho = 1; b.apuro = 1;
   b.v += (objetivo - b.v) * Math.min(1, dt * (objetivo > b.v ? 0.7 : 1.1));
   const agarre = 0.3 + 0.7 * Math.min(1, b.v / (s.velMax * 0.45));
   b.a += b.timon * s.giro * (anclado ? 3 : agarre) * dt;
@@ -994,7 +994,10 @@ function iaEscolta(j, b, dt) {
     const d = Math.hypot(tx - b.x, ty - b.y);
     if (d > 40) timonHacia(b, Math.atan2(ty - b.y, tx - b.x));
     else timonHacia(b, lider.a);
-    b.velas = d > 260 ? 3 : d > 90 ? Math.max(2, lider.velas) : lider.velas;
+    b.velas = d > 160 ? 3 : d > 90 ? Math.max(2, lider.velas) : lider.velas;
+    // Que la flota obedezca enseguida (Nicolás, 14/11/2026): lejos de su lugar, el barco aprieta el paso hasta alcanzarlo.
+    // Sin esto un galeón capturado nunca llegaba a formar detrás de una balandra y parecía que no hacía caso.
+    b.apuro = d > 420 ? 1.6 : d > 140 ? 1.35 : 1;
     fuegoOportunista(j, b);
   }
   esquivarIslas(j, b);

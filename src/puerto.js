@@ -27,7 +27,7 @@ export function catalogoPuerto(j, cap) {
     [t('Cañones'), [
       { id: 'canones', t: t('Sumar 2 cañones'), d: t('Tenés {a} de {b} que entran en este casco. Pegás más, pero vas un poco más lento.', { a: d.canones, b: s.maxCanones }), costo: PUERTO.parCanones, ok: d.canones < s.maxCanones, listo: t('Casco lleno'),
         hacer: () => { d.canones += 2; } },
-      { id: 'nivel', t: t('Cañones nivel {n}', { n: nivel }), d: t('Cada bala hace 15 % más de daño.'), costo: PUERTO.nivelCanones(nivel), ok: nivel <= 6, listo: t('Al máximo'),
+      { id: 'nivel', t: t('Cañones nivel {n}', { n: nivel }), d: t('Cada bala hace 15 % más de daño.'), costo: PUERTO.nivelCanones(nivel), ok: nivel <= PUERTO.nivelesCanones, listo: t('Al máximo'),
         hacer: () => { d.nivelCanones = nivel; } },
     ]],
     // casco: se puede pasar a uno más grande (nunca a uno más chico). El barco nuevo sale entero y conserva cañones, gente y mejoras.

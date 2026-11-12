@@ -84,7 +84,7 @@ export const PUERTO = {
   nivelCanones: (n) => 180 * n, // n = nivel que se compra
   escolta: (n) => 150 * n, // n = cantidad de lugares que vas a tener
   municion: { redonda: 60, metralla: 160, pesada: 220 },
-  refuerzo: (n) => 140 * n, puntosRefuerzo: 45, nivelesRefuerzo: 6, // reforzar el casco: n = nivel que se compra
+  refuerzo: (n) => 140 * n, puntosRefuerzo: 45, nivelesRefuerzo: 10, nivelesCanones: 10, // hasta nivel 10 desde el 14/11/2026 (eran 6): partidas más largas // reforzar el casco: n = nivel que se compra
   cambioCasco: (diferencia) => Math.round(diferencia * 2.5), // pasar a un casco más grande: la diferencia de precio del astillero, por 2,5
 };
 

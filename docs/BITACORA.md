@@ -3,6 +3,18 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-14 (ESC abre ajustes, mejoras hasta nivel 10, botones Q W R) — Nicolás + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea rijan los niveles hasta 10 y la flota que aprieta el paso.**
+
+- **ESC abre los Ajustes en plena partida** (solo, en línea o en sala) y el mar no se detiene. Motivo: Nicolás quiso bajar el sonido jugando en línea y tuvo que salir y perder la partida. Antes, ESC dos veces dejaba la partida; ahora eso es el botón rojo "Dejar la partida" dentro de Ajustes. ESC otra vez cierra. (`abrirAjustes` en `src/main.js`.)
+- **Cañones y casco hasta nivel 10** (eran 6): `PUERTO.nivelesCanones` y `PUERTO.nivelesRefuerzo` en `src/config.js`. Los precios siguen la misma fórmula (180 × nivel y 140 × nivel). La guía del juego ya dice 10.
+- **Botones de acción abajo, en el medio:** Q (orden a la flota), W (formación, con un dibujito de cómo quedan los barcos) y R (habilidad). Q y W aparecen solo con barcos capturados. El botón R se oscurece y muestra los segundos mientras la habilidad se recupera. Se pueden tocar con el ratón. `pintarAcciones` en `src/main.js`.
+- **Se sacó el panel de abajo a la izquierda** (la barrita de la habilidad y las tres líneas de ayuda). Las líneas de ayuda pasaron a Ajustes → Controles. En la práctica guiada los botones van abajo a la izquierda, porque el medio lo ocupa el panel de pasos.
+- **La flota obedece más rápido:** en formación, el barco que está lejos de su lugar aprieta el paso (+35 %, o +60 % si quedó muy atrás) hasta alcanzarlo (`b.apuro` en `iaEscolta` y `moverBarco`). Antes un galeón capturado nunca llegaba a formar detrás de una balandra y parecía que no hacía caso.
+- **Brújula del viento más grande:** de 64 a 96 px.
+- Pendiente: nadie lo probó a mano; revisar el balance con cañones nivel 10 (+150 % de daño).
+
 ## 2026-11-13 (práctica guiada y guía del juego) — Nicolás + Claude
 
 **Estado: subido a `main`. La práctica y la guía no tocan el servidor; el arreglo del galeón sí (falta republicarlo).**
