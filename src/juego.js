@@ -470,7 +470,8 @@ function moverBarco(j, b, dt) {
     if (d < lim) {
       b.x = i.x + (dx / d) * lim;
       b.y = i.y + (dy / d) * lim;
-      if (b.v > s.velMax * 0.4 && b.golpeIsla <= 0) {
+      // los barcos de tu flota no se lastiman contra la costa: es error del timonel de la máquina, no tuyo
+      if (b.v > s.velMax * 0.4 && b.golpeIsla <= 0 && b.bando !== 'escolta') {
         b.vida -= i.tipo === 'iceberg' ? 10 : 5;
         b.golpeIsla = 1;
         if (insignia) aviso(b.cap, i.tipo === 'iceberg' ? '¡Chocaste un iceberg!' : i.tipo === 'arrecife' ? '¡Encallaste en un banco!' : '¡Encallaste contra la costa!', 'malo');
@@ -988,17 +989,36 @@ function iaEscolta(j, b, dt) {
     // en formación: a la par del jefe, una de cada lado
     const escoltas = j.barcos.filter((x) => x.cap === cap && x.bando === 'escolta' && !x.hundiendo);
     const k = escoltas.indexOf(b);
-    const ca = Math.cos(lider.a), sa = Math.sin(lider.a);
+    // La formación se arma según el rumbo con el que venías navegando, no según la proa del momento: si estás quieto y solo
+    // girás, los lugares no dan vueltas alrededor tuyo y la flota se queda donde está (Nicolás, 15/11/2026: parado al lado
+    // de una isla giraba y la flota salía a dar vueltas y se estrellaba contra la costa).
+    const quieto = lider.v < 30;
+    if (!quieto || cap.rumboFlota === undefined) cap.rumboFlota = lider.a;
+    const rumbo = cap.rumboFlota, ca = Math.cos(rumbo), sa = Math.sin(rumbo);
     const [atras, lateral] = FORMACIONES[cap.formacion || 0].lugar(k);
-    const tx = lider.x + ca * atras - sa * lateral, ty = lider.y + sa * atras + ca * lateral;
+    let tx = lider.x + ca * atras - sa * lateral, ty = lider.y + sa * atras + ca * lateral;
+    // si el lugar cae sobre una isla (o pegado a la costa), se corre al agua, del lado de afuera
+    for (const i of j.mundo.islas) {
+      const dx = tx - i.x, dy = ty - i.y, di = Math.hypot(dx, dy) || 1, lim = i.r + b.stats.ancho + 45;
+      if (di < lim) { tx = i.x + (dx / di) * lim; ty = i.y + (dy / di) * lim; }
+    }
     const d = Math.hypot(tx - b.x, ty - b.y);
-    if (d > 40) timonHacia(b, Math.atan2(ty - b.y, tx - b.x));
-    else timonHacia(b, lider.a);
-    b.velas = d > 160 ? 3 : d > 90 ? Math.max(2, lider.velas) : lider.velas;
-    // Que la flota obedezca enseguida (Nicolás, 14/11/2026): lejos de su lugar, el barco aprieta el paso hasta alcanzarlo.
-    // Sin esto un galeón capturado nunca llegaba a formar detrás de una balandra y parecía que no hacía caso.
-    b.apuro = d > 420 ? 1.6 : d > 140 ? 1.35 : 1;
+    if (quieto) {
+      // con el jefe parado: se acercan despacio a su lugar y ahí arrían velas, mirando hacia donde mira él
+      timonHacia(b, d > 50 ? Math.atan2(ty - b.y, tx - b.x) : lider.a);
+      b.velas = d > 260 ? 3 : d > 120 ? 2 : d > 50 ? 1 : 0;
+      b.apuro = d > 420 ? 1.35 : 1;
+    } else {
+      if (d > 40) timonHacia(b, Math.atan2(ty - b.y, tx - b.x));
+      else timonHacia(b, lider.a);
+      b.velas = d > 160 ? 3 : d > 90 ? Math.max(2, lider.velas) : lider.velas;
+      // Que la flota obedezca enseguida (Nicolás, 14/11/2026): lejos de su lugar, el barco aprieta el paso hasta alcanzarlo.
+      // Sin esto un galeón capturado nunca llegaba a formar detrás de una balandra y parecía que no hacía caso.
+      b.apuro = d > 420 ? 1.6 : d > 140 ? 1.35 : 1;
+    }
     fuegoOportunista(j, b);
+    // ya casi en su lugar (que siempre queda en el agua): no da volantazos por la costa de al lado, que lo hacían girar en redondo
+    if (d < 140) return;
   }
   esquivarIslas(j, b);
 }

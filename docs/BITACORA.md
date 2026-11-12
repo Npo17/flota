@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (la flota ya no se estrella sola) — Nicolás + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**
+
+- **Problema (captura de Nicolás):** parado al lado de una isla y girando en el lugar, la flota capturada salía a dar vueltas y se estrellaba contra la costa hasta quedar al 70 %. Causa: los lugares de la formación se calculaban con la proa del momento, así que al girar daban vueltas alrededor del jefe y caían arriba de la isla; los barcos iban a toda vela a buscarlos, chocaban y `esquivarIslas` los hacía girar en redondo.
+- **Arreglo (`iaEscolta` en `src/juego.js`):** con el jefe casi parado (menos de 30 de velocidad) la formación usa el último rumbo con el que venía navegando (`cap.rumboFlota`), así girar en el lugar no mueve a la flota; parados, se acercan despacio y arrían velas en su lugar. Si un lugar cae sobre una isla o pegado a la costa, se corre al agua. Ya casi en su lugar no dan volantazos por la costa de al lado.
+- **Los barcos de tu flota no se lastiman contra la costa** (`moverBarco`): el choque es error del timonel de la máquina, no del jugador. Tu barco y los enemigos sí siguen lastimándose.
+- **Prueba nueva** en `scripts/probar-sim.mjs` ("flota quieta"): jefe parado junto a una isla girando 20 s, en las 4 formaciones; la flota no pierde vida ni anda más de 400 px. Con el código anterior fallaba (barcos al 68-77 % y 750-1270 px de vueltas).
+
 ## 2026-11-14 (ESC abre ajustes, mejoras hasta nivel 10, botones Q W R) — Nicolás + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea rijan los niveles hasta 10 y la flota que aprieta el paso.**

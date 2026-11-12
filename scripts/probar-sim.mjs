@@ -253,6 +253,29 @@ for (const id of Object.keys(MAPAS)) {
     const lugares = new Set(FORMACIONES.map((f) => [0, 1, 2].map((n) => f.lugar(n).join(',')).join(' ')));
     ok(lugares.size === FORMACIONES.length, 'formaciones: dos formaciones ponen los barcos en el mismo lugar');
   }
+  // flota con el jefe parado al lado de una isla y girando en el lugar (captura de Nicolás, 15/11/2026): la flota no sale a
+  // dar vueltas ni se lastima contra la costa, en ninguna formación
+  for (let f = 0; f < FORMACIONES.length; f++) {
+    const k = crearPartida(crearMundo('caribe'), diseno, 100), yo = k.jugador;
+    const isla = k.mundo.islas.filter((i) => i.tipo === 'isla').sort((a, b) => b.r - a.r)[0];
+    const flota = k.barcos.filter((b) => b.bando === 'enemigo').slice(0, 3);
+    k.barcos = [yo, ...flota]; k.enemigosVivos = 0; k.proxConvoy = 999; k.formacion = f;
+    yo.x = isla.x; yo.y = isla.y + isla.r + yo.stats.ancho + 60; yo.a = Math.PI / 2; yo.v = 0; yo.velas = 0;
+    flota.forEach((b, n) => { b.bando = 'escolta'; b.cap = k.yo; b.ia = { estado: 'sigue' }; b.x = yo.x + (n - 1) * 140; b.y = yo.y + 160; b.v = 0; b.vida = b.stats.vidaMax; });
+    for (let i = 0; i < 60 * 8; i++) actualizar(k, 1 / 60, { quieto: true }); // que se acomoden
+
+    let recorrido = 0;
+    for (let i = 0; i < 60 * 20; i++) {
+      const ang = i / 60 * 1.2; // la proa (el cursor) da vueltas, con las velas arriadas
+      const prev = flota.map((b) => [b.x, b.y]);
+      actualizar(k, 1 / 60, { objetivo: { x: yo.x + Math.cos(ang) * 300, y: yo.y + Math.sin(ang) * 300 }, velas: 0 });
+      flota.forEach((b, n) => { recorrido += Math.hypot(b.x - prev[n][0], b.y - prev[n][1]); });
+      yo.vida = yo.stats.vidaMax;
+    }
+    ok(flota.every((b) => b.vida >= b.stats.vidaMax), `flota quieta (${FORMACIONES[f].id}): se lastimó sola: ` + flota.map((b) => Math.round(b.vida / b.stats.vidaMax * 100) + '%'));
+    ok(recorrido / 3 < 400, `flota quieta (${FORMACIONES[f].id}): anduvo ${Math.round(recorrido / 3)} px dando vueltas mientras el jefe solo giraba`);
+
+  }
   // habilidades
   yo.recarga['1'] = 3; yo.recarga['-1'] = 3;
   actualizar(j, 1 / 60, { habilidad: true });
