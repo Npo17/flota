@@ -37,7 +37,7 @@ let estado = 'astillero'; // astillero | mar | puerto | fin
 const vista = { ancho: 0, alto: 0, zoom: 1, raton: { x: 0, y: 0 }, ratonPx: { x: 0, y: 0 }, ladoRaton: 1 };
 const teclas = new Set();
 let pulsos = {}; // acciones de un solo toque
-let velasPedidas = 3; // de 0 (aferradas) a 3 (todo el trapo): se cambian con W / S o la rueda
+let velasPedidas = 3; // de 0 (aferradas) a 3 (todo el trapo): se cambian con las flechas o la rueda
 
 // Zoom que elige el jugador con Ctrl + rueda: de 0,55 (ves mucho mar) a 1,6 (de cerca)
 let zoomJugador = 1;
@@ -448,15 +448,17 @@ addEventListener('keydown', (e) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
-  if (k === 'q') pulsos.fuego = -1;
-  if (k === 'e') pulsos.fuego = 1;
+  // Teclas (13/11/2026, pedido de Nicolás): Q y W son de la flota, como en los juegos de estrategia. El disparo por teclado pasó
+  // a A (babor) y D (estribor) — además del ratón y la barra — y las velas quedan en las flechas y la rueda.
+  if (k === 'a') pulsos.fuego = -1;
+  if (k === 'd') pulsos.fuego = 1;
   if (k === ' ') pulsos.fuegoTodo = true;
   if (k === 'r') pulsos.habilidad = true;
-  if (k === 'w' || k === 'arrowup') cambiarVelas(1);
-  if (k === 's' || k === 'arrowdown') cambiarVelas(-1);
+  if (k === 'arrowup') cambiarVelas(1);
+  if (k === 'arrowdown') cambiarVelas(-1);
   if (k === 'f') pulsos.abordar = true;
-  if (k === 'g') pulsos.ordenFlota = true;
-  if (k === 'h') pulsos.formacion = true;
+  if (k === 'q' || k === 'g') pulsos.ordenFlota = true; // G y H siguen andando, por costumbre
+  if (k === 'w' || k === 'h') pulsos.formacion = true;
   if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
   if (k === 'tab') e.preventDefault();
 });
@@ -509,7 +511,7 @@ function pintarHud() {
   // con barcos capturados aparecen los dos botones de órdenes
   $('hud-flota-botones').classList.toggle('oculto', esc === 0);
   if (esc > 0) {
-    const orden = `${t(j.ordenFlota === 'ataque' ? 'Atacar' : 'Seguirme')} (G)`, forma = `${t(FORMACIONES[j.formacion || 0].nombre)} (H)`;
+    const orden = `${t(j.ordenFlota === 'ataque' ? 'Atacar' : 'Seguirme')} (Q)`, forma = `${t(FORMACIONES[j.formacion || 0].nombre)} (W)`;
     if ($('hud-orden').textContent !== orden) $('hud-orden').textContent = orden;
     if ($('hud-formacion').textContent !== forma) $('hud-formacion').textContent = forma;
   }
