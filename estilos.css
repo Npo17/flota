@@ -62,6 +62,17 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 #hud-tesoro .barra i { background: linear-gradient(90deg, #ffd166, #e2a23b); }
 #hud-tesoro span { font-size: 12px; font-weight: 700; }
 #hud-tesoro:not(.oculto) ~ #avisos { top: 92px; }
+/* El Kraken: el mismo cartel, en el rosa viejo de su piel, con su vida. Si también anda el galeón del tesoro, va debajo de ese cartel */
+#hud-kraken { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(380px, 46vw); padding: 8px 14px 10px; border-radius: 12px; text-align: center;
+  background: rgba(30, 16, 22, 0.9); border: 2px solid #a8707f; color: #dcb9c0; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+#hud-kraken b { display: block; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; }
+#hud-kraken .barra { height: 9px; margin: 6px 0 4px; background: rgba(0, 0, 0, 0.5); }
+#hud-kraken .barra i { background: linear-gradient(90deg, #dcb9c0, #a8707f 55%, #4a2f3a); }
+#hud-kraken span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#hud-kraken.furia { border-color: #e07a5f; }
+#hud-tesoro:not(.oculto) ~ #hud-kraken { top: 92px; }
+#hud-kraken:not(.oculto) ~ #avisos { top: 92px; }
+#hud-tesoro:not(.oculto) ~ #hud-kraken:not(.oculto) ~ #avisos { top: 170px; }
 /* Cartel grande y breve en el medio (el viento cambió) */
 #hud-cartel { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); padding: 12px 30px; border-radius: 12px; font-size: clamp(20px, 3vw, 34px); font-weight: 900; letter-spacing: 3px;
   text-transform: uppercase; color: #fff; background: rgba(8, 30, 48, 0.78); border: 2px solid rgba(255, 255, 255, 0.55); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); animation: cartel 3.6s ease both; }

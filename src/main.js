@@ -186,7 +186,7 @@ pintarMapa();
 
 function empezar() {
   estado = 'mar';
-  tesoroDist0 = 0; vientoCambios = -1; enBrisa = false; $('hud-tesoro').classList.add('oculto'); $('hud-cartel').classList.add('oculto');
+  tesoroDist0 = 0; vientoCambios = -1; enBrisa = false; $('hud-tesoro').classList.add('oculto'); $('hud-kraken').classList.add('oculto'); $('hud-cartel').classList.add('oculto');
   // el sonido de cada evento; para un cañonazo se busca qué barco disparó (el más cercano al fogonazo): según su casco y su munición suena distinto
   partida.alEfecto = (ev) => {
     let de = null;
@@ -807,6 +807,17 @@ function pintarEventos(j, b) {
     const txt = t('Llega al puerto en {t}', { t: `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}` });
     if ($('hud-tesoro-txt').textContent !== txt) $('hud-tesoro-txt').textContent = txt;
   } else tesoroDist0 = 0;
+  // el Kraken: su vida, hasta que lo hunden (mientras se vuelve a lo profundo ya no se muestra)
+  const kr = j.kraken, krVivo = !!kr && !kr.sumerge;
+  $('hud-kraken').classList.toggle('oculto', !krVivo);
+  if (krVivo) {
+    $('hud-kraken').classList.toggle('furia', !!kr.furia && !kr.muerte);
+    $('hud-kraken-barra').style.width = `${Math.max(0, Math.min(100, (100 * kr.vida) / kr.vidaMax))}%`;
+    const titulo = t(kr.muerte ? 'El Kraken cayó' : kr.furia ? 'El Kraken está furioso' : 'El Kraken despertó');
+    const txt = kr.muerte ? t('Se hunde. Vuelve el día') : t('Vida {a} de {b}', { a: Math.max(0, Math.round(kr.vida)), b: kr.vidaMax });
+    if ($('hud-kraken-titulo').textContent !== titulo) $('hud-kraken-titulo').textContent = titulo;
+    if ($('hud-kraken-txt').textContent !== txt) $('hud-kraken-txt').textContent = txt;
+  }
   // el viento cambió de rumbo
   const cambios = j.viento ? j.viento.cambios || 0 : 0;
   if (vientoCambios >= 0 && cambios > vientoCambios) { cartel(t('El viento cambió')); sonido.vientoCambio(); }
@@ -878,6 +889,7 @@ function cuadro(ahora) {
       }
     }
     dibujarEscena(ctx, partida, vista);
+    if (partida.rayo) sonido.trueno(); // la tormenta del Kraken: cada relámpago trae su trueno
     if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
   }
   // sonido: en el astillero, la música; en el mar, las olas y el viento (más fuerte dentro de una ráfaga y con el barco lanzado)
@@ -895,7 +907,7 @@ function cuadro(ahora) {
     const g = estado === 'mar' && !partida.fin ? partida.gancho : null;
     const meAbordan = estado === 'mar' && !partida.fin && (partida.meAbordan || (partida.capitanes || []).some((c) => c.gancho && c.gancho.fase === 'enganchado' && c.gancho.obj === yo && c.barco !== yo));
     sonido.abordaje((g && g.fase === 'enganchado') || meAbordan ? 'pelea' : g ? 'vuelo' : 'nada');
-    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino);
+    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino, partida.tormenta || 0);
   }
 }
 

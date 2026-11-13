@@ -228,6 +228,10 @@ export class Mar {
     const rachas = []; // x, y, radio, rumbo en centésimas, décimas de segundo que le quedan
     if (viento) for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
     if (ahora - this.avisado > 20000) this.avisar(); // para que la sala no se caiga de la lista
+    // el Kraken: x, y, rumbo, vida, vida máxima, cuánto emergió (%), segundos de muerte y de hundirse (en décimas), furia,
+    // y sus zonas marcadas (id, x, y, tiempo y aviso en centésimas). Lo decide todo el servidor: los jugadores solo lo dibujan.
+    const k = j.kraken;
+    const kraken = k ? [r(k.x), r(k.y), r(k.a * 100), Math.max(0, r(k.vida)), k.vidaMax, r(k.emerge * 100), k.muerte ? Math.max(1, r(k.muerte * 10)) : 0, k.sumerge ? Math.max(1, r(k.sumerge * 10)) : 0, k.furia ? 1 : 0, k.zonas.flatMap((z) => [z.id, z.x, z.y, r(z.t * 100), r(z.aviso * 100)])] : null;
 
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;
@@ -243,7 +247,7 @@ export class Mar {
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
       const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}), // vf: las curvas del viento y cuántas veces cambió de rumbo
+        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(kraken ? { kr: kraken } : {}), ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}), // vf: las curvas del viento y cuántas veces cambió de rumbo
         ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
         yo: {
           hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],

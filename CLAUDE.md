@@ -55,7 +55,7 @@ Lo que encuentren `/qa` y `/review` se arregla antes de mostrarle el cambio al s
 - **Flujo:** cada cambio se prueba primero en localhost y se muestra al socio. **No se sube nada sin su OK explícito.**
 - **Al terminar un cambio:** actualizar `docs/BITACORA.md` y este archivo, como dice la regla de arriba.
 - **Ramas:** si trabajaste en una rama, apenas sus cambios estén en `main` **borrala**, en GitHub y en tu compu (`git push origin --delete <rama>` y `git branch -d <rama>`). Antes comprobá que no le quede nada sin unir (`git log origin/main..origin/<rama>` tiene que salir vacío). En el repo solo quedan `main` y las ramas con trabajo en curso (pedido de Nicolás, 12/11/2026).
-- **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`. Si se tocó la práctica guiada o algo que usa (disparos, abordaje, cofres, puerto), también `node scripts/probar-practica.mjs`.
+- **Antes de commitear:** correr `node scripts/probar-sim.mjs` y `node scripts/probar-textos.mjs`. Si se tocó el Kraken (o la simulación que usa: balas, hundir, abordaje, la foto del servidor), también `node scripts/probar-kraken.mjs` y `node scripts/probar-kraken-red.mjs`. Si se tocó la práctica guiada o algo que usa (disparos, abordaje, cofres, puerto), también `node scripts/probar-practica.mjs`.
 - **Commits:** en español, describiendo el cambio para un jugador, con la línea `Co-Authored-By` de Claude.
 - **Originalidad:** es un juego propio. Sirven de referencia de género otros juegos de barcos y de estrategia, pero no se copian nombres, arte, unidades ni bonificaciones de ningún juego existente. Las civilizaciones, banderas y mapas salen de la historia real.
 
@@ -85,8 +85,10 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/mapas.js` | Los 20 mapas históricos: clima, costas y reglas de cada uno |
 | `src/mundo.js` | Genera el mundo de una partida a partir del mapa (con semilla: el mismo mapa sale siempre igual) |
 | `src/barcos.js` | Estadísticas de un barco según su diseño |
-| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota (junta el oro a la vista), remolinos, tritones (nadan bordeando la costa, nunca cruzan tierra; la tripulación les tira con mosquetes), flota del tesoro |
+| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota (junta el oro a la vista), remolinos, tritones (nadan bordeando la costa, nunca cruzan tierra; la tripulación les tira con mosquetes), flota del tesoro y el Kraken (`actualizarKraken`: la maldición de las marcas, la zona marcada y el golpe; sus números en `KRAKEN` de `config.js`) |
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
+| `src/kraken-dibujo.js` | El dibujo del Kraken (tentáculos con ventosas, percebes, dos ojos que siguen a los barcos), la zona marcada, el golpe, la muerte y la noche con tormenta. Solo dibuja: lo que pasa lo decide `juego.js` o el servidor |
+| `scripts/probar-kraken.mjs` | Prueba del Kraken: marcas, zona (centro, borde, afuera, esquivar), cañonazos, furia, muerte con su oro, que se vaya. `probar-kraken-red.mjs`: lo mismo en línea, servidor contra cliente |
 | `src/arte-britanico.js`, `src/arte-vikingo.js`, `src/arte-espanol.js`, `src/arte-portugues.js`, `src/arte-frances.js` | Arte propio de los barcos de esas cinco civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
 | `src/arte-motor.js`, `src/arte-emblemas*.js` | Motor de arte por piezas (cascos, velas cuadras, latinas, de junco y cangrejas, castillos, casetas, remos…) y las tallas y emblemas. Mismo estilo que los cinco de arriba, con los cuatro estados de daño |
 | `src/arte-sueco.js`, `arte-holandes.js`, `arte-aleman.js`, `arte-otomano.js`, `arte-chino.js`, `arte-japones.js` | Varias propuestas de barco por casco para cada una de esas seis civilizaciones |

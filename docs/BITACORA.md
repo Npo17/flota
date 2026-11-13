@@ -3,6 +3,22 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (el Kraken) — Nicolás + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que el Kraken exista en línea; la web y la app ya lo tienen en el modo solo.**
+
+Idea de Nicolás y Cristian: el que captura muchos galeones del tesoro queda tan fuerte que nadie lo puede hundir y juega hasta aburrirse; el Kraken es la maldición que le pone dificultad. Diseño aprobado por los dos en una página aparte (cuatro vueltas: rosado, más monstruo, muerte animada y, al final, criatura natural con ventosas y dos ojos enormes, siguiendo el documento de Nicolás).
+
+- **La maldición** (`marcaTesoro` en `src/juego.js`): cada galeón del tesoro que un capitán hunde le deja una marca (desde el cambio de Cristian del 13/11 el galeón ya no se aborda; si vuelve a abordarse, capturarlo también cuenta). Con 2 se le avisa ("Si hundís 1 más, cuidado: puede despertar el Kraken"); con la 3.ª despierta cerca suyo, se hace de noche y hay tormenta, y se le avisa a todo el mar. Si ya hay un Kraken, el siguiente espera a que ese se vaya.
+- **El combate:** emerge en 5 s (no pega ni recibe daño hasta casi terminar), persigue al capitán más cercano, su cuerpo no se atraviesa. Ataque principal: **zona marcada** sobre un barco a su alcance (prefiere capitanes y flotas, pero pega a todo barco que quede adentro, bots incluidos). Aviso 1,3 s (+0,15 bergantín, +0,45 galeón, que giran más lento); el golpe saca 22 % de la vida máxima en el centro y 11 % en el borde (mínimo 90 y 45). Después el tentáculo queda atravesado 0,9 s. Por debajo del 40 % se enfurece: dos zonas a la vez, aviso 15 % más corto, ataques más seguidos. Solo le pegan los cañones de capitanes y flotas.
+- **Vida y botín:** 12.000 con un capitán, +60 % por cada capitán más. Muere con animación (se retuerce, tinta, gira, se hunde) y a los 4 s deja 6.000 de oro en 16 cofres, para el que los junte. El último cañonazo cuenta como hundido. Si 25 s nadie se le acerca (o todos están en el puerto), vuelve a lo profundo.
+- **Todos los números** en `KRAKEN` (`src/config.js`), para ajustar el balance sin tocar la lógica.
+- **Dibujo** (`src/kraken-dibujo.js`): el de la página de diseño, a escala del mar. La barra rosa vieja arriba (`#hud-kraken`), debajo de la del tesoro si las dos están. La tormenta: oscuridad, lluvia y relámpagos, que llegan y se van de a poco.
+- **Sonido** (`src/sonido.js`, generado como el resto, sin archivos): rugido al despertar (se oye en todo el mar), gruñido y burbujas al marcar zona, latigazo + golpe + madera al pegar, chillido cuando le pegan, rugido largo y burbujas al morir; lluvia y ventarrón de fondo y un trueno con cada relámpago.
+- **En línea:** lo decide todo el servidor y manda `kr` en cada foto (posición, vida, zonas); el cliente solo dibuja y hace correr los relojes entre foto y foto. Un servidor anterior no lo manda y no pasa nada.
+- **Pruebas:** `scripts/probar-kraken.mjs` (maldición, lugar en los 20 mapas, zona centro/borde/afuera, esquivar con un galeón a toda vela, golpe a bots, cañones, furia, muerte y oro, que se vaya, vida con dos capitanes) y `scripts/probar-kraken-red.mjs` (servidor contra cliente: lo ven en el mismo lugar, la zona igual, el daño, la muerte). Probado en la app sin sonido con capturas de la zona, el golpe y la muerte; los sonidos medidos sin parlantes.
+- **Quedó para después** (del documento de Nicolás): barrido en arco, agarre que los aliados cortan a cañonazos, lluvia de zonas, remolino al sumergirse, nube de tinta, chorro de agua, mirada fija, tentáculos y ojos con vida propia (cegar un ojo desvía las zonas), consecuencias en el barco (velas rotas, agua), ataque distinto a barcos grandes y chicos, trofeo cosmético, aviso previo con niebla y gaviotas, música de combate.
+- **A ajustar a ojo jugando:** cuánto dura la pelea (vida 12.000), si el aviso de 1,3 s alcanza para una balandra o un bergantín, cuánto pega, cada cuánto marca zonas y si 6.000 de oro es "mucho mucho".
 ## 2026-11-13 (tesoro sin abordaje, flota que junta oro, mosquetes contra tritones, bots que pierden gente) — Cristian + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.** En modo solo y en salas locales ya anda todo.

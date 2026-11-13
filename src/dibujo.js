@@ -10,6 +10,7 @@ import { pintarEspanol } from './arte-espanol.js';
 import { pintarPortugues } from './arte-portugues.js';
 import { pintarFrances } from './arte-frances.js';
 import { ARTE_ELEGIDO } from './arte-elegidos.js';
+import { dibujarKrakenAbajo, dibujarKrakenArriba, dibujarTormenta } from './kraken-dibujo.js';
 
 const TAU = Math.PI * 2;
 const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
@@ -746,6 +747,9 @@ export function dibujarEscena(ctx, j, vista) {
     ctx.beginPath(); ctx.arc(raton.x, raton.y, 2, 0, TAU); ctx.stroke();
   }
 
+  // el Kraken: las zonas marcadas y su cuerpo van debajo de los barcos
+  dibujarKrakenAbajo(ctx, j, visible);
+
   // barcos
   const cand = candidatoAbordaje(j);
   for (const b of j.barcos) {
@@ -768,6 +772,9 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.fillText(j.nombreJugador, b.x, ny);
     }
   }
+
+  // el tentáculo que golpea cae encima de los barcos
+  dibujarKrakenArriba(ctx, j, visible);
 
   // el gancho en el aire: la soga desde el barco y el garfio en la punta
   if (j.gancho && j.gancho.fase === 'vuelo') {
@@ -844,6 +851,12 @@ export function dibujarEscena(ctx, j, vista) {
       ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.r * (1 + f), 0, TAU); ctx.fill();
     }
   }
+
+  // la noche con tormenta mientras el Kraken está despierto: anochece y amanece de a poco
+  const dtT = Math.max(0, Math.min(0.1, j.t - (j.tTormenta ?? j.t))); j.tTormenta = j.t;
+  const k = j.kraken, quiere = k && !k.muerte && !k.sumerge ? 1 : 0;
+  j.tormenta = (j.tormenta || 0) + (quiere - (j.tormenta || 0)) * Math.min(1, dtT * (quiere ? 0.5 : 0.35));
+  j.rayo = dibujarTormenta(ctx, j, ancho, alto, j.tormenta) || false;
 
   // textos flotantes
   ctx.font = '700 15px system-ui, sans-serif';

@@ -4,6 +4,7 @@
 import { crearMundo } from './mundo.js';
 import { crearBarco, statsDe } from './barcos.js';
 import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng } from './juego.js';
+import { KRAKEN } from './config.js';
 import { t } from './idioma.js';
 
 // En la compu se usa el servidor publicado, salvo que la dirección lleve ?mar=local (servidor de prueba con wrangler dev)
@@ -40,7 +41,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   const yo = { id: null, nombre, barco: null, oroPuerto: 0, oroBodega: 0, escoltasMax: 2 };
   const j = {
     enLinea: true, mundo: null, t: 0, yo,
-    barcos: [], jugador: null, balas: [], particulas: [], cofres: [], tritones: [], textos: [], avisos: [],
+    barcos: [], jugador: null, balas: [], particulas: [], cofres: [], tritones: [], textos: [], avisos: [], kraken: null,
     oroBodega: 0, oroPuerto: 0, escoltasMax: 2, stats: { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 },
     cdHabilidad: 0, habilidad: null,
     cdAbordaje: 0, gancho: null, ordenFlota: 'formacion', sacudon: 0, fin: false, finEn: 0, causa: null,
@@ -140,6 +141,12 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
 
     j.cofres = m.c.map(([id, x, yy]) => ({ id, x, y: yy }));
     j.tritones = m.tr.map(([x, yy, a100]) => ({ x, y: yy, a: a100 / 100, t: j.t }));
+    if (m.kr) { // el Kraken (un servidor anterior no lo manda)
+      const q = m.kr, k = j.kraken || {}, zonas = [];
+      for (let i = 0; i + 4 < q[9].length; i += 5) zonas.push({ id: q[9][i], x: q[9][i + 1], y: q[9][i + 2], t: q[9][i + 3] / 100, aviso: q[9][i + 4] / 100, golpe: q[9][i + 3] >= q[9][i + 4] });
+      Object.assign(k, { x: q[0], y: q[1], a: q[2] / 100, vida: q[3], vidaMax: q[4], emerge: q[5] / 100, muerte: q[6] / 10, sumerge: q[7] / 10, furia: !!q[8], zonas });
+      j.kraken = k;
+    } else j.kraken = null;
     const g = m.g.find((q) => q[0] === miId);
     j.meAbordan = !!(yo.barco && m.g.some((q) => q[0] !== miId && q[1] && q[4] === yo.barco.id)); // otro capitán me tiene enganchado (para el sonido)
     j.gancho = g ? { fase: g[1] ? 'enganchado' : 'vuelo', x: g[2], y: g[3], obj: porId.get(g[4]) || null } : null;
@@ -206,6 +213,12 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       quedan.push(bl);
     }
     j.balas = quedan;
+    // el Kraken entre foto y foto: los relojes siguen corriendo para que la zona se llene y las animaciones no salten
+    const kr = j.kraken;
+    if (kr) {
+      for (const z of kr.zonas) { z.t += dt; z.golpe = z.t >= z.aviso; }
+      if (kr.muerte) kr.muerte += dt; else if (kr.sumerge) kr.sumerge += dt; else if (kr.emerge < 1) kr.emerge = Math.min(1, kr.emerge + dt / KRAKEN.emerger);
+    }
     actualizarParticulas(j, dt);
   }
 

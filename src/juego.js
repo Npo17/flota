@@ -1,7 +1,7 @@
-// Simulación del mar: barcos, balas, bots, abordajes, remolinos y tritones.
+// Simulación del mar: barcos, balas, bots, abordajes, remolinos, tritones y el Kraken.
 // Maneja varios capitanes a la vez. El modo solo es el caso de un único capitán; en línea, esta misma
 // simulación corre en el servidor. No toca pantalla ni teclado: recibe entradas y avanza un paso.
-import { ENEMIGOS, ESCOLTAS_INICIALES, VIENTO, HABILIDADES } from './config.js';
+import { ENEMIGOS, ESCOLTAS_INICIALES, VIENTO, HABILIDADES, KRAKEN } from './config.js';
 import { crearBarco, disenoEnemigo } from './barcos.js';
 import { nivelZona } from './mundo.js';
 import { azar } from './rng.js';
@@ -29,6 +29,8 @@ export function crearMar(mundo, opciones = {}) {
     particulas: [],
     cofres: [],
     tritones: [],
+    kraken: null, // el jefe del mar: despierta cuando un capitán junta KRAKEN.marcas galeones del tesoro
+    proxZona: 1,
     textos: [],
     eventos: opciones.servidor ? [] : null,
     enemigosVivos: opciones.enemigos ?? 18,
@@ -204,6 +206,11 @@ export function efecto(j, ev) {
     P.push({ tipo: 'salpicon', x: ev.tx, y: ev.ty, t: 0, vida: 0.4, r: 4 });
   }
   else if (ev.k === 't') j.textos.push({ x: ev.x, y: ev.y, texto: ev.s, datos: ev.q, color: ev.c, t: 1.6 });
+  else if (ev.k === 'kh') j.krakenHerido = j.t; // le pegaron al Kraken: su piel destella un instante
+  else if (ev.k === 'kg') { // el golpe de un tentáculo: salpicón grande y astillas
+    P.push({ tipo: 'salpicon', x: ev.x, y: ev.y, t: 0, vida: 0.9, r: 40 });
+    for (let k = 0; k < 10; k++) P.push({ tipo: 'astilla', x: ev.x + azar.rango(-30, 30), y: ev.y + azar.rango(-30, 30), vx: azar.rango(-140, 140), vy: azar.rango(-140, 140), t: 0, vida: 0.8, r: 3 });
+  }
 }
 
 // Texto flotante. Con "para" solo lo ve ese capitán.
@@ -373,6 +380,7 @@ export function avanzar(j, dt, entradas) {
   actualizarConvoy(j, dt);
   actualizarTritones(j, dt);
   mosquetes(j, dt);
+  actualizarKraken(j, dt);
   actualizarCofres(j, dt);
   actualizarHundidos(j, dt);
   if (!j.eventos) actualizarParticulas(j, dt);
@@ -551,6 +559,7 @@ function moverBalas(j, dt) {
         }
       }
     }
+    if (!pego && bl.dueno && bl.dueno.cap && krakenAlAlcance(j, bl.x, bl.y, bl.radio)) { golpearKraken(j, bl); pego = true; } // al Kraken solo le pegan los capitanes y sus flotas
     if (pego) continue;
     if (bl.vida <= 0) { if (!j.eventos) efecto(j, { k: 's', x: bl.x, y: bl.y, r: 6 + bl.radio }); continue; }
     if (j.mundo.islas.some((i) => Math.hypot(i.x - bl.x, i.y - bl.y) < i.r * 0.95)) {
@@ -605,7 +614,7 @@ function hundir(j, b) {
   if (b.bando === 'enemigo') {
     if (agresor) agresor.stats.hundidos++;
     soltarOro(j, b.x, b.y, b.oro, b.convoy ? 110 : 25, b.convoy ? 9 : 0);
-    if (b.convoy) aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno');
+    if (b.convoy) { aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno'); marcaTesoro(j, agresor); }
     else if (agresor && b.oro > 0) aviso(agresor, '¡Hundiste un {barco}! Juntá el botín', 'bueno', { barco: b.nombre });
   } else if (!esInsignia(b)) {
     if (agresor) agresor.stats.hundidos++;
@@ -798,6 +807,7 @@ function resolverAbordaje(j, cap, e, gano, bajas) {
     // el barco cambia de dueño
     if (dueno && esInsignia(e)) perderInsignia(j, dueno, cap, false);
     else if (dueno) aviso(dueno, '{nombre} te capturó el {barco}', 'malo', { nombre: cap.nombre, barco: e.nombre });
+    if (e.convoy) marcaTesoro(j, cap); // capturar el galeón del tesoro también cuenta para la maldición
     e.cap = cap;
     e.bando = 'escolta';
     e.convoy = false;
@@ -1233,4 +1243,163 @@ function actualizarTritones(j, dt) {
     quedan.push(tr);
   }
   j.tritones = quedan;
+}
+
+// ---------- El Kraken ----------
+// La maldición del tesoro: cada galeón del tesoro que un capitán hunde le deja una marca (desde el 13/11 el galeón ya no se aborda;
+// si algún día vuelve a abordarse, capturarlo también cuenta). Con una menos de las que hacen
+// falta se le avisa; con la última despierta el Kraken cerca suyo, se hace de noche y hay tormenta (eso lo dibuja la pantalla).
+// Es el desafío para el que ya está muy fuerte: mucha vida, pega a todos los barcos que se le cruzan y, si lo hunden, deja muchísimo oro.
+// Su ataque principal es la zona marcada: elige un barco a su alcance, marca un círculo en el agua donde está y, cuando el aviso
+// se llena, un tentáculo sale de abajo y golpea. Saca más en el centro que en el borde. Los números están en KRAKEN (config.js).
+function marcaTesoro(j, cap) {
+  if (!cap || cap.fin) return;
+  cap.marcasTesoro = (cap.marcasTesoro || 0) + 1;
+  if (cap.marcasTesoro === KRAKEN.marcas - 1) avisoLargo(cap, 'Hundiste {n} galeones del tesoro. Si hundís 1 más, cuidado: puede despertar el Kraken', 'malo', { n: cap.marcasTesoro });
+  // la última marca lo despierta en actualizarKraken (si ya hay uno en el mar, espera a que ese se vaya)
+}
+
+function avisoLargo(quien, texto, tipo, p) {
+  aviso(quien, texto, tipo, p);
+  for (const c of quien.capitanes || [quien]) { const a = c.avisos[c.avisos.length - 1]; if (a) a.t = 7; }
+}
+
+function despertarKraken(j, cap) {
+  const m = j.mundo, yo = cap.barco;
+  const libre = (x, y) => x > 450 && y > 450 && x < m.ancho - 450 && y < m.alto - 450 && !enTierra(j, x, y, KRAKEN.cuerpo + 180)
+    && Math.hypot(x - m.puerto.x, y - m.puerto.y) > m.puerto.radio + 700 && !m.remolinos.some((w) => Math.hypot(w.x - x, w.y - y) < w.radio + 300);
+  let x = 0, y = 0, ok = false;
+  for (let k = 0; k < 60 && !ok; k++) { // cerca del que lo despertó, pero no encima
+    const a = azar.rango(0, TAU), d = azar.rango(600, 900) + k * 12;
+    x = yo.x + Math.cos(a) * d; y = yo.y + Math.sin(a) * d; ok = libre(x, y);
+  }
+  for (let k = 0; k < 300 && !ok; k++) { x = azar.rango(500, m.ancho - 500); y = azar.rango(500, m.alto - 500); ok = libre(x, y); }
+  if (!ok) return false;
+  const vivos = j.capitanes.filter((c) => !c.fin).length;
+  const vidaMax = Math.round(KRAKEN.vida * (1 + KRAKEN.porJugador * Math.max(0, vivos - 1)));
+  j.kraken = { x, y, a: Math.atan2(yo.y - y, yo.x - x), vida: vidaMax, vidaMax, t: 0, emerge: 0, zonas: [], prox: KRAKEN.primerAtaque, muerte: 0, sumerge: 0, lejos: 0, furia: false };
+  avisoLargo(j, '¡{nombre} despertó al Kraken! Se hace de noche y se larga la tormenta', 'malo', { nombre: cap.nombre });
+  emitir(j, { k: 'kd', x: Math.round(x), y: Math.round(y) });
+  return true;
+}
+
+// ¿Un punto le pega al Kraken? Solo cuando ya asomó y mientras está vivo.
+function krakenAlAlcance(j, x, y, margen = 0) {
+  const k = j.kraken;
+  if (!k || k.muerte || k.sumerge || k.emerge < 0.6) return false;
+  return Math.abs(k.x - x) < KRAKEN.cuerpo + margen + 10 && Math.hypot(k.x - x, k.y - y) < KRAKEN.cuerpo + margen;
+}
+
+function golpearKraken(j, bl) {
+  const k = j.kraken, quien = bl.dueno.cap;
+  k.vida -= bl.dano;
+  emitir(j, { k: 'kh', x: Math.round(bl.x), y: Math.round(bl.y) });
+  if (bl.dano >= 5) textoFlotante(j, bl.x, bl.y - 8, `-${Math.round(bl.dano)}`, '#f0c4d0', quien);
+  if (k.vida <= 0) {
+    k.vida = 0; k.muerte = 0.0001; k.zonas = [];
+    quien.stats.hundidos++;
+    aviso(j, '¡El Kraken se hunde! {nombre} le dio el último cañonazo', 'bueno', { nombre: quien.nombre });
+    emitir(j, { k: 'km', x: Math.round(k.x), y: Math.round(k.y) });
+  }
+}
+
+// El daño de un golpe de tentáculo: según el barco (fracción de su vida máxima) y si quedó en el centro o en el borde de la zona
+export function danoKraken(b, enCentro) {
+  return Math.round(Math.max(KRAKEN.danoMin * (enCentro ? 2 : 1), b.stats.vidaMax * (enCentro ? KRAKEN.danoCentro : KRAKEN.danoBorde)));
+}
+
+function actualizarKraken(j, dt) {
+  const k = j.kraken;
+  if (!k) { // ¿alguien juntó todas las marcas? (si había otro Kraken en el mar, despierta recién ahora)
+    const cap = j.capitanes.find((c) => !c.fin && !c.barco.hundiendo && (c.marcasTesoro || 0) >= KRAKEN.marcas);
+    if (cap && despertarKraken(j, cap)) cap.marcasTesoro = 0;
+    return;
+  }
+  k.t += dt;
+  if (k.muerte) { // la animación de muerte la hace la pantalla; acá, el oro y el final
+    k.muerte += dt;
+    if (!k.oroSuelto && k.muerte >= KRAKEN.muerteOro) {
+      k.oroSuelto = true;
+      soltarOro(j, k.x, k.y, KRAKEN.oro, 230, 16);
+      avisoLargo(j, '¡Cayó el Kraken! Su oro quedó flotando: es de quien lo junte', 'bueno');
+    }
+    if (k.muerte >= KRAKEN.muerteDura) j.kraken = null;
+    return;
+  }
+  if (k.sumerge) { k.sumerge += dt; if (k.sumerge >= 3) j.kraken = null; return; }
+  k.emerge = Math.min(1, k.emerge + dt / KRAKEN.emerger);
+
+  // a quién persigue: el capitán más cercano que no esté en el puerto
+  let obj = null, od = Infinity;
+  for (const b of j.barcos) {
+    if (!b.cap || b.hundiendo || b.cap.fin || enPuerto(j, b)) continue;
+    const d = Math.hypot(b.x - k.x, b.y - k.y);
+    if (d < od) { obj = b; od = d; }
+  }
+  if (!obj || od > KRAKEN.olvida) {
+    k.lejos += dt;
+    if (k.lejos > KRAKEN.seVa) { k.sumerge = 0.0001; k.zonas = []; aviso(j, 'El Kraken volvió a lo profundo. Por ahora', 'info'); emitir(j, { k: 'ks', x: Math.round(k.x), y: Math.round(k.y) }); return; }
+  } else k.lejos = 0;
+  if (obj && k.emerge >= 1) { // gira hacia él y se arrima despacio hasta quedar a distancia de golpe, sin meterse en tierra
+    const ang = Math.atan2(obj.y - k.y, obj.x - k.x);
+    k.a += difAng(ang, k.a) * Math.min(1, dt * 0.8);
+    const falta = od - KRAKEN.distancia;
+    if (Math.abs(falta) > 30) {
+      const paso = Math.sign(falta) * Math.min(Math.abs(falta), KRAKEN.vel * dt);
+      const nx = k.x + Math.cos(ang) * paso, ny = k.y + Math.sin(ang) * paso;
+      if (nx > 300 && ny > 300 && nx < j.mundo.ancho - 300 && ny < j.mundo.alto - 300 && !enTierra(j, nx, ny, KRAKEN.cuerpo + 40)) { k.x = nx; k.y = ny; }
+    }
+  }
+  // su cuerpo no se atraviesa: empuja a los barcos hacia afuera
+  if (k.emerge > 0.6) for (const b of j.barcos) {
+    if (b.hundiendo) continue;
+    const dx = b.x - k.x, dy = b.y - k.y, d = Math.hypot(dx, dy) || 1, lim = KRAKEN.cuerpo + b.stats.ancho * 0.6;
+    if (d < lim) { b.x = k.x + (dx / d) * lim; b.y = k.y + (dy / d) * lim; b.v = Math.min(b.v, b.stats.velMax * 0.45); }
+  }
+
+  // la furia: por debajo de cierto resto de vida, más zonas, aviso más corto y ataques más seguidos
+  if (!k.furia && k.vida < k.vidaMax * KRAKEN.furia) { k.furia = true; avisoLargo(j, '¡El Kraken está furioso! Ahora marca dos zonas a la vez', 'malo'); }
+  k.prox -= dt;
+  if (k.emerge >= 1 && k.prox <= 0 && k.zonas.length < (k.furia ? KRAKEN.zonasFuria : KRAKEN.zonas)) {
+    // a quién: cualquier barco a su alcance (capitanes, flotas y bots), pero prefiere a los capitanes y sus flotas
+    const cerca = j.barcos.filter((b) => !b.hundiendo && !(b.cap && enPuerto(j, b)) && Math.hypot(b.x - k.x, b.y - k.y) < KRAKEN.alcance
+      && !k.zonas.some((z) => Math.hypot(z.x - b.x, z.y - b.y) < KRAKEN.radio * 1.5));
+    const deCapitanes = cerca.filter((b) => b.cap);
+    const lista = deCapitanes.length ? deCapitanes : cerca;
+    if (lista.length) {
+      const b = lista[azar.entero(0, lista.length - 1)];
+      const casco = b.diseno.casco, extra = casco === 'galeon' ? KRAKEN.extraGaleon : casco === 'bergantin' ? KRAKEN.extraBergantin : 0;
+      const z = { id: j.proxZona++, x: Math.round(b.x), y: Math.round(b.y), t: 0, aviso: +((KRAKEN.aviso + extra) * (k.furia ? KRAKEN.avisoFuria : 1)).toFixed(2), golpe: false };
+      k.zonas.push(z);
+      emitir(j, { k: 'kz', x: z.x, y: z.y });
+      if (b.cap && esInsignia(b)) aviso(b.cap, '¡El Kraken marcó una zona! Salí del círculo antes de que se llene', 'malo');
+      k.prox = azar.rango(KRAKEN.cada[0], KRAKEN.cada[1]) * (k.furia ? KRAKEN.cadaFuria : 1);
+    } else k.prox = 0.6;
+  }
+  for (const z of k.zonas) {
+    z.t += dt;
+    if (!z.golpe && z.t >= z.aviso) { // el golpe: pega a todo barco que quedó adentro, más en el centro que en el borde
+      z.golpe = true;
+      emitir(j, { k: 'kg', x: z.x, y: z.y });
+      for (const b of j.barcos) {
+        if (b.hundiendo || (b.cap && enPuerto(j, b))) continue;
+        const d = Math.hypot(b.x - z.x, b.y - z.y);
+        if (d > KRAKEN.radio + b.stats.ancho * 0.4) continue;
+        const dano = danoKraken(b, d < KRAKEN.radio * KRAKEN.nucleo);
+        b.vida -= dano;
+        b.ultimoGolpe = j.t;
+        b.ultimoAgresor = null; // si lo hunde el Kraken, no es mérito de nadie
+        if (b.trip > 2) b.trip -= azar.entero(1, 2); // el golpe se lleva gente al agua
+        if (esInsignia(b)) { b.cap.sacudon = Math.max(b.cap.sacudon, 10); aviso(b.cap, '¡El Kraken te golpeó!', 'malo'); }
+        textoFlotante(j, b.x, b.y - 30, `-${dano}`, '#ff8f8f');
+      }
+    }
+    // después del golpe el tentáculo queda atravesado un momento: los barcos no lo cruzan
+    if (z.golpe && z.t < z.aviso + 0.16 + KRAKEN.queda) for (const b of j.barcos) {
+      if (b.hundiendo) continue;
+      const dx = b.x - z.x, dy = b.y - z.y, d = Math.hypot(dx, dy) || 1, lim = KRAKEN.radio * 0.5 + b.stats.ancho * 0.5;
+      if (d < lim) { b.x = z.x + (dx / d) * lim; b.y = z.y + (dy / d) * lim; b.v = Math.min(b.v, b.stats.velMax * 0.4); }
+    }
+  }
+  k.zonas = k.zonas.filter((z) => z.t < z.aviso + KRAKEN.queda + 0.8);
 }

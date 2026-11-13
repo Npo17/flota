@@ -88,6 +88,36 @@ export const PUERTO = {
   cambioCasco: (diferencia) => Math.round(diferencia * 2.5), // pasar a un casco más grande: la diferencia de precio del astillero, por 2,5
 };
 
+// El Kraken (15/11/2026): la maldición del tesoro. Todo lo que se ajusta del jefe está acá, para tocar el balance sin tocar la lógica.
+// Los daños de la zona son fracción de la vida máxima del barco golpeado (con un mínimo), así pega fuerte también a un galeón reforzado.
+export const KRAKEN = {
+  marcas: 3,              // galeones del tesoro que un capitán tiene que capturar o hundir para despertarlo (con uno menos, se le avisa)
+  vida: 12000,            // con un solo capitán en el mar…
+  porJugador: 0.6,        // …y un 60 % más por cada capitán extra
+  emerger: 5,             // segundos que tarda en salir del agua (no pega ni recibe daño hasta casi terminar)
+  cuerpo: 115,            // radio del cuerpo: los barcos no lo atraviesan y las balas le pegan ahí
+  distancia: 380,         // a qué distancia se queda del barco que persigue
+  vel: 60,                // velocidad con la que se acerca
+  alcance: 650,           // hasta dónde llegan sus tentáculos para marcar una zona
+  radio: 90,              // radio de la zona marcada
+  nucleo: 0.45,           // parte del radio donde el golpe saca el daño alto
+  aviso: 1.3,             // segundos que la zona se va llenando antes del golpe…
+  extraBergantin: 0.15,   // …un poco más para los barcos medianos…
+  extraGaleon: 0.45,      // …y bastante más para los galeones, que giran lento
+  danoCentro: 0.22, danoBorde: 0.11, danoMin: 45, // fracción de la vida máxima del barco (el borde saca la mitad); nunca menos que danoMin
+  queda: 0.9,             // segundos que el tentáculo queda atravesado después del golpe, como obstáculo
+  cada: [3.5, 5.5],       // segundos entre una zona y la siguiente
+  primerAtaque: 2.5,      // después de emerger, cuánto espera antes de la primera zona
+  zonas: 1,               // zonas a la vez…
+  furia: 0.4,             // …por debajo de este resto de vida se enfurece:
+  zonasFuria: 2, avisoFuria: 0.85, cadaFuria: 0.6, // dos zonas a la vez, aviso 15 % más corto y ataques más seguidos
+  oro: 6000,              // el botín: queda flotando en cofres, para el que los junte
+  seVa: 25,               // segundos sin ningún capitán cerca antes de hundirse y desaparecer
+  olvida: 2200,           // a partir de qué distancia un capitán ya no cuenta como cerca
+  muerteOro: 4,           // segundos de la animación de muerte hasta que sale el oro
+  muerteDura: 5.4,        // segundos hasta que desaparece del todo
+};
+
 export const ESCOLTAS_INICIALES = 2;
 export const ESCOLTAS_MAX = 6;
 

@@ -11,6 +11,7 @@ for (const k of Object.keys(vol)) {
 }
 
 let gRemolino = null, giroRemolino = [], filtroRemolino = null;
+let gLluvia = null; // la tormenta del Kraken: lluvia y un ventarrón grave
 let ctx = null, salida = null, gSonido = null, gMusica = null, gMar = null, gViento = null, filtroViento = null, gMusicaModo = null, eco = null;
 let modoActual = 'nada', fuerzaViento = 0, relojMusica = null, proximoCompas = 0, compas = 0, ultimoAjuste = 0;
 const BOTONES = 'button, [role="button"], a[href], .chip, .tarjeta, .opcion, select';
@@ -96,6 +97,20 @@ function armar(c) {
     o.connect(g); g.connect(destino); o.start(c.currentTime + desfase);
     giroRemolino.push(o);
   }
+
+  // --- La tormenta del Kraken: lluvia (ruido agudo, parejo) y un ventarrón grave que va y viene ---
+  gLluvia = c.createGain(); gLluvia.gain.value = 0; gLluvia.connect(gSonido);
+  const lluvia = c.createBufferSource(); lluvia.buffer = bufBlanco; lluvia.loop = true;
+  const fLl = c.createBiquadFilter(); fLl.type = 'highpass'; fLl.frequency.value = 1900;
+  const fLl2 = c.createBiquadFilter(); fLl2.type = 'lowpass'; fLl2.frequency.value = 7500;
+  const gLl = c.createGain(); gLl.gain.value = 0.32;
+  lluvia.connect(fLl); fLl.connect(fLl2); fLl2.connect(gLl); gLl.connect(gLluvia); lluvia.start();
+  const ventarron = c.createBufferSource(); ventarron.buffer = bufMarron; ventarron.loop = true; ventarron.playbackRate.value = 0.8;
+  const fVen = c.createBiquadFilter(); fVen.type = 'lowpass'; fVen.frequency.value = 260;
+  const gVen = c.createGain(); gVen.gain.value = 0.5;
+  const vaivenVen = c.createOscillator(); vaivenVen.frequency.value = 0.09; const gVaivenVen = c.createGain(); gVaivenVen.gain.value = 0.3;
+  vaivenVen.connect(gVaivenVen); gVaivenVen.connect(gVen.gain);
+  ventarron.connect(fVen); fVen.connect(gVen); gVen.connect(gLluvia); ventarron.start(); vaivenVen.start();
 
   // --- La pelea de un abordaje: el tumulto de fondo (voces y pasos sobre la cubierta, todo junto); los golpes sueltos se le suman ---
   gPelea = c.createGain(); gPelea.gain.value = 0; gPelea.connect(gSonido);
@@ -459,6 +474,7 @@ function chasquido(cuando, nivel, lado, hz, dura) { // golpes en la madera y sal
 // de: para un cañonazo, { casco, municion } del barco que disparó (si se sabe)
 export function evento(ev, oyente, de) {
   if (!ctx || ctx.state !== 'running' || modoActual !== 'mar' || !oyente) return;
+  if (ev.k && ev.k[0] === 'k' && ev.k.length === 2) return eventoKraken(ev, oyente);
   const dx = ev.x - oyente.x, d = Math.hypot(dx, ev.y - oyente.y);
   const cerca = Math.max(0, 1 - d / 1700);
   if (cerca <= 0) return;
@@ -483,7 +499,7 @@ export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state ===
 // viento: de 0 a 1, cuánto sopla donde está el barco. remolino: de 0 a 1, cuán adentro de un remolino está (0 = lejos, 1 = en el centro).
 // Se puede llamar en cada cuadro: solo ajusta cada tanto.
 let cercaRemolino = 0;
-export function ambiente(modo, viento = 0, remolino = 0) {
+export function ambiente(modo, viento = 0, remolino = 0, tormenta = 0) {
   modoActual = modo; fuerzaViento = viento; cercaRemolino = remolino;
   if (!ctx || ctx.state !== 'running') return;
   const ahora = ctx.currentTime;
@@ -497,6 +513,7 @@ export function ambiente(modo, viento = 0, remolino = 0) {
   gRemolino.gain.setTargetAtTime(0.12 * r + 1.6 * r * r * r, ahora, 0.35);
   filtroRemolino.frequency.setTargetAtTime(200 + 620 * r * r, ahora, 0.4);
   for (const o of giroRemolino) o.frequency.setTargetAtTime(0.55 + 2.6 * r * r, ahora, 0.5);
+  gLluvia.gain.setTargetAtTime(modo === 'mar' ? 0.75 * tormenta : 0, ahora, 0.8);
   gMusicaModo.gain.setTargetAtTime(modo === 'lobby' ? 2.8 : 0, ahora, modo === 'lobby' ? 1.2 : 0.5);
   if (modo === 'lobby') arrancarMusica(); else if (relojMusica && gMusicaModo.gain.value < 0.01) pararMusica();
 }
@@ -520,7 +537,7 @@ if (typeof window !== 'undefined') {
 
 // Para probar sin parlantes: arma todo en un contexto que no suena, toca unos segundos de cada cosa y devuelve cuánto se oyó.
 export async function probar() {
-  const guardado = [gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
+  const guardado = [gLluvia, gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas];
   const medir = async (segundos, preparar) => {
     const c = new OfflineAudioContext(2, 44100 * segundos, 44100);
     armar(c); relojMusica = null; proximoCompas = 0; compas = 0; ultimoAjuste = -1;
@@ -545,7 +562,127 @@ export async function probar() {
   r.campana = await medir(2, () => { modoActual = 'mar'; campana(0.05, 0.30, 880); });
   r.clic = await medir(1, () => { modoActual = 'lobby'; ultimoClic = -1; clic(); });
   r.silencio = await medir(2, () => { modoActual = 'nada'; });
-  [gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
+  // el Kraken: despierta (sin el trueno de después, que va con un reloj), golpe cerca, le pegan, muere, y la tormenta
+  r.krakenDespierta = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; estallido(0.05, 0.7, 0, { grave: 40, cola: 2.4, brillo: 500 }); burbujas(0.05, 0.12, 0, 26, 2.2); rugido(1.2, 0.95, 0, { dura: 3.2, grave: 46, cae: 0.62 }); });
+  r.krakenGolpe = await medir(3, () => { modoActual = 'mar'; gMar.gain.value = 0; eventoKraken({ k: 'kg', x: 0, y: 0 }, { x: 0, y: 0 }); });
+  r.krakenZona = await medir(2, () => { modoActual = 'mar'; gMar.gain.value = 0; eventoKraken({ k: 'kz', x: 0, y: 0 }, { x: 0, y: 0 }); });
+  r.krakenHerido = await medir(1, () => { modoActual = 'mar'; gMar.gain.value = 0; ultimoChillido = -9; eventoKraken({ k: 'kh', x: 0, y: 0 }, { x: 0, y: 0 }); });
+  r.krakenMuere = await medir(6, () => { modoActual = 'mar'; gMar.gain.value = 0; eventoKraken({ k: 'km', x: 0, y: 0 }, { x: 0, y: 0 }); });
+  r.trueno = await medir(4, () => { modoActual = 'mar'; gMar.gain.value = 0; trueno(); });
+  r.lluvia = await medir(4, () => { modoActual = 'mar'; gMar.gain.value = 0; gLluvia.gain.value = 0.75; });
+  ultimoChillido = 0;
+  [gLluvia, gTumulto, gPelea, gRemolino, giroRemolino, filtroRemolino, ctx, salida, gSonido, gMusica, gMar, gViento, filtroViento, gMusicaModo, eco, bufBlanco, bufMarron, relojMusica, modoActual, proximoCompas, compas] = guardado;
   ultimoAjuste = 0;
   return r;
+}
+
+// ---------- El Kraken ----------
+// Todo generado, como el resto: un rugido es una onda grave y áspera (diente de sierra) que tiembla, pasada por dos resonancias
+// como una garganta enorme, más ruido grave de agua revuelta. Lo importante del Kraken se oye aunque esté lejos (más bajo).
+function rugido(cuando, nivel, lado, { dura = 2.2, grave = 52, cae = 0.7, aspero = 1 } = {}) {
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  const fin = ctx.createGain(); fin.gain.value = nivel;
+  if (pan) { pan.pan.value = lado; fin.connect(pan); pan.connect(gSonido); } else fin.connect(gSonido);
+  const env = ctx.createGain(); env.connect(fin);
+  env.gain.setValueAtTime(0.0001, cuando); env.gain.exponentialRampToValueAtTime(1, cuando + dura * 0.18); env.gain.setTargetAtTime(0.0001, cuando + dura * 0.55, dura * 0.18);
+  for (const [mult, peso] of [[1, 0.55], [1.5, 0.25], [2.02, 0.18]]) {
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(grave * mult * 1.1, cuando); o.frequency.exponentialRampToValueAtTime(grave * mult * cae, cuando + dura);
+    const tiembla = ctx.createOscillator(); tiembla.frequency.value = 7 + Math.random() * 4; const gT = ctx.createGain(); gT.gain.value = grave * mult * 0.06 * aspero;
+    tiembla.connect(gT); gT.connect(o.frequency);
+    const g = ctx.createGain(); g.gain.value = peso;
+    o.connect(g);
+    for (const [hz, q] of [[260, 2.2], [620, 3.5]]) { const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = hz; f.Q.value = q; g.connect(f); f.connect(env); }
+    o.start(cuando); o.stop(cuando + dura + 0.2); tiembla.start(cuando); tiembla.stop(cuando + dura + 0.2);
+  }
+  const agua = ctx.createBufferSource(); agua.buffer = bufMarron; agua.playbackRate.value = 0.6;
+  const fa = ctx.createBiquadFilter(); fa.type = 'lowpass'; fa.frequency.value = 340;
+  const ga = ctx.createGain(); ga.gain.value = 0.9; agua.connect(fa); fa.connect(ga); ga.connect(env);
+  agua.start(cuando, Math.random() * 2, dura + 0.2);
+}
+// El trueno de la tormenta: un chasquido seco y después el retumbo largo que rueda
+export function trueno() {
+  if (!ctx || ctx.state !== 'running' || modoActual !== 'mar') return;
+  const ahora = ctx.currentTime + 0.05 + Math.random() * 0.4, lado = Math.random() * 1.2 - 0.6;
+  chasquido(ahora, 0.35, lado, 3200, 0.18);
+  const r = ctx.createBufferSource(); r.buffer = bufMarron; r.playbackRate.value = 0.5;
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(900, ahora); f.frequency.exponentialRampToValueAtTime(120, ahora + 3);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ahora); g.gain.exponentialRampToValueAtTime(1.3, ahora + 0.08); g.gain.exponentialRampToValueAtTime(0.5, ahora + 0.9); g.gain.exponentialRampToValueAtTime(0.001, ahora + 3.4);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  r.connect(f); f.connect(g);
+  if (pan) { pan.pan.value = lado; g.connect(pan); pan.connect(gSonido); } else g.connect(gSonido);
+  r.start(ahora, Math.random() * 2, 3.5);
+}
+// Burbujas: golpecitos de agua que suben de tono (al marcar una zona, al hundirse)
+function burbujas(cuando, nivel, lado, cuantas, dura) {
+  for (let i = 0; i < cuantas; i++) {
+    const c = cuando + Math.random() * dura, hz = 160 + Math.random() * 260;
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(hz, c); o.frequency.exponentialRampToValueAtTime(hz * 2.4, c + 0.07);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, c); g.gain.exponentialRampToValueAtTime(nivel * (0.5 + Math.random() * 0.5), c + 0.01); g.gain.exponentialRampToValueAtTime(0.001, c + 0.09);
+    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    o.connect(g);
+    if (pan) { pan.pan.value = lado + (Math.random() - 0.5) * 0.4; g.connect(pan); pan.connect(gSonido); } else g.connect(gSonido);
+    o.start(c); o.stop(c + 0.12);
+  }
+}
+// Un latigazo: el aire que corta el tentáculo al caer
+function latigazo(cuando, nivel, lado) {
+  const r = ctx.createBufferSource(); r.buffer = bufBlanco;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+  f.frequency.setValueAtTime(900, cuando); f.frequency.exponentialRampToValueAtTime(4200, cuando + 0.1); f.frequency.exponentialRampToValueAtTime(700, cuando + 0.22);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(nivel, cuando + 0.08); g.gain.exponentialRampToValueAtTime(0.001, cuando + 0.24);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  r.connect(f); f.connect(g);
+  if (pan) { pan.pan.value = lado; g.connect(pan); pan.connect(gSonido); } else g.connect(gSonido);
+  r.start(cuando, Math.random() * 2, 0.3);
+}
+// El chillido cuando le pegan: corto y agudo, que sube y baja
+function chillido(cuando, nivel, lado) {
+  const o = ctx.createOscillator(); o.type = 'sawtooth';
+  const base = 520 + Math.random() * 160;
+  o.frequency.setValueAtTime(base, cuando); o.frequency.exponentialRampToValueAtTime(base * 2, cuando + 0.12); o.frequency.exponentialRampToValueAtTime(base * 0.7, cuando + 0.38);
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1200; f.Q.value = 3;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, cuando); g.gain.exponentialRampToValueAtTime(nivel, cuando + 0.04); g.gain.exponentialRampToValueAtTime(0.001, cuando + 0.42);
+  const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  o.connect(f); f.connect(g);
+  if (pan) { pan.pan.value = lado; g.connect(pan); pan.connect(gSonido); } else g.connect(gSonido);
+  o.start(cuando); o.stop(cuando + 0.45);
+}
+let ultimoChillido = 0;
+// kd despierta, kz marca una zona, kg golpe de tentáculo, kh le pegaron, km muere, ks vuelve a lo profundo
+function eventoKraken(ev, oyente) {
+  const dx = ev.x - oyente.x, d = Math.hypot(dx, ev.y - oyente.y);
+  const cerca = Math.max(0, 1 - d / 2600), lado = Math.max(-0.8, Math.min(0.8, dx / 900)), ahora = ctx.currentTime + 0.02;
+  if (ev.k === 'kd') { // despierta: se oye en todo el mar, más fuerte si está cerca
+    const n = 0.45 + 0.55 * cerca;
+    estallido(ahora, 0.7 * n, lado, { grave: 40, cola: 2.4, brillo: 500 });
+    burbujas(ahora, 0.12 * n, lado, 26, 2.2);
+    rugido(ahora + 1.2, 0.95 * n, lado, { dura: 3.2, grave: 46, cae: 0.62 });
+    setTimeout(trueno, 900);
+  } else if (ev.k === 'km') { // muere: un rugido largo que se apaga y el agua que se lo traga
+    const n = 0.45 + 0.55 * cerca;
+    rugido(ahora, 1.0 * n, lado, { dura: 4.2, grave: 60, cae: 0.38, aspero: 1.6 });
+    burbujas(ahora + 1.5, 0.16 * n, lado, 60, 3.2);
+    estallido(ahora + 2.6, 0.6 * n, lado, { grave: 38, cola: 2.2, brillo: 420 });
+  } else if (ev.k === 'ks') { // se va: un gemido grave y las burbujas
+    rugido(ahora, 0.6 * (0.3 + 0.7 * cerca), lado, { dura: 2.6, grave: 44, cae: 0.55 });
+    burbujas(ahora + 0.6, 0.1 * cerca, lado, 30, 2);
+  } else if (cerca <= 0) return;
+  else if (ev.k === 'kz') { // marca una zona: un gruñido corto y el agua que empieza a hervir donde va a golpear
+    rugido(ahora, 0.38 * cerca, lado, { dura: 0.9, grave: 70, cae: 0.85 });
+    burbujas(ahora + 0.1, 0.14 * cerca, lado, 14, 1.1);
+  } else if (ev.k === 'kg') { // el golpe: latigazo, impacto sordo, madera que cruje, salpicón y un gruñido
+    const n = cerca * cerca;
+    latigazo(ahora, 0.5 * n, lado);
+    estallido(ahora + 0.1, 1.0 * n, lado, { grave: 48, cola: 1.1, brillo: 650 });
+    chasquido(ahora + 0.12, 0.6 * n, lado, 520, 0.5);
+    chasquido(ahora + 0.18, 0.35 * n, lado, 1800, 0.12);
+    chasquido(ahora + 0.15, 0.3 * n, lado, 2600, 0.6);
+    rugido(ahora + 0.25, 0.4 * n, lado, { dura: 1.0, grave: 64, cae: 0.75 });
+  } else if (ev.k === 'kh') { // le pegaron: un chillido corto (no más de uno cada tanto, una andanada son muchas balas)
+    if (ctx.currentTime - ultimoChillido < 0.6) return;
+    ultimoChillido = ctx.currentTime;
+    chillido(ahora, 0.16 * cerca, lado);
+  }
 }
