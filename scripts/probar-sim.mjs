@@ -225,6 +225,26 @@ for (const id of Object.keys(MAPAS)) {
   if (sueltas.length) ok(llegaron >= 4, `tritones (${id}): no rodearon la isla para llegar al barco (llegaron ${llegaron})`);
 }
 
+// --- abordaje con flota al ataque (Nicolás, 15/11/2026: su flota le hundió el barco que estaba abordando): mientras el gancho
+// lo tiene, la flota no le tira y se termina capturando. Sin abordaje, la misma flota sí lo hunde (para ver que la prueba muerde).
+for (const abordo of [true, false]) {
+  const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
+  const otros = k.barcos.filter((b) => b.bando === 'enemigo');
+  const presa = otros[0], flota = otros.slice(1, 5);
+  k.barcos = [yo, presa, ...flota]; k.enemigosVivos = 0; k.proxConvoy = 999; k.mundo.islas = k.mundo.islas.filter((i) => i.tipo === 'puerto'); k.mundo.remolinos = []; k.tritones = []; k.yo.proxTritones = 1e9;
+  yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0; yo.trip = 60; yo.vida = 1e6;
+  presa.x = 3000; presa.y = 5290; presa.a = 0; presa.v = 0; presa.trip = 40; presa.vida = presa.stats.vidaMax * 0.35;
+  flota.forEach((b, n) => { b.bando = 'escolta'; b.cap = k.yo; b.ia = { estado: 'sigue' }; b.x = 2800 + n * 130; b.y = 5480; b.a = 0; b.v = 0; b.vida = 1e6; });
+  k.ordenFlota = 'ataque'; k.cdAbordaje = 0; k.escoltasMax = 6; // con lugar en la flota (llena, el abordaje ganado lo hunde a propósito)
+  if (abordo) actualizar(k, 1 / 60, { abordar: true, objetivo: { x: presa.x, y: presa.y } });
+  for (let i = 0; i < 60 * 25 && presa.bando === 'enemigo' && !presa.hundiendo; i++) {
+    presa.v = 0; yo.v = 0; yo.vida = 1e6; if (abordo) yo.trip = Math.max(yo.trip, 30);
+    actualizar(k, 1 / 60, {});
+  }
+  if (abordo) ok(presa.bando === 'escolta' && !presa.hundiendo, `abordaje con flota: la flota hundió el barco que abordabas (${presa.bando}, hundido ${!!presa.hundiendo})`);
+  else ok(presa.hundiendo, 'abordaje con flota: sin abordaje la flota al ataque no lo hundió (la prueba no sirve)');
+}
+
 // --- rachas, habilidades, refuerzo, guardias que no abandonan al tesoro y mundo sin callejones
 {
   const { HABILIDADES } = await import('../src/config.js');

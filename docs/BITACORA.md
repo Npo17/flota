@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (la flota no hunde al barco que estás abordando) — Nicolás + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**
+
+- **Problema (Nicolás):** con 4 barcos en la flota al ataque, abordó otro para sumarlo y su propia flota se lo hundió durante el abordaje.
+- **Arreglo (`abordandoMiJefe` en `src/juego.js`):** mientras el gancho de tu capitán tiene agarrado un barco, tu flota no lo elige como blanco (`masCercano`) y sus balas lo atraviesan sin daño (`moverBalas`). Tus propios cañones sí le pegan, por si lo querés hundir igual. Antes de que el gancho llegue (vuelo) no hay protección.
+- **Ojo, no cambia:** con la flota llena, el abordaje ganado saquea y hunde el barco a propósito ("Flota llena: lo saqueaste y lo hundiste"). Para sumarlo hay que agrandar la flota en el puerto (empieza en 2, máximo 6).
+- **Prueba nueva** en `scripts/probar-sim.mjs` ("abordaje con flota"): 4 barcos al ataque al lado de un barco que abordás → se captura; sin abordaje, la misma flota lo hunde. Con el código anterior fallaba.
+
 ## 2026-11-15 (los tritones ya no cruzan la tierra) — Nicolás + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**

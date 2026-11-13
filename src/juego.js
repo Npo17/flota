@@ -513,6 +513,12 @@ function separarBarcos(j) {
   }
 }
 
+// ¿Es b el barco que está abordando el jefe de esta escolta? Mientras el gancho lo tiene agarrado, la flota no le tira:
+// lo querés capturar, no hundir (Nicolás, 15/11/2026: su flota le hundió el barco que estaba abordando).
+function abordandoMiJefe(escolta, b) {
+  return !!(escolta && escolta.bando === 'escolta' && escolta.cap && escolta.cap.gancho && escolta.cap.gancho.obj === b);
+}
+
 function moverBalas(j, dt) {
   const quedan = [];
   for (const bl of j.balas) {
@@ -522,6 +528,7 @@ function moverBalas(j, dt) {
       if (b.hundiendo || equipoDe(b) === bl.equipo) continue;
       if (Math.abs(b.x - bl.x) > b.stats.largo || Math.abs(b.y - bl.y) > b.stats.largo) continue;
       if (b.cap && enPuerto(j, b)) continue; // el puerto es zona segura
+      if (abordandoMiJefe(bl.dueno, b)) continue; // tu flota no le pega al barco que estás abordando: pasa de largo
       if (dentroDelCasco(b, bl.x, bl.y, bl.radio)) {
         golpear(j, b, bl);
         pego = true;
@@ -866,7 +873,7 @@ function masCercano(j, b, radio) {
   const p = j.mundo.puerto;
   let mejor = null, mejorD = radio;
   for (const o of j.barcos) {
-    if (o.hundiendo || equipoDe(o) === mio) continue;
+    if (o.hundiendo || equipoDe(o) === mio || abordandoMiJefe(b, o)) continue;
     if (!b.cap && !o.cap && (mio === 'tesoro' || equipoDe(o) === 'tesoro')) continue; // el tesoro es asunto de los capitanes
     if (Math.abs(o.x - b.x) > radio || Math.abs(o.y - b.y) > radio) continue;
     if (Math.hypot(o.x - p.x, o.y - p.y) < p.radio + 60) continue; // el puerto es zona segura
