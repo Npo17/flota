@@ -85,9 +85,9 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/mapas.js` | Los 20 mapas históricos: clima, costas y reglas de cada uno |
 | `src/mundo.js` | Genera el mundo de una partida a partir del mapa (con semilla: el mismo mapa sale siempre igual) |
 | `src/barcos.js` | Estadísticas de un barco según su diseño |
-| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota (junta el oro a la vista), remolinos, tritones (nadan bordeando la costa, nunca cruzan tierra; la tripulación les tira con mosquetes), flota del tesoro y el Kraken (`actualizarKraken`: la maldición de las marcas, la zona marcada y el golpe; sus números en `KRAKEN` de `config.js`) |
+| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota (junta el oro a la vista), remolinos, tritones (nadan bordeando la costa, nunca cruzan tierra; la tripulación les tira con mosquetes), flota del tesoro y el Kraken (`actualizarKraken`: las monedas del tesoro maldito, sus ocho ataques en `lanzarAtaque` / `actualizarAtaquesKraken`, la furia y la deuda saldada; sus números en `KRAKEN` de `config.js`) |
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
-| `src/kraken-dibujo.js` | El dibujo del Kraken (tentáculos con ventosas, percebes, dos ojos que siguen a los barcos), la zona marcada, el golpe, la muerte y la noche con tormenta. Solo dibuja: lo que pasa lo decide `juego.js` o el servidor |
+| `src/kraken-dibujo.js` | El dibujo del Kraken (tentáculos con ventosas, percebes, dos ojos que siguen a los barcos), la zona marcada, el golpe, los otros ataques (barrido, chorro, agarre, tinta, remolino, mirada), la furia, la muerte, la noche con tormenta y la moneda maldita que vuela al barco. Solo dibuja: lo que pasa lo decide `juego.js` o el servidor |
 | `scripts/probar-kraken.mjs` | Prueba del Kraken: marcas, zona (centro, borde, afuera, esquivar), cañonazos, furia, muerte con su oro, que se vaya. `probar-kraken-red.mjs`: lo mismo en línea, servidor contra cliente |
 | `src/arte-britanico.js`, `src/arte-vikingo.js`, `src/arte-espanol.js`, `src/arte-portugues.js`, `src/arte-frances.js` | Arte propio de los barcos de esas cinco civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
 | `src/arte-motor.js`, `src/arte-emblemas*.js` | Motor de arte por piezas (cascos, velas cuadras, latinas, de junco y cangrejas, castillos, casetas, remos…) y las tallas y emblemas. Mismo estilo que los cinco de arriba, con los cuatro estados de daño |
@@ -159,7 +159,7 @@ La simulación (`juego.js`) no toca la pantalla ni el teclado: recibe una entrad
 - Un barco dañado va más lento. Parado junto a una isla se repara hasta el 75 %.
 - A los bots el casco castigado también les baja la tripulación (`BAJAS_CASCO`); a los jugadores solo les baja con la baja al azar de cada bala, como siempre.
 - Tu tripulación (en tu barco y en los de tu flota) les tira con mosquetes a los tritones que se acercan (`MOSQUETES`); bajan una parte, el resto se baja a cañonazos.
-- Los remolinos son solo remolinos (sin monstruo). No hay Kraken.
+- Los remolinos son solo remolinos (sin monstruo). El Kraken es aparte: lo despierta quien junta 3 **monedas del tesoro maldito de Flint Braun** (una por galeón del tesoro hundido; se ven en la tabla a la derecha del puntaje). Tiene ocho ataques que elige al azar (zona, lluvia de zonas, barrido, chorro, agarre, tinta, mirada fija, buceo con remolino). Si hunde al que lo despertó, la deuda queda saldada y se va (Cristian, 13/11/2026).
 - Mapas y civilizaciones son de 1400 a 1700, con banderas de época (no las modernas).
 
 ## Servicios

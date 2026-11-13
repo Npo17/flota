@@ -5,7 +5,7 @@
   --caja: #11293b; --tarjeta: #173a52; --tarjeta-hover: #1d4763; --tarjeta-elegida: #21506e;
   --carta: linear-gradient(#1a405a, #143247); --carta-elegida: linear-gradient(#245674, #1b4560);
   --oro: #ffd166; --acento: #ffd166; --boton: #2a5f80; --boton-2: #1d4763; --campo: #0c2233; --texto-campo: #fff;
-  --surco: rgba(0, 0, 0, 0.45); --error: #ff8f8f; --yo: #b8ffcb;
+  --surco: rgba(0, 0, 0, 0.45); --error: #ff8f8f; --yo: #b8ffcb; --maldita: #b9e8a0; --maldita-borde: #3d5a2a;
   color-scheme: dark;
 }
 :root[data-tema="claro"] {
@@ -14,7 +14,7 @@
   --caja: #fbf6e7; --tarjeta: #efe6cc; --tarjeta-hover: #e6d9b6; --tarjeta-elegida: #ffe7a6;
   --carta: linear-gradient(#f5edd6, #eadfc0); --carta-elegida: linear-gradient(#ffeebc, #ffe19a);
   --oro: #9a6200; --acento: #d99a00; --boton: #2a5f80; --boton-2: #3d7699; --campo: #fff; --texto-campo: #23303a;
-  --surco: rgba(0, 0, 0, 0.18); --error: #c0392b; --yo: #1c7a3a;
+  --surco: rgba(0, 0, 0, 0.18); --error: #c0392b; --yo: #1c7a3a; --maldita: #3f7a22; --maldita-borde: #9cc480;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -248,6 +248,10 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 #hud-tabla { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--borde); }
 #hud-tabla .fila { margin: 2px 0; font-size: 12.5px; }
 #hud-tabla .fila.yo { color: var(--yo); }
+/* monedas del tesoro maldito de Flint Braun: una moneda dorada con un brillo verde, a la derecha del puntaje */
+.maldita { color: var(--maldita); font-variant-numeric: tabular-nums; }
+.moneda-maldita { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 50%; vertical-align: -0.1em; margin: 0 2px 0 6px;
+  background: radial-gradient(circle at 35% 35%, var(--oro), var(--maldita-borde)); box-shadow: 0 0 5px var(--maldita); }
 
 /* Ajustes: idioma y pantalla */
 .cabecera-der { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }

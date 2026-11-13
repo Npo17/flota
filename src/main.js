@@ -1,5 +1,5 @@
 // Pega todo: pantallas (astillero, puerto, fin), teclado y el ciclo del juego.
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, HABILIDADES } from './config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, HABILIDADES, KRAKEN } from './config.js';
 import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
@@ -687,14 +687,18 @@ function pintarHud() {
   $('hud-bodega').textContent = j.oroBodega;
   $('hud-puerto').textContent = j.oroPuerto;
   $('hud-hundidos').textContent = j.stats.hundidos;
+  // tus monedas del tesoro maldito (con las que faltan para despertar al Kraken)
+  const monedas = j.enLinea ? ((j.jugadores || []).find((x) => x[0] === j.yo.id) || [])[3] || 0 : j.yo.marcasTesoro || 0;
+  $('hud-monedas-fila').classList.toggle('oculto', !monedas);
+  $('hud-monedas').textContent = `${monedas} / ${KRAKEN.marcas}`;
   if (j.enLinea) {
     $('hud-eliminados').textContent = j.stats.eliminados || 0;
     const top = [...j.jugadores].sort((a, c) => c[2] - a[2]).slice(0, 5);
-    const clave = top.map((x) => x[1] + x[2]).join('|') + j.jugadores.length;
+    const clave = top.map((x) => x[1] + x[2] + '·' + (x[3] || 0)).join('|') + j.jugadores.length;
     if (clave !== tablaPintada) {
       tablaPintada = clave;
       $('hud-tabla').innerHTML = `<div class="fila"><b>${t('En el mar')}</b><span>${j.jugadores.length}</span></div>`
-        + top.map((x, q) => `<div class="fila${x[0] === j.yo.id ? ' yo' : ''}"><span>${q + 1}. ${limpiar(x[1])}</span><b class="oro">${x[2]}</b></div>`).join('');
+        + top.map((x, q) => `<div class="fila${x[0] === j.yo.id ? ' yo' : ''}"><span>${q + 1}. ${limpiar(x[1])}</span><span><b class="oro">${x[2]}</b>${x[3] ? `<i class="moneda-maldita"></i><b class="maldita">${x[3]}</b>` : ''}</span></div>`).join('');
     }
   }
   const averia = b.vida < s.vidaMax * 0.7 ? ` · ${t('averiado, vas más lento')}` : '';

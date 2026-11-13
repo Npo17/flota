@@ -42,7 +42,7 @@ ok(j.kraken && Math.abs(j.kraken.x - k.x) <= 1 && Math.abs(j.kraken.y - k.y) <= 
 ok(j.avisos.some((a) => a.texto.includes('despertó al Kraken')), 'al cliente no le llegó el aviso');
 
 // emerge, marca una zona sobre el barco y golpea: el cliente ve la zona en el mismo lugar y el barco pierde vida
-k.emerge = 1; k.prox = 0;
+k.emerge = 1; k.prox = 0; k.forzar = 'zona';
 cap.barco.x = k.x + 380; cap.barco.y = k.y; cap.barco.v = 0;
 mar.clientes.get(ws).entrada = { quieto: true };
 mar.paso();
@@ -58,6 +58,15 @@ const pasos = (seg) => Math.ceil(seg / 0.02); // mar.paso() llamado seguido avan
 for (let i = 0; i < pasos(z.aviso + 0.3); i++) { cap.barco.x = z.x; cap.barco.y = z.y; cap.barco.v = 0; mar.paso(); }
 ok(cap.barco.vida < vida0, 'el golpe no le sacó vida al barco en el servidor');
 ok(Math.abs(j.jugador.vida - Math.round(cap.barco.vida)) <= 1, 'el cliente no ve la vida que le quedó');
+
+// los ataques nuevos también viajan: un barrido se ve igual en el cliente, y la tabla trae las monedas
+k.forzar = 'barrido'; k.t = 60; k.prox = 0; k.zonas = [];
+mar.paso();
+const bs = k.ataques.find((x) => x.tipo === 'barrido'), bc = j.kraken && (j.kraken.ataques || []).find((x) => x.tipo === 'barrido');
+ok(bs && bc && bc.r0 === bs.r0 && bc.r1 === bs.r1 && Math.abs(bc.a - bs.a) < 0.02, 'el cliente no ve el barrido igual que el servidor');
+cap.marcasTesoro = 2; mar.paso();
+ok(j.jugadores.some((x) => x[3] === 2), 'la tabla no trae las monedas del tesoro maldito');
+cap.marcasTesoro = 0; k.forzar = 'zona'; k.prox = 999; k.ataques = [];
 
 // muere: el cliente lo ve morir y después desaparecer
 k.vida = 0; k.muerte = 0.0001; k.zonas = [];

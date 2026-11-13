@@ -10,7 +10,7 @@ import { pintarEspanol } from './arte-espanol.js';
 import { pintarPortugues } from './arte-portugues.js';
 import { pintarFrances } from './arte-frances.js';
 import { ARTE_ELEGIDO } from './arte-elegidos.js';
-import { dibujarKrakenAbajo, dibujarKrakenArriba, dibujarTormenta } from './kraken-dibujo.js';
+import { dibujarKrakenAbajo, dibujarKrakenArriba, dibujarTormenta, dibujarMonedas } from './kraken-dibujo.js';
 
 const TAU = Math.PI * 2;
 const ESCOLLO = { iceberg: true, arrecife: true }; // obstáculos chicos que no son tierra
@@ -775,6 +775,7 @@ export function dibujarEscena(ctx, j, vista) {
 
   // el tentáculo que golpea cae encima de los barcos
   dibujarKrakenArriba(ctx, j, visible);
+  dibujarMonedas(ctx, j, visible); // la moneda del tesoro maldito que vuela al barco
 
   // el gancho en el aire: la soga desde el barco y el garfio en la punta
   if (j.gancho && j.gancho.fase === 'vuelo') {

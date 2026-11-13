@@ -2,10 +2,10 @@
 // Corre la misma simulación que el modo solo (src/juego.js) y manda el estado a todos 20 veces por segundo.
 // El servidor decide todo lo que importa (posiciones, daño, oro): el navegador solo manda a dónde apunta y qué dispara.
 import { crearMundo } from '../src/mundo.js';
-import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe } from '../src/juego.js';
+import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe, ataquesAFoto } from '../src/juego.js';
 import { comprar } from '../src/puerto.js';
 import { costoDiseno } from '../src/barcos.js';
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES } from '../src/config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES, KRAKEN } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
 const MAX_JUGADORES = 24; // en el mar de todos
@@ -218,7 +218,7 @@ export class Mar {
     const barcos = j.barcos.map((b) => [b.id, r(b.x), r(b.y), r(b.a * 100), r(b.v), b.velas, r(b.vida), b.trip, b.cap ? b.cap.id : 0, b.bando === 'jugador' ? 'j' : b.bando === 'escolta' ? 'e' : 'b', b.hundiendo ? 1 : 0]);
     const cofres = j.cofres.map((x) => [x.id, r(x.x), r(x.y)]);
     const tritones = j.tritones.map((x) => [r(x.x), r(x.y), r(x.a * 100)]);
-    const caps = j.capitanes.filter((x) => !x.fin).map((x) => [x.id, x.nombre, r(x.stats.saqueado)]);
+    const caps = j.capitanes.filter((x) => !x.fin).map((x) => [x.id, x.nombre, r(x.stats.saqueado), x.marcasTesoro || 0]); // la 4.ª: monedas del tesoro maldito
     const ganchos = [];
     for (const cap of j.capitanes) if (cap.gancho) ganchos.push([cap.id, cap.gancho.fase === 'vuelo' ? 0 : 1, r(cap.gancho.x), r(cap.gancho.y), cap.gancho.obj ? cap.gancho.obj.id : 0]);
     const comunes = j.eventos.filter((e) => !e.p);
@@ -231,7 +231,8 @@ export class Mar {
     // el Kraken: x, y, rumbo, vida, vida máxima, cuánto emergió (%), segundos de muerte y de hundirse (en décimas), furia,
     // y sus zonas marcadas (id, x, y, tiempo y aviso en centésimas). Lo decide todo el servidor: los jugadores solo lo dibujan.
     const k = j.kraken;
-    const kraken = k ? [r(k.x), r(k.y), r(k.a * 100), Math.max(0, r(k.vida)), k.vidaMax, r(k.emerge * 100), k.muerte ? Math.max(1, r(k.muerte * 10)) : 0, k.sumerge ? Math.max(1, r(k.sumerge * 10)) : 0, k.furia ? 1 : 0, k.zonas.flatMap((z) => [z.id, z.x, z.y, r(z.t * 100), r(z.aviso * 100)])] : null;
+    const kraken = k ? [r(k.x), r(k.y), r(k.a * 100), Math.max(0, r(k.vida)), k.vidaMax, r(k.emerge * 100), k.muerte ? Math.max(1, r(k.muerte * 10)) : 0, k.sumerge ? Math.max(1, r(k.sumerge * 10)) : 0, k.furia ? 1 : 0, k.zonas.flatMap((z) => [z.id, z.x, z.y, r(z.t * 100), r(z.aviso * 100)]),
+      ataquesAFoto(k), k.mirada ? [k.mirada.id, r(k.mirada.t * 100)] : 0, k.zonas.map((z) => z.r || KRAKEN.radio), k.buceo ? Math.max(1, r(k.buceo * 10)) : 0] : null; // 10 a 13: los ataques nuevos (un navegador anterior no los lee)
 
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;

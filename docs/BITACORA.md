@@ -3,6 +3,33 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (Kraken: monedas de Flint Braun, deuda saldada y ocho ataques) — Cristian + Claude
+
+**Estado: probado en localhost y commiteado. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea rijan los ataques nuevos, las monedas en la tabla y la deuda saldada.** Un navegador viejo con el servidor nuevo, o al revés, no se rompe: los datos nuevos van al final de la foto y quien no los conoce los ignora.
+
+Pedido de Cristian después de probar el Kraken de Nicolás (le gustó cómo se ve; tenía un solo ataque y se volvía predecible).
+
+- **Monedas del tesoro maldito de Flint Braun:** cada galeón del tesoro hundido es una moneda (lo que antes se llamaba "marca"). Una moneda sale del agua girando, con brillo verde, y vuela al barco del que lo hundió (evento `'mo'`, dibujo `dibujarMonedas` en `src/kraken-dibujo.js`, tres toques de campana que desafinan). Todo el mar recibe "¡{nombre} consiguió una moneda del tesoro maldito de Flint Braun!".
+- **Las monedas se ven:** en la tabla del mar, a la derecha del puntaje de cada jugador (la foto del servidor manda la 4.ª columna en `caps`), y en tu panel ("Monedas malditas 2 / 3", solo si tenés alguna; vale también en el modo solo).
+- **Cuando zarpa un galeón y alguien tiene una moneda menos de las necesarias**, además del aviso de siempre ("¡Flota del tesoro! …") sale "A {nombre} le falta UNA moneda para desatar la maldición del Kraken".
+- **Deuda saldada:** si el Kraken hunde el barco insignia del capitán que lo despertó, se vuelve a lo profundo y todo el mar lee "{nombre} saldó su deuda con el Kraken" (`hundir` en `src/juego.js`, con `kraken.invocador`). Si el que lo despertó se va del mar, el Kraken sigue (no se cambió; queda para decidir).
+- **Ocho ataques** en lugar de uno (del documento de Nicolás). Cada vez que le toca elige uno al azar según `KRAKEN.pesos`:
+  - **Zona marcada**, la de siempre.
+  - **Lluvia de zonas:** 6 zonas chicas en línea, círculo o espiral que se llenan una detrás de otra.
+  - **Barrido:** una franja en arco alrededor suyo que se llena en el sentido en que va a barrer; se esquiva saliendo hacia afuera o hacia el Kraken.
+  - **Chorro de agua:** una línea desde la boca que se llena desde el Kraken; pega y arrastra al barco.
+  - **Agarre:** un círculo chico que se cierra sobre un barco; si no sale, el tentáculo lo agarra 6 s, no se mueve y pierde casco de a poco. Los aliados (otros capitanes o tu flota) cortan el tentáculo a cañonazos; las balas del barco agarrado no lo cortan. Se ve la vida del tentáculo.
+  - **Nube de tinta:** una mancha negra cerca del barco que tapa lo que hay debajo durante 9 s.
+  - **Mirada fija:** clava los ojos en un barco 8 s y todos los ataques van a ese. Se corta si ese barco se mete en la tinta o si los demás le sacan el 3 % de la vida (distraerlo).
+  - **Buceo:** se sumerge (no se le puede pegar), deja un remolino de 4,5 s que arrastra al centro y sale cerca del capitán más cercano.
+- **Furia** (por debajo del 40 %): hasta 3 ataques a la vez, avisos 15 % más cortos, más seguido, a veces dos ataques distintos juntos (`combinadoFuria`), dos tentáculos más y los ojos encendidos.
+- Todos los números nuevos en `KRAKEN` (`src/config.js`): `pesos`, `lluvia`, `barrido`, `chorro`, `agarre`, `tinta`, `mirada`, `buceo`, `maxAtaques`, `combinadoFuria`.
+- **En línea:** la foto `kr` suma al final los ataques (`ataquesAFoto` / `ataquesDeFoto` en `src/juego.js`), la mirada, el radio de cada zona y el buceo.
+- **Pruebas nuevas** en `scripts/probar-kraken.mjs`: monedas (evento, aviso a todos, aviso del 3.er galeón), deuda saldada, lluvia en secuencia, barrido dentro y fuera de la franja, chorro que pega y empuja, agarre que inmoviliza y un aliado que corta el tentáculo, mirada que se corta con la tinta, buceo con remolino sin recibir daño, los ataques que van y vuelven por la foto, y que los ocho salgan en 4 minutos de pelea enfurecido. `probar-kraken-red.mjs`: el cliente ve el barrido igual que el servidor y la tabla trae las monedas. Las pruebas viejas fijan `k.forzar = 'zona'` porque son de la zona marcada.
+- **Visto en el navegador:** moneda, barrido, chorro, agarre (con la barra del tentáculo), lluvia, mirada, tinta y furia. El remolino del buceo no llegué a verlo en pantalla (quedó fuera del cuadro), pero la prueba lo cubre.
+- Ojo: en una de nueve corridas `probar-sim` falló "flota quieta (cuña)" por poco (441 px contra 400); no se repitió en otras cinco. Parece azar de esa prueba, no de este cambio.
+- **A ajustar jugando:** los pesos de cada ataque, cuánto pegan el barrido (1,4 veces el borde de una zona) y el chorro, la vida del tentáculo (160), el empuje del chorro y la fuerza del remolino.
+
 ## 2026-11-15 (el Kraken) — Nicolás + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que el Kraken exista en línea; la web y la app ya lo tienen en el modo solo.**

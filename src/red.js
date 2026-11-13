@@ -3,7 +3,7 @@
 // El servidor decide posiciones, daño y oro; acá solo se suaviza el movimiento y se dibujan los efectos.
 import { crearMundo } from './mundo.js';
 import { crearBarco, statsDe } from './barcos.js';
-import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng } from './juego.js';
+import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto } from './juego.js';
 import { KRAKEN } from './config.js';
 import { t } from './idioma.js';
 
@@ -144,7 +144,9 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     if (m.kr) { // el Kraken (un servidor anterior no lo manda)
       const q = m.kr, k = j.kraken || {}, zonas = [];
       for (let i = 0; i + 4 < q[9].length; i += 5) zonas.push({ id: q[9][i], x: q[9][i + 1], y: q[9][i + 2], t: q[9][i + 3] / 100, aviso: q[9][i + 4] / 100, golpe: q[9][i + 3] >= q[9][i + 4] });
-      Object.assign(k, { x: q[0], y: q[1], a: q[2] / 100, vida: q[3], vidaMax: q[4], emerge: q[5] / 100, muerte: q[6] / 10, sumerge: q[7] / 10, furia: !!q[8], zonas });
+      if (q[12]) zonas.forEach((z, i) => { z.r = q[12][i] || KRAKEN.radio; }); // radio de cada zona (la lluvia trae zonas chicas)
+      Object.assign(k, { x: q[0], y: q[1], a: q[2] / 100, vida: q[3], vidaMax: q[4], emerge: q[5] / 100, muerte: q[6] / 10, sumerge: q[7] / 10, furia: !!q[8], zonas,
+        ataques: q[10] ? ataquesDeFoto(q[10]) : [], mirada: q[11] ? { id: q[11][0], t: q[11][1] / 100 } : null, buceo: (q[13] || 0) / 10 });
       j.kraken = k;
     } else j.kraken = null;
     const g = m.g.find((q) => q[0] === miId);
@@ -217,6 +219,9 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
     const kr = j.kraken;
     if (kr) {
       for (const z of kr.zonas) { z.t += dt; z.golpe = z.t >= z.aviso; }
+      for (const a of kr.ataques || []) a.t += dt;
+      if (kr.mirada) kr.mirada.t += dt;
+      if (kr.buceo) kr.buceo += dt;
       if (kr.muerte) kr.muerte += dt; else if (kr.sumerge) kr.sumerge += dt; else if (kr.emerge < 1) kr.emerge = Math.min(1, kr.emerge + dt / KRAKEN.emerger);
     }
     actualizarParticulas(j, dt);

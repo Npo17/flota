@@ -140,7 +140,8 @@ function cabeza(claro, asoma, ojosAbre) {
     const ex = 24, ey = s * 62, R = 27;
     x.fillStyle = '#44323b'; x.strokeStyle = PIEL.borde; x.lineWidth = 4; x.beginPath(); x.arc(ex, ey, R + 9, 0, TAU); x.fill(); x.stroke(); // párpado abultado
     for (let q = 0; q < 5; q++) { const a = (s > 0 ? 0.6 : 3.4) + q * 0.62 + azar(q + s * 3 + 9) * 0.3; percebes(ex + Math.cos(a) * (R + 5), ey + Math.sin(a) * (R + 5), 2.4, q + s * 7 + 40, 2); } // costras
-    const ojo = x.createRadialGradient(ex - 5, ey - 6, 3, ex, ey, R); ojo.addColorStop(0, '#9a8a45'); ojo.addColorStop(0.6, '#5e5a2c'); ojo.addColorStop(1, '#2a2816');
+    const ojo = x.createRadialGradient(ex - 5, ey - 6, 3, ex, ey, R); // enfurecido, los ojos se encienden
+    if (K.furia) { ojo.addColorStop(0, '#ffe08a'); ojo.addColorStop(0.55, '#e8862e'); ojo.addColorStop(1, '#5a1c0c'); } else { ojo.addColorStop(0, '#9a8a45'); ojo.addColorStop(0.6, '#5e5a2c'); ojo.addColorStop(1, '#2a2816'); }
     x.fillStyle = ojo; x.strokeStyle = '#14100c'; x.lineWidth = 3; x.beginPath(); x.arc(ex, ey, R, 0, TAU); x.fill(); x.stroke();
     x.save(); x.beginPath(); x.arc(ex, ey, R - 1, 0, TAU); x.clip();
     const pxo = ex + Math.cos(haciaL) * 10, pyo = ey + Math.sin(haciaL) * 10;
@@ -163,7 +164,7 @@ function cuerpo(claro, emerge) {
   const tam = TAM * (1 - hunde * 0.45), kx = K.x, ky = K.y, ka = K.a;
   K.x += Math.sin(t * 41) * agonia * 9; K.y += Math.cos(t * 37) * agonia * 7; K.a += Math.sin(t * 7) * agonia * 0.16 + hunde * hunde * 1.5; // se retuerce y gira al hundirse
   x.save(); x.translate(K.x, K.y); x.scale(tam, tam); x.translate(-K.x, -K.y);
-  [-0.42, 0.42, -1.0, 1.0, -1.6, 1.6, -2.25, 2.25].forEach((d, i) => {
+  (K.furia ? [-0.42, 0.42, -1.0, 1.0, -1.6, 1.6, -2.25, 2.25, -2.75, 2.75] : [-0.42, 0.42, -1.0, 1.0, -1.6, 1.6, -2.25, 2.25]).forEach((d, i) => { // enfurecido asoman dos más
     const b = K.a + d, adelante = i < 2, s = i % 2 ? 1 : -1;
     const sale = suave((emerge - 0.18 - i * 0.03) / 0.42);                                     // al emerger salen de a uno, la punta primero
     const idle = i === 3 || i === 4 || i === 6 ? suave(0.55 + 0.8 * Math.sin(t * 0.23 + i * 2.1)) : 1; // algunos se hunden y vuelven a salir
@@ -178,7 +179,7 @@ function cuerpo(claro, emerge) {
 // La zona marcada. Se lee por forma además de color: borde claro y nítido, rayas en lo que ya se llenó, anillo de rayitas que gira,
 // cuatro flechas hacia adentro y un anillo interior que marca dónde el golpe saca más.
 function marcador(z, f, alfa) {
-  const R = KRAKEN.radio;
+  const R = z.r || KRAKEN.radio;
   x.save(); x.translate(z.x, z.y); x.globalAlpha = alfa;
   x.fillStyle = 'rgba(40, 8, 8, 0.3)'; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.fill();
   x.save(); x.beginPath(); x.arc(0, 0, R * f, 0, TAU); x.clip();                               // el llenado, del centro hacia afuera
@@ -199,7 +200,7 @@ function marcador(z, f, alfa) {
 // El golpe: el tentáculo sale de abajo del agua en el borde de la zona que da al Kraken y cae atravesado sobre ella
 function golpe(z) {
   const s = z.t - z.aviso; if (s < 0) return;
-  const R = KRAKEN.radio, u = Math.atan2(z.y - K.y, z.x - K.x);
+  const R = z.r || KRAKEN.radio, u = Math.atan2(z.y - K.y, z.x - K.x);
   const cae = entre(s / 0.16), fuera = entre((s - 0.16 - KRAKEN.queda) / 0.55);
   cadena(23 + (z.id % 7), z.x - Math.cos(u) * R * 1.25, z.y - Math.sin(u) * R * 1.25, u + (1 - cae) * 0.9, R * 2.5 * (0.25 + 0.75 * cae) * (1 - fuera * 0.5), 50,
     { curva: 0.35 + (1 - cae) * 2.2, fuerza: 0.55, base: 2, vis: 1 - fuera * 0.9, alfa: 1 - fuera * fuera });
@@ -217,10 +218,11 @@ function preparar(ctx, j, k) {
   x = ctx; t = j.t; K = { x: k.x, y: k.y, a: k.a };
   const fm = k.muerte ? entre(k.muerte / 5) : 0; // la muerte dura unos 5 segundos: se retuerce, larga tinta, gira y se hunde
   agonia = fm > 0 && fm < 0.4 ? Math.min(1, fm / 0.08) * (fm < 0.32 ? 1 : (0.4 - fm) / 0.08) : 0;
-  hunde = k.muerte ? entre((fm - 0.36) / 0.44) : k.sumerge ? entre(k.sumerge / 3) : 0;
+  hunde = k.muerte ? entre((fm - 0.36) / 0.44) : k.sumerge ? entre(k.sumerge / 3) : k.buceo ? entre(k.buceo / 1.1) : 0;
+  K.furia = !!k.furia && !k.muerte;
   alfaK = 1 - hunde * hunde;
   // los ojos siguen a su blanco: la zona que marcó o, si no hay, el barco del jugador; giran despacio hacia él
-  const z = k.zonas && k.zonas[0], yo = j.jugador, quiere = z ? z : yo ? yo : K;
+  const fijo = k.mirada && j.barcos.find((b) => b.id === k.mirada.id), z = k.zonas && k.zonas[0], yo = j.jugador, quiere = fijo || (z ? z : yo ? yo : K);
   if (k.mx === undefined) { k.mx = quiere.x; k.my = quiere.y; }
   k.mx += (quiere.x - k.mx) * 0.06; k.my += (quiere.y - k.my) * 0.06;
   mira = { x: k.mx, y: k.my };
@@ -238,6 +240,7 @@ export function dibujarKrakenAbajo(ctx, j, visible) {
     burbujas(K.x, K.y, 260, f, 34);
   }
   for (const z of k.zonas || []) if (z.t < z.aviso + 0.3 && visible(z.x, z.y, KRAKEN.radio + 30)) marcador(z, entre(z.t / z.aviso), z.t < z.aviso ? 1 : 1 - (z.t - z.aviso) / 0.3);
+  for (const a of k.ataques || []) ataqueAbajo(a, visible);
   if (k.muerte) { // la tinta: una mancha oscura que crece y después se disuelve
     const fm = entre(k.muerte / 5), crece = Math.min(1, fm / 0.6), queda = 1 - Math.max(0, (fm - 0.78) / 0.22);
     for (let i = 0; i < 11; i++) {
@@ -245,6 +248,7 @@ export function dibujarKrakenAbajo(ctx, j, visible) {
       x.fillStyle = `rgba(18, 8, 26, ${0.36 * queda})`; x.beginPath(); x.ellipse(K.x + Math.cos(a) * r * 0.9, K.y + Math.sin(a) * r * 0.6, (90 + azar(i + 8) * 110) * crece, (60 + azar(i + 12) * 70) * crece, a, 0, TAU); x.fill();
     }
   }
+  if (k.buceo && k.buceo > 1.1) return; // bajo el agua: solo se ve el remolino
   if (hunde < 1 && visible(K.x, K.y, 420)) cuerpo(j.t - (j.krakenHerido ?? -9) < 0.12 || (agonia > 0 && Math.sin(t * 34) > 0.55), emerge);
   x.globalAlpha = 1;
 }
@@ -255,6 +259,8 @@ export function dibujarKrakenArriba(ctx, j, visible) {
   if (!k) return;
   x = ctx;
   for (const z of k.zonas || []) if (z.t >= z.aviso && visible(z.x, z.y, KRAKEN.radio * 3)) golpe(z);
+  for (const a of k.ataques || []) ataqueArriba(a, j, visible);
+  if (k.mirada && !k.muerte) miradaFija(k, j, visible);
   if ((k.muerte || k.sumerge) && hunde < 1 && visible(K.x, K.y, 500)) {
     const cuanto = k.muerte ? Math.sin(Math.min(1, entre(k.muerte / 5) / 0.9) * Math.PI) : 1 - hunde;
     burbujas(K.x, K.y, 250 * (1 - hunde * 0.5), cuanto, 46);
@@ -293,4 +299,132 @@ export function dibujarTormenta(ctx, j, ancho, alto, fuerza) {
   }
   ctx.restore();
   return fr >= 0 && fr < 0.05; // recién cayó un rayo (para el trueno)
+}
+
+// ---------- Los ataques nuevos (Cristian, 13/11/2026) ----------
+// Cada uno se avisa por forma además de color: la franja del barrido se llena en el sentido en que va a barrer, el chorro se llena
+// desde la boca, el agarre es un círculo chico que se cierra. Lo que golpea (tentáculo, agua) va arriba de los barcos.
+function ataqueAbajo(a, visible) {
+  if (a.tipo === 'barrido' && a.t < a.aviso + 0.2 && visible(a.x, a.y, a.r1 + 40)) {
+    const f = entre(a.t / a.aviso), alfa = a.t < a.aviso ? 1 : 1 - (a.t - a.aviso) / 0.2, a0 = a.a - a.arco, a1 = a.a + a.arco;
+    const sector = (desde, hasta) => { x.beginPath(); x.arc(a.x, a.y, a.r1, desde, hasta); x.arc(a.x, a.y, a.r0, hasta, desde, true); x.closePath(); };
+    x.globalAlpha = alfa;
+    sector(a0, a1); x.fillStyle = 'rgba(40, 8, 8, 0.3)'; x.fill();
+    sector(a0, a0 + (a1 - a0) * f); x.fillStyle = 'rgba(232, 92, 40, 0.5)'; x.fill(); // se llena en el sentido del barrido
+    sector(a0, a1); x.strokeStyle = '#1a0d08'; x.lineWidth = 7; x.stroke(); x.strokeStyle = '#fff3d6'; x.lineWidth = 3; x.stroke();
+    x.setLineDash([16, 12]); x.lineDashOffset = -t * 46; x.beginPath(); x.arc(a.x, a.y, (a.r0 + a.r1) / 2, a0, a1); x.stroke(); x.setLineDash([]); x.lineDashOffset = 0;
+    // la flecha que dice hacia dónde barre
+    const am = a0 + (a1 - a0) * Math.min(0.95, f + 0.08), rm = (a.r0 + a.r1) / 2;
+    x.save(); x.translate(a.x + Math.cos(am) * rm, a.y + Math.sin(am) * rm); x.rotate(am + Math.PI / 2);
+    x.fillStyle = '#fff3d6'; x.strokeStyle = '#1a0d08'; x.lineWidth = 2; x.beginPath(); x.moveTo(16, 0); x.lineTo(-8, -11); x.lineTo(-8, 11); x.closePath(); x.fill(); x.stroke();
+    x.restore(); x.globalAlpha = 1;
+  } else if (a.tipo === 'chorro' && a.t < a.aviso + 0.2 && visible(a.x + Math.cos(a.a) * a.largo / 2, a.y + Math.sin(a.a) * a.largo / 2, a.largo)) {
+    const f = entre(a.t / a.aviso), alfa = a.t < a.aviso ? 1 : 1 - (a.t - a.aviso) / 0.2, w = a.ancho / 2;
+    x.save(); x.translate(a.x, a.y); x.rotate(a.a); x.globalAlpha = alfa;
+    x.fillStyle = 'rgba(40, 8, 8, 0.3)'; x.fillRect(0, -w, a.largo, a.ancho);
+    x.fillStyle = 'rgba(70, 140, 210, 0.5)'; x.fillRect(0, -w, a.largo * f, a.ancho); // se llena desde la boca
+    x.strokeStyle = '#1a0d08'; x.lineWidth = 7; x.strokeRect(0, -w, a.largo, a.ancho); x.strokeStyle = '#fff3d6'; x.lineWidth = 3; x.strokeRect(0, -w, a.largo, a.ancho);
+    x.fillStyle = '#fff3d6'; x.strokeStyle = '#1a0d08'; x.lineWidth = 2;
+    for (let d = 60 + ((t * 120) % 80); d < a.largo - 20; d += 80) { x.beginPath(); x.moveTo(d + 12, 0); x.lineTo(d - 6, -10); x.lineTo(d - 6, 10); x.closePath(); x.fill(); x.stroke(); }
+    x.restore(); x.globalAlpha = 1;
+  } else if (a.tipo === 'agarre' && !a.fase && visible(a.x, a.y, 120)) { // un círculo chico, verdoso, que se cierra sobre el barco
+    const f = entre(a.t / a.aviso), R = KRAKEN.agarre.radio;
+    x.save(); x.translate(a.x, a.y);
+    x.fillStyle = 'rgba(30, 40, 20, 0.3)'; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.fill();
+    x.fillStyle = 'rgba(150, 200, 90, 0.45)'; x.beginPath(); x.arc(0, 0, R * f, 0, TAU); x.fill();
+    x.strokeStyle = '#1a0d08'; x.lineWidth = 6; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.stroke();
+    x.strokeStyle = '#e8f5c8'; x.lineWidth = 3; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.stroke();
+    x.setLineDash([8, 8]); x.lineDashOffset = t * 60; x.beginPath(); x.arc(0, 0, R + 10 - f * 8, 0, TAU); x.stroke(); x.setLineDash([]); x.lineDashOffset = 0;
+    x.restore();
+  } else if (a.tipo === 'remolino' && visible(a.x, a.y, KRAKEN.buceo.radio + 40)) { // el remolino que deja al sumergirse
+    const R = KRAKEN.buceo.radio, alfa = entre(a.t / 0.8) * entre((a.dura - a.t) / 1.5);
+    x.save(); x.translate(a.x, a.y); x.globalAlpha = alfa;
+    const g = x.createRadialGradient(0, 0, 10, 0, 0, R); g.addColorStop(0, 'rgba(4, 16, 30, 0.75)'); g.addColorStop(1, 'rgba(10, 40, 70, 0)');
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.fill();
+    x.strokeStyle = 'rgba(220, 240, 255, 0.55)'; x.lineWidth = 3; x.lineCap = 'round';
+    for (let b = 0; b < 5; b++) { x.beginPath(); for (let q = 0; q <= 26; q++) { const f = q / 26, ang = b * TAU / 5 + f * 4.2 - t * 2.4, r = R * (1 - f * 0.92); q ? x.lineTo(Math.cos(ang) * r, Math.sin(ang) * r) : x.moveTo(Math.cos(ang) * r, Math.sin(ang) * r); } x.stroke(); }
+    x.restore(); x.globalAlpha = 1;
+  }
+}
+
+function ataqueArriba(a, j, visible) {
+  if (a.tipo === 'barrido' && a.t >= a.aviso && a.t < a.aviso + 0.8 && visible(a.x, a.y, a.r1 + 60)) { // el tentáculo barre el arco
+    const s = a.t - a.aviso, f = suave(s / 0.45), ang = a.a - a.arco + 2 * a.arco * f, fuera = entre((s - 0.45) / 0.35);
+    cadena(31 + (a.id % 5), a.x + Math.cos(ang) * KRAKEN.cuerpo * 0.7, a.y + Math.sin(ang) * KRAKEN.cuerpo * 0.7, ang, a.r1 - KRAKEN.cuerpo * 0.5, 48, { curva: -0.6, fuerza: 0.4, base: 2, alfa: 1 - fuera });
+    for (let q = 0; q < 6; q++) { const g = ang - q * 0.12; if (g < a.a - a.arco) break; espuma(a.x + Math.cos(g) * (a.r0 + a.r1) / 2, a.y + Math.sin(g) * (a.r0 + a.r1) / 2, 30 + q * 6, 0.6 * (1 - q / 6) * (1 - fuera)); }
+    x.globalAlpha = 1;
+  } else if (a.tipo === 'chorro' && a.t >= a.aviso && a.t < a.aviso + 0.7) { // el agua sale a presión
+    const s = a.t - a.aviso, largo = a.largo * suave(s / 0.18), apaga = 1 - entre((s - 0.3) / 0.4);
+    x.save(); x.translate(a.x, a.y); x.rotate(a.a); x.lineCap = 'round';
+    x.strokeStyle = `rgba(160, 205, 240, ${0.75 * apaga})`; x.lineWidth = a.ancho * 0.9; x.beginPath(); x.moveTo(0, 0); x.lineTo(largo, 0); x.stroke();
+    x.strokeStyle = `rgba(255, 255, 255, ${0.85 * apaga})`; x.lineWidth = a.ancho * 0.35; x.beginPath(); x.moveTo(0, 0); x.lineTo(largo, 0); x.stroke();
+    x.restore();
+    for (let d = 40; d < largo; d += 70) espuma(a.x + Math.cos(a.a) * d, a.y + Math.sin(a.a) * d, a.ancho * 0.6 + Math.sin(t * 20 + d) * 4, 0.5 * apaga);
+  } else if (a.tipo === 'agarre' && a.fase && visible(a.x, a.y, 160)) { // el tentáculo enroscado en el barco, con su vida
+    const u = K ? Math.atan2(a.y - K.y, a.x - K.x) : 0;
+    cadena(41 + (a.id % 5), a.x - Math.cos(u) * 85, a.y - Math.sin(u) * 85, u, 150, 34, { curva: 2.6, fuerza: 0.5, base: 2 });
+    x.globalAlpha = 1;
+    const w = 64, f = Math.max(0, a.vida / (a.vidaMax || KRAKEN.agarre.vida));
+    x.fillStyle = 'rgba(0,0,0,0.6)'; x.fillRect(a.x - w / 2 - 1, a.y - 62, w + 2, 8);
+    x.fillStyle = '#c9a0b0'; x.fillRect(a.x - w / 2, a.y - 61, w * f, 6);
+  } else if (a.tipo === 'tinta' && visible(a.x, a.y, KRAKEN.tinta.radio + 60)) { // nube negra que tapa lo de abajo
+    const alfa = 0.82 * entre(a.t / 0.7) * entre((a.dura - a.t) / 1.5), R = KRAKEN.tinta.radio;
+    for (let i = 0; i < 12; i++) {
+      const ang = i * 0.53 + azar(i + a.id) * 2, r = R * (0.15 + azar(i + 4) * 0.55) + Math.sin(t * 0.7 + i) * 8;
+      x.fillStyle = `rgba(10, 6, 16, ${alfa * 0.55})`;
+      x.beginPath(); x.ellipse(a.x + Math.cos(ang) * r, a.y + Math.sin(ang) * r * 0.8, R * (0.35 + azar(i + 8) * 0.3), R * (0.25 + azar(i + 12) * 0.2), ang, 0, TAU); x.fill();
+    }
+    x.globalAlpha = 1;
+  }
+}
+
+// La mirada fija: una mira que gira sobre el barco marcado y un hilo tenue desde los ojos
+function miradaFija(k, j, visible) {
+  const b = j.barcos.find((o) => o.id === k.mirada.id);
+  if (!b || !visible(b.x, b.y, 120)) return;
+  const late = 0.6 + 0.4 * Math.sin(t * 6), R = b.stats.largo * 0.75;
+  x.save(); x.setLineDash([10, 12]); x.strokeStyle = `rgba(255, 140, 70, ${0.35 * late})`; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(k.x, k.y); x.lineTo(b.x, b.y); x.stroke(); x.setLineDash([]);
+  x.translate(b.x, b.y);
+  for (const [r, giro, alfa] of [[R, t * 1.4, 0.9], [R + 12, -t * 0.9, 0.55]]) {
+    x.save(); x.rotate(giro); x.strokeStyle = `rgba(255, 120, 60, ${alfa * late})`; x.lineWidth = 3.5;
+    for (let q = 0; q < 4; q++) { x.beginPath(); x.arc(0, 0, r, q * TAU / 4 + 0.2, q * TAU / 4 + 1.2); x.stroke(); }
+    x.restore();
+  }
+  x.restore();
+}
+
+// ---------- La moneda del tesoro maldito de Flint Braun ----------
+// Cuando cae un galeón del tesoro, una moneda sale del agua girando, brilla verde y vuela al barco del que lo hundió.
+export function dibujarMonedas(ctx, j, visible) {
+  const lista = j.monedas;
+  if (!lista || !lista.length) return;
+  x = ctx; t = j.t;
+  j.monedas = lista.filter((m) => j.t - m.t0 < 2.6);
+  for (const m of j.monedas) {
+    const s = j.t - m.t0, b = j.barcos.find((o) => o.id === m.bid);
+    const sube = suave(s / 0.9), vuela = suave((s - 0.9) / 0.9), destello = entre((s - 1.8) / 0.8);
+    const tx = b ? b.x : m.x, ty = b ? b.y : m.y;
+    const px = m.x + (tx - m.x) * vuela, py = m.y - 60 * sube * (1 - vuela) + (ty - m.y) * vuela - Math.sin(vuela * Math.PI) * 90;
+    if (!visible(px, py, 120)) continue;
+    if (s < 1.8) {
+      if (s < 0.9) espuma(m.x, m.y, 20 + s * 40, 0.6 * (1 - s / 0.9));
+      const R = 16, gira = Math.cos(s * 9); // gira sobre sí misma
+      const halo = x.createRadialGradient(px, py, 4, px, py, 46); halo.addColorStop(0, 'rgba(150, 255, 160, 0.55)'); halo.addColorStop(1, 'rgba(150, 255, 160, 0)');
+      x.fillStyle = halo; x.beginPath(); x.arc(px, py, 46, 0, TAU); x.fill();
+      x.save(); x.translate(px, py); x.scale(Math.max(0.15, Math.abs(gira)), 1);
+      const g = x.createRadialGradient(-5, -5, 2, 0, 0, R); g.addColorStop(0, '#fff1a8'); g.addColorStop(0.6, '#c9962e'); g.addColorStop(1, '#5a4210');
+      x.fillStyle = g; x.strokeStyle = '#2a1e08'; x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, R, 0, TAU); x.fill(); x.stroke();
+      x.strokeStyle = 'rgba(42, 30, 8, 0.6)'; x.lineWidth = 1.5; x.beginPath(); x.arc(0, 0, R - 4, 0, TAU); x.stroke();
+      if (gira > 0) { // la calavera grabada, del lado de adelante
+        x.fillStyle = '#3d2c0c'; x.beginPath(); x.arc(0, -2, 6.5, 0, TAU); x.fill(); x.fillRect(-4, 2, 8, 5);
+        x.fillStyle = '#c9962e'; x.beginPath(); x.arc(-2.6, -2.5, 1.8, 0, TAU); x.arc(2.6, -2.5, 1.8, 0, TAU); x.fill();
+      }
+      x.restore();
+    } else if (b) { // llegó: un anillo verde que se abre sobre el barco
+      x.strokeStyle = `rgba(150, 255, 160, ${0.8 * (1 - destello)})`; x.lineWidth = 4;
+      x.beginPath(); x.arc(tx, ty, 20 + destello * 70, 0, TAU); x.stroke();
+    }
+  }
+  x.globalAlpha = 1;
 }

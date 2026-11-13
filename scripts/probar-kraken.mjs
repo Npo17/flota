@@ -1,7 +1,7 @@
 // Prueba del Kraken sin navegador: la maldición del tesoro, la zona marcada (centro, borde y esquivar), el daño de los cañones,
 // la furia, la muerte con su oro y que se vaya si nadie lo enfrenta. Uso: node scripts/probar-kraken.mjs
 import { crearMundo } from '../src/mundo.js';
-import { crearPartida, crearMar, agregarCapitan, actualizar, avanzar, danoKraken } from '../src/juego.js';
+import { crearPartida, crearMar, agregarCapitan, actualizar, avanzar, danoKraken, ataquesAFoto, ataquesDeFoto } from '../src/juego.js';
 import { KRAKEN } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
@@ -24,6 +24,7 @@ function conKraken(j) {
   actualizar(j, 1 / 60, {});
   const k = j.kraken;
   k.emerge = 1; k.prox = 999;
+  k.forzar = 'zona'; // estas pruebas son de la zona marcada; los demás ataques se prueban aparte
   return k;
 }
 
@@ -183,6 +184,161 @@ for (const [donde, dist, espera] of [['centro', 0, 'centro'], ['borde', KRAKEN.r
   ok(j.kraken && j.kraken.vidaMax === Math.round(KRAKEN.vida * (1 + KRAKEN.porJugador)), 'en línea: con dos capitanes la vida no subió: ' + (j.kraken && j.kraken.vidaMax));
   ok(j.eventos.some((e) => e.k === 'kd'), 'en línea: no se emitió el evento de que despertó');
   ok(B.avisos.some((a) => a.texto.includes('despertó al Kraken')), 'en línea: el otro capitán no se enteró');
+}
+
+
+// --- 9. monedas del tesoro maldito de Flint Braun (Cristian, 13/11/2026): cada galeón hundido suelta una, se avisa a todos y se ve en la tabla
+{
+  const j = crearMar(crearMundo('caribe'), { servidor: true, enemigos: 0 });
+  const A = agregarCapitan(j, { id: 'a', nombre: 'Ana', diseno }), B = agregarCapitan(j, { id: 'b', nombre: 'Beto', diseno });
+  j.proxConvoy = 0.01; A.barco.x = 3200; A.barco.y = 3600; B.barco.x = 3300; B.barco.y = 3600; A.proxTritones = B.proxTritones = 1e9;
+  avanzar(j, 1 / 20, {});
+  const g = j.barcos.find((b) => b.convoy);
+  j.barcos = j.barcos.filter((b) => !(b.ia && b.ia.lider === g)); // sin guardias
+  j.eventos = [];
+  g.ultimoAgresor = A; g.vida = 0;
+  avanzar(j, 1 / 20, {});
+  ok(A.marcasTesoro === 1, 'monedas: no sumó la moneda');
+  const ev = j.eventos.find((e) => e.k === 'mo');
+  ok(ev && ev.b === A.barco.id, 'monedas: no salió la animación de la moneda hacia el barco');
+  ok(B.avisos.some((a) => a.texto.includes('Flint Braun')), 'monedas: el resto del mar no se enteró');
+  // con una moneda menos de las necesarias, cuando zarpa el próximo galeón se avisa que le falta una
+  A.marcasTesoro = KRAKEN.marcas - 1;
+  j.barcos = j.barcos.filter((b) => !b.convoy && !(b.ia && b.ia.lider)); j.proxConvoy = 0.01;
+  avanzar(j, 1 / 20, {});
+  ok(B.avisos.some((a) => a.texto === 'A {nombre} le falta UNA moneda para desatar la maldición del Kraken' && a.p.nombre === 'Ana'), 'monedas: al zarpar el 3.er galeón no avisó que le falta una');
+}
+
+// --- 10. si el Kraken hunde al que lo despertó, la deuda queda saldada y se va
+{
+  const j = marVacio(), yo = j.jugador, k = conKraken(j);
+  yo.x = k.x + 380; yo.y = k.y; yo.v = 0;
+  k.prox = 0; actualizar(j, 1 / 60, { quieto: true });
+  const z = k.zonas[0];
+  yo.vida = 5;
+  let saldo = false;
+  for (let i = 0; i < 60 * (z.aviso + 1); i++) { yo.x = z.x; yo.y = z.y; yo.v = 0; actualizar(j, 1 / 60, { quieto: true }); saldo = saldo || textos(j).some((t) => t.includes('saldó su deuda')); }
+  ok(saldo, 'deuda: no avisó que saldó su deuda');
+  ok(!j.kraken || j.kraken.sumerge > 0, 'deuda: el Kraken siguió en el mar después de hundir al que lo despertó');
+}
+
+// Prepara un Kraken con un ataque elegido, el jugador a cierta distancia y sin que se mueva
+function conAtaque(tipo, dist = 380) {
+  const j = marVacio(), yo = j.jugador, k = conKraken(j);
+  k.forzar = tipo; yo.x = k.x + dist; yo.y = k.y; yo.v = 0; yo.vida = yo.stats.vidaMax; k.t = 60;
+  k.prox = 0; actualizar(j, 1 / 60, { quieto: true }); k.prox = 999;
+  return { j, yo, k };
+}
+const quieto = (j, yo, seg, x = yo.x, y = yo.y) => { for (let i = 0; i < seg * 60; i++) { yo.x = x; yo.y = y; yo.v = 0; actualizar(j, 1 / 60, { quieto: true }); } };
+
+// --- 11. lluvia de zonas: varias chicas que se llenan en secuencia
+{
+  const { j, yo, k } = conAtaque('lluvia');
+  ok(k.zonas.length === KRAKEN.lluvia.gotas && k.zonas.every((z) => z.r === KRAKEN.lluvia.radio), 'lluvia: no marcó las zonas chicas');
+  const avisos = k.zonas.map((z) => z.aviso);
+  ok(avisos.every((a, i) => i === 0 || a > avisos[i - 1]), 'lluvia: las zonas no se llenan en secuencia');
+  const antes = yo.vida, cerca = k.zonas.some((z) => Math.hypot(z.x - yo.x, z.y - yo.y) < z.r);
+  quieto(j, yo, Math.max(...avisos) + 0.3);
+  ok(!cerca || yo.vida < antes, 'lluvia: no pegó al barco que estaba debajo');
+}
+
+// --- 12. barrido: pega en la franja del arco; afuera o adentro de la franja, no
+for (const [donde, dist, pega] of [['en la franja', 380, true], ['más afuera', 380 + KRAKEN.barrido.ancho + 60, false]]) {
+  const { j, yo, k } = conAtaque('barrido');
+  const a = k.ataques.find((x) => x.tipo === 'barrido');
+  ok(a && a.r0 < 380 && a.r1 > 380, 'barrido: la franja no pasa por el barco');
+  const x = a.x + Math.cos(a.a) * dist, y = a.y + Math.sin(a.a) * dist, antes = yo.vida;
+  quieto(j, yo, a.aviso + 0.2, x, y);
+  ok(pega ? yo.vida < antes : yo.vida === antes, `barrido (${donde}): ${pega ? 'no pegó' : 'pegó igual'}`);
+}
+
+// --- 13. chorro: pega en la línea y empuja
+{
+  const { j, yo, k } = conAtaque('chorro');
+  const a = k.ataques.find((x) => x.tipo === 'chorro'), antes = yo.vida;
+  quieto(j, yo, a.aviso + 0.05);
+  ok(yo.vida < antes && yo.empuje, 'chorro: no pegó ni empujó al barco en la línea');
+  const x0 = yo.x; for (let i = 0; i < 30; i++) actualizar(j, 1 / 60, { quieto: true });
+  ok(Math.abs(yo.x - x0) > 20, 'chorro: el empuje no movió al barco');
+}
+
+// --- 14. agarre: si no sale del círculo lo agarra y no se mueve; un aliado corta el tentáculo a cañonazos
+{
+  const j = crearMar(crearMundo('caribe'), { servidor: true, enemigos: 0 });
+  j.mundo.remolinos = []; j.proxConvoy = 1e9;
+  const A = agregarCapitan(j, { id: 'a', nombre: 'Ana', diseno }), B = agregarCapitan(j, { id: 'b', nombre: 'Beto', diseno: { ...diseno, faccion: 'espanoles' } });
+  A.proxTritones = B.proxTritones = 1e9;
+  A.barco.x = 2000; A.barco.y = 2000; B.barco.x = 2000; B.barco.y = 2300;
+  A.marcasTesoro = KRAKEN.marcas;
+  avanzar(j, 1 / 20, {});
+  const k = j.kraken; k.emerge = 1; k.t = 60; k.x = 1620; k.y = 2000; k.forzar = 'agarre';
+  const blanco = A.barco;
+  const fijo = () => { blanco.x = 2000; blanco.y = 2000; };
+  k.prox = 0; avanzar(j, 1 / 20, {}); k.prox = 999;
+  const a = k.ataques.find((x) => x.tipo === 'agarre');
+  if (a) a.bid = blanco.id, a.x = 2000, a.y = 2000; // que sea a Ana, para la prueba
+  for (let i = 0; i < 20 * (a.aviso + 0.3); i++) { fijo(); blanco.vida = blanco.stats.vidaMax; avanzar(j, 1 / 20, {}); }
+  ok(a.fase === 1 && blanco.agarradoHasta > j.t, 'agarre: no agarró al barco que se quedó en el círculo');
+  const x0 = blanco.x; avanzar(j, 1 / 20, { a: { objetivo: { x: 3000, y: 2000 }, velas: 3 } });
+  ok(Math.abs(blanco.x - x0) < 1, 'agarre: el barco agarrado se movió');
+  // Beto le tira al tentáculo
+  let libre = false;
+  for (let i = 0; i < 20 * 25 && !libre; i++) {
+    B.barco.x = 2000; B.barco.y = 2300; B.barco.a = 0; B.barco.v = 0; blanco.vida = blanco.stats.vidaMax; k.vida = k.vidaMax;
+    avanzar(j, 1 / 20, { b: { fuego: -1 } });
+    libre = !k.ataques.some((x) => x.tipo === 'agarre');
+  }
+  ok(libre && !(blanco.agarradoHasta > j.t), 'agarre: los cañonazos del aliado no cortaron el tentáculo');
+}
+
+// --- 15. mirada fija: los ataques van al barco marcado; la tinta la corta
+{
+  const { j, yo, k } = conAtaque('mirada');
+  ok(k.mirada && k.mirada.id === yo.id, 'mirada: no le clavó los ojos al jugador');
+  k.ataques.push({ id: 999, tipo: 'tinta', x: yo.x, y: yo.y, a: 0, t: 0, aviso: 0, dura: 9 });
+  quieto(j, yo, 0.2);
+  ok(!k.mirada, 'mirada: la tinta no le cortó la mirada');
+}
+
+// --- 16. buceo: se sumerge, el remolino arrastra al centro, no recibe daño y vuelve a salir cerca
+{
+  const { j, yo, k } = conAtaque('buceo', 300);
+  ok(k.buceo > 0 && k.ataques.some((a) => a.tipo === 'remolino'), 'buceo: no se sumergió dejando un remolino');
+  const r = k.ataques.find((a) => a.tipo === 'remolino'), d0 = Math.hypot(yo.x - r.x, yo.y - r.y);
+  for (let i = 0; i < 60; i++) { yo.v = 0; yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, { quieto: true }); }
+  ok(Math.hypot(yo.x - r.x, yo.y - r.y) < d0 - 10, 'buceo: el remolino no arrastró al barco');
+  const v = k.vida;
+  for (let i = 0; i < 60 * KRAKEN.buceo.dura; i++) { yo.v = 0; yo.vida = yo.stats.vidaMax; actualizar(j, 1 / 60, { fuego: -1, quieto: true }); }
+  ok(k.vida === v, 'buceo: le pegaron mientras estaba sumergido');
+  ok(!k.buceo && Math.hypot(k.x - yo.x, k.y - yo.y) < KRAKEN.alcance, 'buceo: no volvió a salir cerca del barco');
+}
+
+// --- 17. la foto en línea: los ataques van y vuelven igual
+{
+  const { k } = conAtaque('barrido');
+  k.ataques.push({ id: 7, tipo: 'agarre', bid: 3, x: 10, y: 20, a: 0, t: 0.5, aviso: 1.1, fase: 1, vida: 90 }, { id: 8, tipo: 'tinta', x: 1, y: 2, a: 0, t: 1, aviso: 0, dura: 9 });
+  const vuelta = ataquesDeFoto(ataquesAFoto(k));
+  ok(vuelta.length === k.ataques.length && vuelta.every((a, i) => a.tipo === k.ataques[i].tipo && a.x === k.ataques[i].x), 'foto: los ataques no vuelven iguales');
+  ok(vuelta.find((a) => a.tipo === 'agarre').vida === 90 && vuelta.find((a) => a.tipo === 'barrido').r1 === k.ataques[0].r1, 'foto: se perdieron datos del ataque');
+}
+
+// --- 18. todos los ataques salen alguna vez y ninguno rompe la simulación en una pelea larga, enfurecido
+{
+  const j = marVacio(), yo = j.jugador, k = conKraken(j);
+  k.forzar = null; k.t = 60; k.furia = true; k.vida = k.vidaMax * 0.3; k.prox = 0;
+  const vistos = new Set();
+  for (let i = 0; i < 60 * 240; i++) { // 4 minutos: con los pesos de KRAKEN, la chance de que alguno no salga es menos de 1 en 1000
+    yo.x = k.x + 380; yo.y = k.y; yo.v = 0; yo.vida = yo.stats.vidaMax; yo.trip = 40; k.vida = k.vidaMax * 0.3;
+    if (!k.buceo) k.emerge = 1;
+    actualizar(j, 1 / 60, { quieto: true });
+    if (!j.kraken) break;
+    for (const z of k.zonas) vistos.add(z.grupo !== undefined ? 'lluvia' : 'zona');
+    for (const a of k.ataques) vistos.add(a.tipo === 'remolino' ? 'buceo' : a.tipo);
+    if (k.mirada) vistos.add('mirada');
+  }
+  const faltan = Object.keys(KRAKEN.pesos).filter((t) => !vistos.has(t));
+  ok(faltan.length === 0, 'variedad: en 4 minutos no salieron ' + faltan.join(', '));
+  ok(Number.isFinite(yo.x) && Number.isFinite(k.x), 'variedad: posición inválida');
 }
 
 console.log(fallas ? `${fallas} fallas` : 'todo bien');

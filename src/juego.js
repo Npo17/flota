@@ -200,6 +200,7 @@ export function efecto(j, ev) {
     }
   } else if (ev.k === 's') P.push({ tipo: 'salpicon', x: ev.x, y: ev.y, t: 0, vida: 0.7, r: ev.r });
   else if (ev.k === 'p') P.push({ tipo: 'polvo', x: ev.x, y: ev.y, t: 0, vida: 0.6, r: 8 });
+  else if (ev.k === 'mo') (j.monedas || (j.monedas = [])).push({ x: ev.x, y: ev.y, bid: ev.b, t0: j.t }); // la moneda maldita (la dibuja kraken-dibujo.js)
   else if (ev.k === 'm') { // tiro de mosquete: humito en la borda y un salpicón chico donde estaba el tritón
     const a = Math.atan2(ev.ty - ev.y, ev.tx - ev.x);
     P.push({ tipo: 'humo', x: ev.x + Math.cos(a) * 12, y: ev.y + Math.sin(a) * 12, vx: Math.cos(a) * 25, vy: Math.sin(a) * 25, t: 0, vida: 0.6, r: 3 });
@@ -453,6 +454,13 @@ function moverBarco(j, b, dt) {
   b.a += b.timon * s.giro * (anclado ? 3 : agarre) * dt;
   if (anclado) b.v *= Math.max(0, 1 - 3 * dt);
   let vx = Math.cos(b.a) * b.v, vy = Math.sin(b.a) * b.v;
+  // el Kraken: un tentáculo que lo tiene agarrado no lo deja moverse; un chorro de agua lo arrastra un trecho
+  if (b.agarradoHasta > j.t) { vx = 0; vy = 0; b.v = 0; }
+  if (b.empuje) {
+    vx += b.empuje.vx; vy += b.empuje.vy;
+    const f = Math.max(0, 1 - dt * 2.4); b.empuje.vx *= f; b.empuje.vy *= f;
+    if (Math.abs(b.empuje.vx) + Math.abs(b.empuje.vy) < 6) b.empuje = null;
+  }
 
   // remolinos: te chupan y te hacen girar
   let enRemolino = false;
@@ -559,6 +567,7 @@ function moverBalas(j, dt) {
         }
       }
     }
+    if (!pego && bl.dueno && bl.dueno.cap && cortarAgarre(j, bl)) pego = true; // los aliados cortan el tentáculo que agarra a un barco
     if (!pego && bl.dueno && bl.dueno.cap && krakenAlAlcance(j, bl.x, bl.y, bl.radio)) { golpearKraken(j, bl); pego = true; } // al Kraken solo le pegan los capitanes y sus flotas
     if (pego) continue;
     if (bl.vida <= 0) { if (!j.eventos) efecto(j, { k: 's', x: bl.x, y: bl.y, r: 6 + bl.radio }); continue; }
@@ -607,6 +616,14 @@ function soltarOro(j, x, y, oro, abre, partes) {
 
 function hundir(j, b) {
   if (b.hundiendo) return;
+  // si el Kraken hunde al capitán que lo despertó, la deuda queda saldada y vuelve a lo profundo (Cristian, 13/11/2026)
+  const kr = j.kraken;
+  if (kr && !kr.muerte && !kr.sumerge && esInsignia(b) && kr.invocador === b.cap && j.t - (b.golpeKraken ?? -99) < 3) {
+    kr.sumerge = 0.0001; kr.zonas = []; kr.ataques = []; kr.mirada = null; kr.buceo = 0;
+    for (const o of j.barcos) o.agarradoHasta = 0;
+    avisoLargo(j, '{nombre} saldó su deuda con el Kraken', 'info', { nombre: b.cap.nombre });
+    emitir(j, { k: 'ks', x: Math.round(kr.x), y: Math.round(kr.y) });
+  }
   b.hundiendo = 0.0001;
   b.vida = 0;
   emitir(j, { k: 'h', x: Math.round(b.x), y: Math.round(b.y) });
@@ -614,7 +631,7 @@ function hundir(j, b) {
   if (b.bando === 'enemigo') {
     if (agresor) agresor.stats.hundidos++;
     soltarOro(j, b.x, b.y, b.oro, b.convoy ? 110 : 25, b.convoy ? 9 : 0);
-    if (b.convoy) { aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno'); marcaTesoro(j, agresor); }
+    if (b.convoy) { aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno'); marcaTesoro(j, agresor, b); }
     else if (agresor && b.oro > 0) aviso(agresor, '¡Hundiste un {barco}! Juntá el botín', 'bueno', { barco: b.nombre });
   } else if (!esInsignia(b)) {
     if (agresor) agresor.stats.hundidos++;
@@ -807,7 +824,7 @@ function resolverAbordaje(j, cap, e, gano, bajas) {
     // el barco cambia de dueño
     if (dueno && esInsignia(e)) perderInsignia(j, dueno, cap, false);
     else if (dueno) aviso(dueno, '{nombre} te capturó el {barco}', 'malo', { nombre: cap.nombre, barco: e.nombre });
-    if (e.convoy) marcaTesoro(j, cap); // capturar el galeón del tesoro también cuenta para la maldición
+    if (e.convoy) marcaTesoro(j, cap, e); // capturar el galeón del tesoro también cuenta para la maldición
     e.cap = cap;
     e.bando = 'escolta';
     e.convoy = false;
@@ -1141,6 +1158,7 @@ function actualizarConvoy(j, dt) {
       j.barcos.push(g);
     }
     aviso(j, '¡Flota del tesoro! Un galeón lleva el oro al puerto con cuatro guardias. Hundí primero a los guardias. Mirá el minimapa', 'bueno');
+    for (const c of j.capitanes) if (!c.fin && (c.marcasTesoro || 0) === KRAKEN.marcas - 1) avisoLargo(j, 'A {nombre} le falta UNA moneda para desatar la maldición del Kraken', 'malo', { nombre: c.nombre });
     return;
   }
 }
@@ -1252,9 +1270,13 @@ function actualizarTritones(j, dt) {
 // Es el desafío para el que ya está muy fuerte: mucha vida, pega a todos los barcos que se le cruzan y, si lo hunden, deja muchísimo oro.
 // Su ataque principal es la zona marcada: elige un barco a su alcance, marca un círculo en el agua donde está y, cuando el aviso
 // se llena, un tentáculo sale de abajo y golpea. Saca más en el centro que en el borde. Los números están en KRAKEN (config.js).
-function marcaTesoro(j, cap) {
+// Cada marca es una moneda del tesoro maldito de Flint Braun (Cristian, 13/11/2026): sale del galeón hundido y vuela a tu barco
+// (la animación la hace la pantalla con el evento 'mo'), y todo el mar se entera. Las monedas se ven al lado del puntaje.
+function marcaTesoro(j, cap, galeon) {
   if (!cap || cap.fin) return;
   cap.marcasTesoro = (cap.marcasTesoro || 0) + 1;
+  if (galeon) emitir(j, { k: 'mo', x: Math.round(galeon.x), y: Math.round(galeon.y), b: cap.barco.id });
+  avisoLargo(j, '¡{nombre} consiguió una moneda del tesoro maldito de Flint Braun!', 'info', { nombre: cap.nombre });
   if (cap.marcasTesoro === KRAKEN.marcas - 1) avisoLargo(cap, 'Hundiste {n} galeones del tesoro. Si hundís 1 más, cuidado: puede despertar el Kraken', 'malo', { n: cap.marcasTesoro });
   // la última marca lo despierta en actualizarKraken (si ya hay uno en el mar, espera a que ese se vaya)
 }
@@ -1264,10 +1286,15 @@ function avisoLargo(quien, texto, tipo, p) {
   for (const c of quien.capitanes || [quien]) { const a = c.avisos[c.avisos.length - 1]; if (a) a.t = 7; }
 }
 
+function aguaLibreKraken(j, x, y) {
+  const m = j.mundo;
+  return x > 450 && y > 450 && x < m.ancho - 450 && y < m.alto - 450 && !enTierra(j, x, y, KRAKEN.cuerpo + 180)
+    && Math.hypot(x - m.puerto.x, y - m.puerto.y) > m.puerto.radio + 700 && !m.remolinos.some((w) => Math.hypot(w.x - x, w.y - y) < w.radio + 300);
+}
+
 function despertarKraken(j, cap) {
   const m = j.mundo, yo = cap.barco;
-  const libre = (x, y) => x > 450 && y > 450 && x < m.ancho - 450 && y < m.alto - 450 && !enTierra(j, x, y, KRAKEN.cuerpo + 180)
-    && Math.hypot(x - m.puerto.x, y - m.puerto.y) > m.puerto.radio + 700 && !m.remolinos.some((w) => Math.hypot(w.x - x, w.y - y) < w.radio + 300);
+  const libre = (x, y) => aguaLibreKraken(j, x, y);
   let x = 0, y = 0, ok = false;
   for (let k = 0; k < 60 && !ok; k++) { // cerca del que lo despertó, pero no encima
     const a = azar.rango(0, TAU), d = azar.rango(600, 900) + k * 12;
@@ -1277,7 +1304,7 @@ function despertarKraken(j, cap) {
   if (!ok) return false;
   const vivos = j.capitanes.filter((c) => !c.fin).length;
   const vidaMax = Math.round(KRAKEN.vida * (1 + KRAKEN.porJugador * Math.max(0, vivos - 1)));
-  j.kraken = { x, y, a: Math.atan2(yo.y - y, yo.x - x), vida: vidaMax, vidaMax, t: 0, emerge: 0, zonas: [], prox: KRAKEN.primerAtaque, muerte: 0, sumerge: 0, lejos: 0, furia: false };
+  j.kraken = { x, y, a: Math.atan2(yo.y - y, yo.x - x), vida: vidaMax, vidaMax, t: 0, emerge: 0, zonas: [], ataques: [], mirada: null, buceo: 0, ultBuceo: 0, prox: KRAKEN.primerAtaque, muerte: 0, sumerge: 0, lejos: 0, furia: false, invocador: cap };
   avisoLargo(j, '¡{nombre} despertó al Kraken! Se hace de noche y se larga la tormenta', 'malo', { nombre: cap.nombre });
   emitir(j, { k: 'kd', x: Math.round(x), y: Math.round(y) });
   return true;
@@ -1286,17 +1313,19 @@ function despertarKraken(j, cap) {
 // ¿Un punto le pega al Kraken? Solo cuando ya asomó y mientras está vivo.
 function krakenAlAlcance(j, x, y, margen = 0) {
   const k = j.kraken;
-  if (!k || k.muerte || k.sumerge || k.emerge < 0.6) return false;
+  if (!k || k.muerte || k.sumerge || k.buceo || k.emerge < 0.6) return false;
   return Math.abs(k.x - x) < KRAKEN.cuerpo + margen + 10 && Math.hypot(k.x - x, k.y - y) < KRAKEN.cuerpo + margen;
 }
 
 function golpearKraken(j, bl) {
   const k = j.kraken, quien = bl.dueno.cap;
   k.vida -= bl.dano;
+  if (k.mirada && bl.dueno.id !== k.mirada.id && !(k.mirada.cap && bl.dueno.cap === k.mirada.cap)) k.mirada.otros += bl.dano; // los demás lo distraen
   emitir(j, { k: 'kh', x: Math.round(bl.x), y: Math.round(bl.y) });
   if (bl.dano >= 5) textoFlotante(j, bl.x, bl.y - 8, `-${Math.round(bl.dano)}`, '#f0c4d0', quien);
   if (k.vida <= 0) {
-    k.vida = 0; k.muerte = 0.0001; k.zonas = [];
+    k.vida = 0; k.muerte = 0.0001; k.zonas = []; k.ataques = []; k.mirada = null;
+    for (const o of j.barcos) o.agarradoHasta = 0;
     quien.stats.hundidos++;
     aviso(j, '¡El Kraken se hunde! {nombre} le dio el último cañonazo', 'bueno', { nombre: quien.nombre });
     emitir(j, { k: 'km', x: Math.round(k.x), y: Math.round(k.y) });
@@ -1327,6 +1356,12 @@ function actualizarKraken(j, dt) {
     return;
   }
   if (k.sumerge) { k.sumerge += dt; if (k.sumerge >= 3) j.kraken = null; return; }
+  if (k.buceo) { // se sumergió: deja un remolino donde estaba y sale cerca de su blanco
+    k.buceo += dt;
+    actualizarAtaquesKraken(j, k, dt);
+    if (k.buceo >= KRAKEN.buceo.dura) salirDelBuceo(j, k);
+    return;
+  }
   k.emerge = Math.min(1, k.emerge + dt / KRAKEN.emerger);
 
   // a quién persigue: el capitán más cercano que no esté en el puerto
@@ -1338,7 +1373,7 @@ function actualizarKraken(j, dt) {
   }
   if (!obj || od > KRAKEN.olvida) {
     k.lejos += dt;
-    if (k.lejos > KRAKEN.seVa) { k.sumerge = 0.0001; k.zonas = []; aviso(j, 'El Kraken volvió a lo profundo. Por ahora', 'info'); emitir(j, { k: 'ks', x: Math.round(k.x), y: Math.round(k.y) }); return; }
+    if (k.lejos > KRAKEN.seVa) { k.sumerge = 0.0001; k.zonas = []; k.ataques = []; k.mirada = null; aviso(j, 'El Kraken volvió a lo profundo. Por ahora', 'info'); emitir(j, { k: 'ks', x: Math.round(k.x), y: Math.round(k.y) }); return; }
   } else k.lejos = 0;
   if (obj && k.emerge >= 1) { // gira hacia él y se arrima despacio hasta quedar a distancia de golpe, sin meterse en tierra
     const ang = Math.atan2(obj.y - k.y, obj.x - k.x);
@@ -1357,49 +1392,309 @@ function actualizarKraken(j, dt) {
     if (d < lim) { b.x = k.x + (dx / d) * lim; b.y = k.y + (dy / d) * lim; b.v = Math.min(b.v, b.stats.velMax * 0.45); }
   }
 
-  // la furia: por debajo de cierto resto de vida, más zonas, aviso más corto y ataques más seguidos
-  if (!k.furia && k.vida < k.vidaMax * KRAKEN.furia) { k.furia = true; avisoLargo(j, '¡El Kraken está furioso! Ahora marca dos zonas a la vez', 'malo'); }
+  // la furia: por debajo de cierto resto de vida, más ataques a la vez, avisos más cortos, ataques más seguidos y combinados
+  if (!k.furia && k.vida < k.vidaMax * KRAKEN.furia) { k.furia = true; avisoLargo(j, '¡El Kraken está furioso! Ahora ataca más seguido y combina ataques', 'malo'); }
+  // la mirada fija: dura unos segundos; se corta si el barco se mete en la tinta o si los demás le pegan lo suficiente
+  if (k.mirada) {
+    const m = k.mirada, b = j.barcos.find((x) => x.id === m.id);
+    m.t += dt;
+    const corta = !b || b.hundiendo || enTinta(k, b.x, b.y) ? 'tinta' : m.otros >= k.vidaMax * KRAKEN.mirada.distraer ? 'distraido' : null;
+    if (corta || m.t >= KRAKEN.mirada.dura) {
+      if (corta === 'distraido') aviso(j, '¡Distrajeron al Kraken! Dejó de mirar a {nombre}', 'bueno', { nombre: m.nombre });
+      else if (corta === 'tinta' && b && !b.hundiendo && b.cap) aviso(b.cap, 'El Kraken te perdió de vista en la tinta', 'bueno');
+      k.mirada = null;
+    }
+  }
   k.prox -= dt;
-  if (k.emerge >= 1 && k.prox <= 0 && k.zonas.length < (k.furia ? KRAKEN.zonasFuria : KRAKEN.zonas)) {
-    // a quién: cualquier barco a su alcance (capitanes, flotas y bots), pero prefiere a los capitanes y sus flotas
-    const cerca = j.barcos.filter((b) => !b.hundiendo && !(b.cap && enPuerto(j, b)) && Math.hypot(b.x - k.x, b.y - k.y) < KRAKEN.alcance
-      && !k.zonas.some((z) => Math.hypot(z.x - b.x, z.y - b.y) < KRAKEN.radio * 1.5));
-    const deCapitanes = cerca.filter((b) => b.cap);
-    const lista = deCapitanes.length ? deCapitanes : cerca;
-    if (lista.length) {
+  if (k.emerge >= 1 && k.prox <= 0) {
+    const lista = blancosKraken(j, k);
+    const max = k.furia ? KRAKEN.maxAtaquesFuria : KRAKEN.maxAtaques;
+    if (lista.length && ataquesEnMarcha(k) < max) {
+      const tipo = k.forzar || elegirAtaque(j, k, lista);
       const b = lista[azar.entero(0, lista.length - 1)];
-      const casco = b.diseno.casco, extra = casco === 'galeon' ? KRAKEN.extraGaleon : casco === 'bergantin' ? KRAKEN.extraBergantin : 0;
-      const z = { id: j.proxZona++, x: Math.round(b.x), y: Math.round(b.y), t: 0, aviso: +((KRAKEN.aviso + extra) * (k.furia ? KRAKEN.avisoFuria : 1)).toFixed(2), golpe: false };
-      k.zonas.push(z);
-      emitir(j, { k: 'kz', x: z.x, y: z.y });
-      if (b.cap && esInsignia(b)) aviso(b.cap, '¡El Kraken marcó una zona! Salí del círculo antes de que se llene', 'malo');
-      k.prox = azar.rango(KRAKEN.cada[0], KRAKEN.cada[1]) * (k.furia ? KRAKEN.cadaFuria : 1);
+      lanzarAtaque(j, k, tipo, b, lista);
+      // enfurecido, a veces larga un segundo ataque distinto al mismo tiempo
+      if (k.furia && !k.forzar && Math.random() < KRAKEN.combinadoFuria && ataquesEnMarcha(k) < max) {
+        const otro = elegirAtaque(j, k, lista, tipo);
+        if (otro) lanzarAtaque(j, k, otro, lista[azar.entero(0, lista.length - 1)], lista);
+      }
+      k.prox = azar.rango(KRAKEN.cada[0], KRAKEN.cada[1]) * (k.furia ? KRAKEN.cadaFuria : 1) * (k.mirada ? 0.7 : 1);
     } else k.prox = 0.6;
   }
+  actualizarAtaquesKraken(j, k, dt);
+}
+
+// ---------- Los ataques del Kraken ----------
+// Además de la zona marcada: lluvia de zonas chicas en secuencia, barrido en arco, chorro de agua, agarre (los aliados cortan el
+// tentáculo a cañonazos), nube de tinta, mirada fija y buceo con remolino. Cada vez que le toca elige uno al azar (pesos en KRAKEN).
+function enTinta(k, x, y) {
+  return k.ataques.some((a) => a.tipo === 'tinta' && Math.hypot(a.x - x, a.y - y) < KRAKEN.tinta.radio * 0.8);
+}
+
+// A quién puede atacar: si clavó los ojos en un barco, a ese; si no, a los barcos a su alcance, prefiriendo capitanes y flotas
+function blancosKraken(j, k) {
+  const sirve = (b) => !b.hundiendo && !(b.cap && enPuerto(j, b)) && Math.hypot(b.x - k.x, b.y - k.y) < KRAKEN.alcance;
+  if (k.mirada) { const m = j.barcos.find((b) => b.id === k.mirada.id); if (m && sirve(m)) return [m]; }
+  const cerca = j.barcos.filter(sirve), deCapitanes = cerca.filter((b) => b.cap);
+  return deCapitanes.length ? deCapitanes : cerca;
+}
+
+// Cuántas cosas tiene en marcha (una lluvia de zonas cuenta como una)
+function ataquesEnMarcha(k) {
+  const grupos = new Set(k.zonas.filter((z) => !z.golpe).map((z) => z.grupo ?? z.id));
+  return grupos.size + k.ataques.filter((a) => a.tipo === 'barrido' || a.tipo === 'chorro' || a.tipo === 'agarre').length;
+}
+
+function elegirAtaque(j, k, lista, menos) {
+  const P = KRAKEN.pesos, conCap = lista.some((b) => b.cap && !b.agarradoHasta);
+  const pesos = {
+    zona: P.zona, lluvia: P.lluvia, barrido: P.barrido, chorro: P.chorro,
+    agarre: conCap && !k.ataques.some((a) => a.tipo === 'agarre') ? P.agarre : 0,
+    tinta: !k.ataques.some((a) => a.tipo === 'tinta') ? P.tinta : 0,
+    mirada: !k.mirada && conCap ? P.mirada : 0,
+    buceo: k.t > 15 && k.t - k.ultBuceo > KRAKEN.buceo.cada ? P.buceo : 0,
+  };
+  if (menos) pesos[menos] = 0;
+  if (menos) pesos.buceo = 0; // no se sumerge en medio de otro ataque
+  const total = Object.values(pesos).reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  let r = Math.random() * total;
+  for (const [t, w] of Object.entries(pesos)) { r -= w; if (r <= 0 && w > 0) return t; }
+  return 'zona';
+}
+
+const avisoBase = (k, seg, b) => +((seg + (b ? extraCasco(b) : 0)) * (k.furia ? KRAKEN.avisoFuria : 1)).toFixed(2);
+function extraCasco(b) { const c = b.diseno.casco; return c === 'galeon' ? KRAKEN.extraGaleon : c === 'bergantin' ? KRAKEN.extraBergantin : 0; }
+
+function lanzarAtaque(j, k, tipo, b, lista) {
+  const avisar = (texto) => { if (b.cap && esInsignia(b)) aviso(b.cap, texto, 'malo'); };
+  if (tipo === 'zona') {
+    if (k.zonas.some((z) => !z.golpe && Math.hypot(z.x - b.x, z.y - b.y) < KRAKEN.radio * 1.5)) { // ese ya tiene una encima: otro
+      b = lista.find((o) => !k.zonas.some((z) => !z.golpe && Math.hypot(z.x - o.x, z.y - o.y) < KRAKEN.radio * 1.5));
+      if (!b) return;
+    }
+    const z = { id: j.proxZona++, x: Math.round(b.x), y: Math.round(b.y), t: 0, aviso: avisoBase(k, KRAKEN.aviso, b), r: KRAKEN.radio, golpe: false };
+    k.zonas.push(z);
+    emitir(j, { k: 'kz', x: z.x, y: z.y });
+    if (b.cap && esInsignia(b)) aviso(b.cap, '¡El Kraken marcó una zona! Salí del círculo antes de que se llene', 'malo');
+  } else if (tipo === 'lluvia') { // zonas chicas en línea, círculo o espiral, que se llenan una detrás de otra
+    const L = KRAKEN.lluvia, forma = azar.entero(0, 2), u = Math.atan2(b.y - k.y, b.x - k.x), grupo = j.proxZona;
+    for (let i = 0; i < L.gotas; i++) {
+      let x = b.x, y = b.y;
+      if (forma === 0) { const d = (i - (L.gotas - 1) / 2) * L.radio * 1.9; x += Math.cos(u + Math.PI / 2) * d; y += Math.sin(u + Math.PI / 2) * d; }
+      else if (forma === 1) { const a = (i / L.gotas) * TAU; x += Math.cos(a) * L.radio * 2.2; y += Math.sin(a) * L.radio * 2.2; }
+      else { const a = i * 1.15, d = L.radio * 0.4 + i * L.radio * 0.7; x += Math.cos(a) * d; y += Math.sin(a) * d; }
+      k.zonas.push({ id: j.proxZona++, grupo, x: Math.round(x), y: Math.round(y), t: 0, aviso: avisoBase(k, 1.1 + i * L.paso, null), r: L.radio, golpe: false });
+    }
+    emitir(j, { k: 'kz', x: Math.round(b.x), y: Math.round(b.y) });
+    avisar('¡Lluvia de tentáculos! Las zonas se llenan en orden: pasá entre ellas');
+  } else if (tipo === 'barrido') { // una franja en arco alrededor del Kraken
+    const B = KRAKEN.barrido, d = Math.max(KRAKEN.cuerpo + B.ancho * 0.6 + 20, Math.min(KRAKEN.alcance - B.ancho / 2, Math.hypot(b.x - k.x, b.y - k.y)));
+    k.ataques.push({ id: j.proxZona++, tipo, x: Math.round(k.x), y: Math.round(k.y), a: Math.atan2(b.y - k.y, b.x - k.x), t: 0, aviso: avisoBase(k, B.aviso, b), r0: Math.round(d - B.ancho / 2), r1: Math.round(d + B.ancho / 2), arco: B.arco });
+    emitir(j, { k: 'kz', x: Math.round(b.x), y: Math.round(b.y) });
+    avisar('¡Barrido! Salí de la franja: hacia afuera o hacia el Kraken');
+  } else if (tipo === 'chorro') { // chorro de agua en línea desde la boca
+    const a = Math.atan2(b.y - k.y, b.x - k.x);
+    k.ataques.push({ id: j.proxZona++, tipo, x: Math.round(k.x + Math.cos(a) * KRAKEN.cuerpo * 0.8), y: Math.round(k.y + Math.sin(a) * KRAKEN.cuerpo * 0.8), a, t: 0, aviso: avisoBase(k, KRAKEN.chorro.aviso, b), largo: KRAKEN.chorro.largo, ancho: KRAKEN.chorro.ancho });
+    k.a = a; // apunta con la boca
+    emitir(j, { k: 'kz', x: Math.round(b.x), y: Math.round(b.y) });
+    avisar('¡Chorro de agua! Corréte de la línea');
+  } else if (tipo === 'agarre') {
+    if (!b.cap) b = lista.find((o) => o.cap) || b;
+    k.ataques.push({ id: j.proxZona++, tipo, bid: b.id, x: Math.round(b.x), y: Math.round(b.y), a: 0, t: 0, aviso: avisoBase(k, KRAKEN.agarre.aviso, null), fase: 0, vida: KRAKEN.agarre.vida, vidaMax: KRAKEN.agarre.vida });
+    emitir(j, { k: 'kz', x: Math.round(b.x), y: Math.round(b.y) });
+    avisar('¡Un tentáculo te busca! Salí del círculo o te agarra');
+  } else if (tipo === 'tinta') { // nube de tinta entre el Kraken y su blanco: no se ve qué hay debajo, y meterse adentro corta la mirada
+    const d = Math.hypot(k.x - b.x, k.y - b.y) || 1, lejos = Math.min(d * 0.7, KRAKEN.tinta.radio * 0.8 + 60); // cerca del barco pero no encima: hay que ir a esconderse
+    const x = b.x + ((k.x - b.x) / d) * lejos, y = b.y + ((k.y - b.y) / d) * lejos;
+    k.ataques.push({ id: j.proxZona++, tipo, x: Math.round(x), y: Math.round(y), a: 0, t: 0, aviso: 0, dura: KRAKEN.tinta.dura });
+    emitir(j, { k: 'kz', x: Math.round(x), y: Math.round(y) });
+    aviso(j, 'El Kraken soltó tinta: no se ve qué hay abajo', 'info');
+  } else if (tipo === 'mirada') {
+    if (!b.cap) b = lista.find((o) => o.cap) || b;
+    k.mirada = { id: b.id, cap: b.cap || null, nombre: b.cap ? b.cap.nombre : b.nombre, t: 0, otros: 0 };
+    if (b.cap) aviso(b.cap, '¡El Kraken te clavó los ojos! Va todo contra vos: escondete en la tinta o que los demás le peguen', 'malo');
+    for (const c of j.capitanes) if (c !== b.cap && !c.fin) aviso(c, '¡El Kraken le clavó los ojos a {nombre}! Pegale para distraerlo', 'info', { nombre: k.mirada.nombre });
+    k.prox = 0.8;
+  } else if (tipo === 'buceo') { // se sumerge y deja un remolino que arrastra al centro
+    k.buceo = 0.0001; k.ultBuceo = j.t; k.zonas = k.zonas.filter((z) => z.golpe); k.mirada = null;
+    k.ataques = k.ataques.filter((a) => a.tipo === 'tinta' || a.tipo === 'remolino');
+    for (const b2 of j.barcos) if (b2.agarradoHasta) b2.agarradoHasta = 0;
+    k.ataques.push({ id: j.proxZona++, tipo: 'remolino', x: Math.round(k.x), y: Math.round(k.y), a: 0, t: 0, aviso: 0, dura: KRAKEN.buceo.dura + 1.5 });
+    emitir(j, { k: 'ks', x: Math.round(k.x), y: Math.round(k.y) });
+    aviso(j, '¡El Kraken se sumergió! Su remolino arrastra al centro: alejate', 'malo');
+  }
+}
+
+// Sale del buceo: en agua libre, a su distancia de golpe del capitán más cercano (o donde estaba, si no hay lugar)
+function salirDelBuceo(j, k) {
+  k.buceo = 0;
+  let obj = null, od = Infinity;
+  for (const b of j.barcos) {
+    if (!b.cap || b.hundiendo || b.cap.fin || enPuerto(j, b)) continue;
+    const d = Math.hypot(b.x - k.x, b.y - k.y);
+    if (d < od) { obj = b; od = d; }
+  }
+  if (obj) for (let i = 0; i < 40; i++) {
+    const a = azar.rango(0, TAU), d = KRAKEN.distancia + azar.rango(0, 160) + i * 10, x = obj.x + Math.cos(a) * d, y = obj.y + Math.sin(a) * d;
+    if (aguaLibreKraken(j, x, y)) { k.x = x; k.y = y; k.a = Math.atan2(obj.y - y, obj.x - x); break; }
+  }
+  k.emerge = 0.4; // vuelve a asomar enseguida (la parte de la cabeza y los ojos)
+  k.prox = 2;
+  emitir(j, { k: 'kd', x: Math.round(k.x), y: Math.round(k.y), c: 1 });
+}
+
+// Un golpe del Kraken a un barco (si lo hunde, no es mérito de nadie)
+function golpeDeKraken(j, b, dano) {
+  b.vida -= dano;
+  b.ultimoGolpe = j.t;
+  b.ultimoAgresor = null;
+  b.golpeKraken = j.t;
+  if (b.trip > 2) b.trip -= azar.entero(1, 2); // el golpe se lleva gente al agua
+  if (esInsignia(b)) { b.cap.sacudon = Math.max(b.cap.sacudon, 10); aviso(b.cap, '¡El Kraken te golpeó!', 'malo'); }
+  textoFlotante(j, b.x, b.y - 30, `-${dano}`, '#ff8f8f');
+}
+
+function actualizarAtaquesKraken(j, k, dt) {
+  const vivo = (b) => !b.hundiendo && !(b.cap && enPuerto(j, b));
   for (const z of k.zonas) {
     z.t += dt;
+    const R = z.r || KRAKEN.radio;
     if (!z.golpe && z.t >= z.aviso) { // el golpe: pega a todo barco que quedó adentro, más en el centro que en el borde
       z.golpe = true;
       emitir(j, { k: 'kg', x: z.x, y: z.y });
       for (const b of j.barcos) {
-        if (b.hundiendo || (b.cap && enPuerto(j, b))) continue;
+        if (!vivo(b)) continue;
         const d = Math.hypot(b.x - z.x, b.y - z.y);
-        if (d > KRAKEN.radio + b.stats.ancho * 0.4) continue;
-        const dano = danoKraken(b, d < KRAKEN.radio * KRAKEN.nucleo);
-        b.vida -= dano;
-        b.ultimoGolpe = j.t;
-        b.ultimoAgresor = null; // si lo hunde el Kraken, no es mérito de nadie
-        if (b.trip > 2) b.trip -= azar.entero(1, 2); // el golpe se lleva gente al agua
-        if (esInsignia(b)) { b.cap.sacudon = Math.max(b.cap.sacudon, 10); aviso(b.cap, '¡El Kraken te golpeó!', 'malo'); }
-        textoFlotante(j, b.x, b.y - 30, `-${dano}`, '#ff8f8f');
+        if (d > R + b.stats.ancho * 0.4) continue;
+        golpeDeKraken(j, b, R < KRAKEN.radio ? Math.round(danoKraken(b, false) * 0.8) : danoKraken(b, d < R * KRAKEN.nucleo));
       }
     }
     // después del golpe el tentáculo queda atravesado un momento: los barcos no lo cruzan
     if (z.golpe && z.t < z.aviso + 0.16 + KRAKEN.queda) for (const b of j.barcos) {
       if (b.hundiendo) continue;
-      const dx = b.x - z.x, dy = b.y - z.y, d = Math.hypot(dx, dy) || 1, lim = KRAKEN.radio * 0.5 + b.stats.ancho * 0.5;
+      const dx = b.x - z.x, dy = b.y - z.y, d = Math.hypot(dx, dy) || 1, lim = R * 0.5 + b.stats.ancho * 0.5;
       if (d < lim) { b.x = z.x + (dx / d) * lim; b.y = z.y + (dy / d) * lim; b.v = Math.min(b.v, b.stats.velMax * 0.4); }
     }
   }
   k.zonas = k.zonas.filter((z) => z.t < z.aviso + KRAKEN.queda + 0.8);
+
+  const quedan = [];
+  for (const a of k.ataques) {
+    a.t += dt;
+    if (a.tipo === 'barrido') {
+      if (!a.golpe && a.t >= a.aviso) {
+        a.golpe = true;
+        emitir(j, { k: 'kg', x: Math.round(a.x + Math.cos(a.a) * (a.r0 + a.r1) / 2), y: Math.round(a.y + Math.sin(a.a) * (a.r0 + a.r1) / 2) });
+        for (const b of j.barcos) {
+          if (!vivo(b)) continue;
+          const d = Math.hypot(b.x - a.x, b.y - a.y), m = b.stats.ancho * 0.4;
+          if (d < a.r0 - m || d > a.r1 + m || Math.abs(difAng(Math.atan2(b.y - a.y, b.x - a.x), a.a)) > a.arco) continue;
+          golpeDeKraken(j, b, Math.round(danoKraken(b, false) * 1.4));
+        }
+      }
+      if (a.t < a.aviso + 0.8) quedan.push(a);
+    } else if (a.tipo === 'chorro') {
+      if (!a.golpe && a.t >= a.aviso) {
+        a.golpe = true;
+        emitir(j, { k: 'kg', x: Math.round(a.x + Math.cos(a.a) * a.largo * 0.5), y: Math.round(a.y + Math.sin(a.a) * a.largo * 0.5) });
+        const ca = Math.cos(a.a), sa = Math.sin(a.a);
+        for (const b of j.barcos) {
+          if (!vivo(b)) continue;
+          const dx = b.x - a.x, dy = b.y - a.y, largo = dx * ca + dy * sa, lado = -dx * sa + dy * ca;
+          if (largo < 0 || largo > a.largo || Math.abs(lado) > a.ancho / 2 + b.stats.ancho * 0.4) continue;
+          golpeDeKraken(j, b, danoKraken(b, false));
+          b.empuje = { vx: ca * KRAKEN.chorro.empuje, vy: sa * KRAKEN.chorro.empuje }; // el agua lo arrastra
+        }
+      }
+      if (a.t < a.aviso + 0.7) quedan.push(a);
+    } else if (a.tipo === 'agarre') {
+      const b = j.barcos.find((x) => x.id === a.bid);
+      if (!b || b.hundiendo) continue;
+      if (a.fase === 0) { // el aviso: si cuando se llena el barco sigue en el círculo, lo agarra
+        if (a.t >= a.aviso) {
+          if (Math.hypot(b.x - a.x, b.y - a.y) < KRAKEN.agarre.radio + b.stats.ancho * 0.4 && vivo(b)) {
+            a.fase = 1; a.t0 = a.t;
+            emitir(j, { k: 'kg', x: Math.round(b.x), y: Math.round(b.y) });
+            if (b.cap) aviso(b.cap, '¡El Kraken te agarró! Tus aliados pueden cortar el tentáculo a cañonazos', 'malo');
+            for (const c of j.capitanes) if (c !== b.cap && !c.fin) aviso(c, '¡El Kraken agarró a {nombre}! Cortale el tentáculo a cañonazos', 'info', { nombre: b.cap ? b.cap.nombre : b.nombre });
+          } else continue; // se escapó
+        }
+        quedan.push(a);
+        continue;
+      }
+      // lo tiene: no se mueve y pierde casco de a poco, hasta que cortan el tentáculo o lo suelta
+      a.x = Math.round(b.x); a.y = Math.round(b.y);
+      b.agarradoHasta = j.t + 0.2;
+      a.danoAc = (a.danoAc || 0) + b.stats.vidaMax * KRAKEN.agarre.dano * dt;
+      if (a.danoAc >= 1) { const d = Math.floor(a.danoAc); a.danoAc -= d; b.vida -= d; b.ultimoGolpe = j.t; b.ultimoAgresor = null; b.golpeKraken = j.t; }
+      if (a.vida <= 0) {
+        b.agarradoHasta = 0;
+        textoFlotante(j, b.x, b.y - 40, '¡Tentáculo cortado!', '#9be7c4');
+        if (b.cap) aviso(b.cap, '¡Cortaron el tentáculo! Quedaste libre', 'bueno');
+        continue;
+      }
+      if (a.t - a.t0 >= KRAKEN.agarre.dura) { b.agarradoHasta = 0; continue; }
+      quedan.push(a);
+    } else if (a.tipo === 'tinta') {
+      if (a.t < a.dura) quedan.push(a);
+    } else if (a.tipo === 'remolino') { // arrastra al centro y hace girar; en el ojo, rompe el casco
+      const R = KRAKEN.buceo.radio, apaga = Math.min(1, (a.dura - a.t) / 1.5);
+      for (const b of j.barcos) {
+        if (!vivo(b)) continue;
+        const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
+        if (d >= R || d < 1) continue;
+        const f = (1 - d / R) * apaga, nx = dx / d, ny = dy / d;
+        b.x += (nx * KRAKEN.buceo.fuerza * f - ny * KRAKEN.buceo.fuerza * 0.8 * f) * dt;
+        b.y += (ny * KRAKEN.buceo.fuerza * f + nx * KRAKEN.buceo.fuerza * 0.8 * f) * dt;
+        b.a += 0.8 * f * dt;
+        if (d < 70) { b.vida -= 14 * dt; b.golpeKraken = j.t; b.ultimoAgresor = null; }
+      }
+      if (a.t < a.dura) quedan.push(a);
+    }
+  }
+  k.ataques = quedan;
 }
+
+// Una bala que pasa por el tentáculo que agarra a un barco lo corta (las del barco agarrado no: le dispara al costado)
+function cortarAgarre(j, bl) {
+  const k = j.kraken;
+  if (!k || !k.ataques.length) return false;
+  for (const a of k.ataques) {
+    if (a.tipo !== 'agarre' || a.fase !== 1 || bl.dueno.id === a.bid) continue;
+    if (Math.hypot(a.x - bl.x, a.y - bl.y) < 44 + bl.radio) {
+      a.vida -= bl.dano;
+      emitir(j, { k: 'kh', x: Math.round(bl.x), y: Math.round(bl.y) });
+      textoFlotante(j, bl.x, bl.y - 8, `-${Math.round(bl.dano)}`, '#f0c4d0', bl.dueno.cap);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Para la foto del servidor y su lectura en el navegador: los ataques en números (tipo, id, x, y, ángulo, reloj, aviso, y tres datos)
+const TIPO_ATAQUE = ['', 'barrido', 'chorro', 'agarre', 'tinta', 'remolino'];
+export function ataquesAFoto(k) {
+  const r = Math.round;
+  return k.ataques.flatMap((a) => {
+    const n = TIPO_ATAQUE.indexOf(a.tipo), base = [n, a.id, a.x, a.y, r(a.a * 100), r(a.t * 100), r(a.aviso * 100)];
+    if (a.tipo === 'barrido') return [...base, a.r0, a.r1, r(a.arco * 100)];
+    if (a.tipo === 'chorro') return [...base, a.largo, a.ancho, 0];
+    if (a.tipo === 'agarre') return [...base, a.bid, Math.max(0, r(a.vida)), a.fase];
+    return [...base, 0, r((a.dura || 0) * 100), 0];
+  });
+}
+export function ataquesDeFoto(q) {
+  const out = [];
+  for (let i = 0; i + 9 < q.length + 0; i += 10) {
+    const [n, id, x, y, a100, t100, av100, p1, p2, p3] = q.slice(i, i + 10), tipo = TIPO_ATAQUE[n];
+    const a = { tipo, id, x, y, a: a100 / 100, t: t100 / 100, aviso: av100 / 100 };
+    if (tipo === 'barrido') Object.assign(a, { r0: p1, r1: p2, arco: p3 / 100 });
+    else if (tipo === 'chorro') Object.assign(a, { largo: p1, ancho: p2 });
+    else if (tipo === 'agarre') Object.assign(a, { bid: p1, vida: p2, vidaMax: KRAKEN.agarre.vida, fase: p3 });
+    else Object.assign(a, { dura: p2 / 100 });
+    out.push(a);
+  }
+  return out;
+}
+

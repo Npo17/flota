@@ -491,6 +491,7 @@ export function evento(ev, oyente, de) {
     chasquido(cuando + 0.25, 0.35 * nivel, lado, 500, 1.2);
   } else if (ev.k === 's' && cerca > 0.45) chasquido(cuando, 0.16 * nivel, lado, 2600, 0.22);
   else if (ev.k === 'm' && cerca > 0.5) chasquido(cuando, 0.3 * nivel, lado, 3200, 0.06); // tiro de mosquete contra un tritón: un chasquido seco
+  else if (ev.k === 'mo') { campana(cuando, 0.26, 392); campana(cuando + 0.2, 0.22, 370); campana(cuando + 0.45, 0.2, 262); } // la moneda maldita: tres toques que desafinan
 }
 // Un cañonazo de muestra, para oír el volumen al mover la barra en Ajustes
 export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, nivel, 0, 0.9, casco, municion); }

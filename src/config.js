@@ -116,6 +116,17 @@ export const KRAKEN = {
   olvida: 2200,           // a partir de qué distancia un capitán ya no cuenta como cerca
   muerteOro: 4,           // segundos de la animación de muerte hasta que sale el oro
   muerteDura: 5.4,        // segundos hasta que desaparece del todo
+  // Más ataques, para que no sea predecible (Cristian, 13/11/2026). Cada vez que le toca atacar elige uno al azar según estos pesos.
+  pesos: { zona: 3, lluvia: 2, barrido: 2, chorro: 2, agarre: 1.5, tinta: 1, mirada: 1, buceo: 1 },
+  maxAtaques: 2, maxAtaquesFuria: 3, // cuántas cosas puede tener en marcha a la vez (zonas, barridos, chorros…)
+  combinadoFuria: 0.45,   // enfurecido, chance de largar dos ataques distintos juntos
+  lluvia: { gotas: 6, radio: 46, paso: 0.28 },              // zonas chicas en línea, círculo o espiral que se llenan una detrás de otra
+  barrido: { ancho: 120, arco: 1.1, aviso: 1.6 },           // un tentáculo barre una franja en arco alrededor suyo: se esquiva yendo hacia afuera o hacia adentro
+  chorro: { largo: 640, ancho: 70, aviso: 1.3, empuje: 380 }, // chorro de agua en línea recta desde la boca: pega y empuja
+  agarre: { aviso: 1.1, radio: 70, dura: 6, vida: 160, dano: 0.025 }, // atrapa un barco y lo deja quieto; los aliados cortan el tentáculo a cañonazos
+  tinta: { radio: 260, dura: 9 },                           // nube de tinta negra: no se ve qué hay abajo
+  mirada: { dura: 8, distraer: 0.03 },                      // clava los ojos en un barco: los ataques van a ese; se corta con tinta o pegándole entre los demás
+  buceo: { dura: 4.5, radio: 380, fuerza: 120, cada: 30 },  // se sumerge, deja un remolino que arrastra al centro y sale en otro lado
 };
 
 export const ESCOLTAS_INICIALES = 2;
