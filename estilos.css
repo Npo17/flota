@@ -52,6 +52,11 @@ canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: bloc
 .aviso { background: var(--panel-fuerte); border-radius: 8px; padding: 7px 14px; font-size: 14px; font-weight: 600; border-left: 4px solid #8fb7cc; text-align: center; }
 .aviso.bueno { border-color: #3ecf5e; }
 .aviso.malo { border-color: #e5484d; }
+/* Kraken y monedas de Flint Braun: más grandes y con una entrada que llama la atención */
+#avisos:has(.grande) { width: min(820px, 60vw); }
+.aviso.grande { padding: 13px 26px; font-size: clamp(18px, 2.3vw, 27px); font-weight: 800; line-height: 1.25; border-left-width: 7px; border-radius: 12px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4); animation: aviso-grande 0.35s ease-out; }
+.aviso.grande.info { border-color: var(--maldita); }
+@keyframes aviso-grande { 0% { opacity: 0; transform: scale(0.85) translateY(-10px); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: none; } }
 #pista { position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(255, 236, 170, 0.92); color: #2a1c08; font-weight: 700; padding: 8px 16px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
 #pista:empty { display: none; }
 /* El evento del tesoro: cartel arriba con el tiempo que le queda al galeón para llegar al puerto */

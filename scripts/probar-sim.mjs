@@ -420,5 +420,37 @@ for (const abordo of [true, false]) {
   const parte = e.trip / e.stats.tripMax;
   ok(parte < 0.65 && parte > 0.4, `bots: con el 60 % del casco perdido la tripulación quedó al ${(parte * 100) | 0} %`);
 }
+{
+  // la flota que queda a más de 2500 de su jefe aparece a su lado, en el agua
+  const k = rivales(crearPartida(crearMundo('caribe'), diseno, 100)), yo = k.jugador;
+  const flota = k.barcos.filter((b) => b.bando === 'enemigo').slice(0, 3);
+  k.barcos = [yo, ...flota]; k.enemigosVivos = 0; k.proxConvoy = 999; k.tritones = []; k.yo.proxTritones = 1e9;
+  const agua = (x, y) => !k.mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + 400);
+  const sitio = [[3000, 5400], [3000, 5800], [2400, 4900], [3600, 4900]].find(([x, y]) => agua(x, y)) || [3000, 5400];
+  yo.x = sitio[0]; yo.y = sitio[1]; yo.a = 0; yo.v = 0;
+  flota.forEach((b, n) => { b.bando = 'escolta'; b.cap = k.yo; b.ia = { estado: 'sigue' }; b.x = 200 + n * 90; b.y = 200; b.a = 0; b.v = 0; });
+  ok(flota.every((b) => Math.hypot(b.x - yo.x, b.y - yo.y) > 2500), 'reagrupe: la flota de prueba tiene que arrancar lejos');
+  for (let i = 0; i < 3; i++) actualizar(k, 1 / 60, {});
+  const d = flota.map((b) => Math.hypot(b.x - yo.x, b.y - yo.y) | 0);
+  ok(d.every((x) => x < 800), `reagrupe: la flota lejana no apareció junto al jefe (${d})`);
+  ok(flota.every((b) => !k.mundo.islas.some((i) => Math.hypot(i.x - b.x, i.y - b.y) < i.r)), 'reagrupe: apareció sobre una isla');
+  ok(k.yo.avisos.some((a) => a.texto.includes('se reagrupó')), 'reagrupe: no avisó');
+}
+{
+  // una escolta pegada contra el borde del mapa a toda vela, sin avanzar, sale sola (antes quedaba ahí para siempre)
+  const k = rivales(crearPartida(crearMundo('lepanto'), diseno, 100)), yo = k.jugador;
+  const e = k.barcos.find((b) => b.bando === 'enemigo');
+  k.barcos = [yo, e]; k.enemigosVivos = 0; k.proxConvoy = 999; k.tritones = []; k.yo.proxTritones = 1e9;
+  e.bando = 'escolta'; e.cap = k.yo; e.ia = { estado: 'sigue' }; e.vida = 1e6;
+  yo.x = 60; yo.y = 2000; yo.a = 0; yo.v = 0; // el jefe está pegado al borde, a la vista de la escolta
+  e.x = 60; e.y = 2400; e.a = Math.PI; e.v = 80; e.velas = 3;
+  let quieto = 0, peor = 0;
+  for (let i = 0; i < 60 * 40; i++) {
+    yo.x = 700; yo.y = 2000; yo.v = 0;
+    const ant = [e.x, e.y]; actualizar(k, 1 / 60, {});
+    quieto = Math.hypot(e.x - ant[0], e.y - ant[1]) < 0.3 && Math.hypot(e.x - yo.x, e.y - yo.y) > 250 ? quieto + 1 / 60 : 0; peor = Math.max(peor, quieto);
+  }
+  ok(peor < 8, `trabado: la escolta pegada al borde quedó ${peor.toFixed(1)} s sin avanzar`);
+}
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);

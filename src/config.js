@@ -131,6 +131,8 @@ export const KRAKEN = {
 
 export const ESCOLTAS_INICIALES = 2;
 export const ESCOLTAS_MAX = 6;
+// Si una escolta queda más lejos que esto de su jefe (trabada en una costa, perdida), aparece junto a él
+export const REAGRUPE_FLOTA = 2500;
 
 // Tipos de barcos enemigos. "nivel" sube a medida que te alejás del puerto.
 export const ENEMIGOS = {

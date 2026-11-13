@@ -1,7 +1,7 @@
 // Simulación del mar: barcos, balas, bots, abordajes, remolinos, tritones y el Kraken.
 // Maneja varios capitanes a la vez. El modo solo es el caso de un único capitán; en línea, esta misma
 // simulación corre en el servidor. No toca pantalla ni teclado: recibe entradas y avanza un paso.
-import { ENEMIGOS, ESCOLTAS_INICIALES, VIENTO, HABILIDADES, KRAKEN } from './config.js';
+import { ENEMIGOS, ESCOLTAS_INICIALES, REAGRUPE_FLOTA, VIENTO, HABILIDADES, KRAKEN } from './config.js';
 import { crearBarco, disenoEnemigo } from './barcos.js';
 import { nivelZona } from './mundo.js';
 import { azar } from './rng.js';
@@ -484,9 +484,9 @@ function moverBarco(j, b, dt) {
   b.x += vx * dt;
   b.y += vy * dt;
 
-  // islas
+  // islas (dos pasadas: entre dos tierras pegadas, salir de una puede meter en la otra)
   b.golpeIsla = Math.max(0, b.golpeIsla - dt);
-  for (const i of j.mundo.islas) {
+  for (let pasada = 0; pasada < 2; pasada++) for (const i of j.mundo.islas) {
     const dx = b.x - i.x, dy = b.y - i.y, d = Math.hypot(dx, dy);
     const lim = i.r * 1.0 + s.ancho * 0.6;
     if (d < lim) {
@@ -845,8 +845,9 @@ function resolverAbordaje(j, cap, e, gano, bajas) {
 }
 
 // ---------- IA ----------
-// Un bot que quiere andar y no avanza está trabado contra una costa u otro barco: durante unos segundos
-// deja lo que estaba haciendo y sale derecho hacia el lado contrario a la tierra más cercana.
+// Un bot que quiere andar y no avanza está trabado contra una costa, el borde del mapa u otro barco: durante unos segundos
+// deja lo que estaba haciendo y sale hacia el agua más libre. Se mira el avance de verdad (no la velocidad): pegado a una
+// costa o al borde del mapa el barco conserva la velocidad pero no se mueve, o da vueltas en el lugar (Cristian, 13/11/2026).
 function bloqueado(j, b, dt) {
   if (b.escape > 0) {
     b.escape -= dt;
@@ -854,13 +855,64 @@ function bloqueado(j, b, dt) {
     b.velas = 3;
     return true;
   }
-  const trabado = b.velas > 0 && b.v < 14 && !(b.frenoGancho < 1);
-  b.atasco = trabado ? (b.atasco || 0) + dt : 0;
-  if (b.atasco > 2.2) {
-    let cerca = null, cd = Infinity;
-    for (const i of j.mundo.islas) { const d = Math.hypot(i.x - b.x, i.y - b.y) - i.r; if (d < cd) { cd = d; cerca = i; } }
-    b.rumboEscape = cerca && cd < 260 ? Math.atan2(b.y - cerca.y, b.x - cerca.x) + azar.rango(-0.5, 0.5) : b.a + Math.PI * 0.6;
-    b.escape = 3.5; b.atasco = 0;
+  const quiere = b.velas > 0 && !(b.frenoGancho < 1) && !(b.agarradoHasta > j.t) && !b.enRemolino;
+  b.atasco = quiere && b.v < 14 ? (b.atasco || 0) + dt : 0;
+  // ventana de 1,5 s: cuánto anduvo de verdad contra cuánto debería haber andado
+  const m = b.marca || (b.marca = { x: b.x, y: b.y, t: 0, camino: 0 });
+  m.t += dt; m.camino += b.v * dt;
+  if (m.t >= 1.5) {
+    const anduvo = Math.hypot(b.x - m.x, b.y - m.y);
+    b.sinAvance = quiere && m.camino > 45 && anduvo < m.camino * 0.3 ? (b.sinAvance || 0) + m.t : 0;
+    m.x = b.x; m.y = b.y; m.t = 0; m.camino = 0;
+  }
+  if (b.atasco > 2.2 || b.sinAvance >= 3) {
+    // una escolta que ya probó varias veces salir y vuelve a trabarse, y está lejos de su jefe, aparece junto a él
+    b.reintentos = (b.reintentos && j.t - b.ultReintento < 40 ? b.reintentos : 0) + 1; b.ultReintento = j.t;
+    const lider = b.bando === 'escolta' && b.cap && b.cap.barco;
+    if (lider && !lider.hundiendo && b.reintentos >= 3 && Math.hypot(lider.x - b.x, lider.y - b.y) > 700 && reagrupar(j, b, lider)) return true;
+    const pref = lider && !lider.hundiendo ? Math.atan2(lider.y - b.y, lider.x - b.x) : b.a + Math.PI;
+    b.rumboEscape = rumboLibre(j, b, pref);
+    b.escape = 3.5; b.atasco = 0; b.sinAvance = 0; m.camino = 0; m.t = 0;
+  }
+  return false;
+}
+
+// El rumbo con más agua libre por delante (islas, escollos y borde del mapa), sin alejarse más de lo necesario de "pref".
+function rumboLibre(j, b, pref) {
+  const { ancho: W, alto: H } = j.mundo;
+  let mejor = pref, mejorP = -Infinity;
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * TAU;
+    let hueco = 400;
+    for (const d of [120, 260, 420]) {
+      const x = b.x + Math.cos(a) * d, y = b.y + Math.sin(a) * d;
+      hueco = Math.min(hueco, x - 120, W - 120 - x, y - 120, H - 120 - y);
+      for (const i of j.mundo.islas) hueco = Math.min(hueco, Math.hypot(i.x - x, i.y - y) - i.r - b.stats.ancho);
+    }
+    const p = Math.min(hueco, 150) - Math.abs(difAng(a, pref)) * 25;
+    if (p > mejorP) { mejorP = p; mejor = a; }
+  }
+  return mejor;
+}
+
+// La escolta aparece en el agua junto a su jefe (más atrás de él), sin pisar tierra ni otro barco. Devuelve false si no hay lugar.
+function reagrupar(j, b, lider) {
+  const { ancho: W, alto: H } = j.mundo, ancho = b.stats.ancho;
+  const atras = lider.a + Math.PI;
+  for (const dist of [240, 320, 420, 540, 680]) {
+    for (let k = 0; k < 12; k++) {
+      const ang = atras + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5;
+      const x = lider.x + Math.cos(ang) * dist, y = lider.y + Math.sin(ang) * dist;
+      if (x < 150 || y < 150 || x > W - 150 || y > H - 150 || enTierra(j, x, y, ancho + 90)) continue;
+      if (j.barcos.some((o) => o !== b && !o.hundiendo && Math.hypot(o.x - x, o.y - y) < (o.stats.ancho + ancho) * 0.5 + 70)) continue;
+      emitir(j, { k: 's', x: Math.round(b.x), y: Math.round(b.y), r: 46 });
+      emitir(j, { k: 's', x: Math.round(x), y: Math.round(y), r: 46 });
+      b.x = x; b.y = y; b.a = lider.a; b.v = lider.v; b.timon = 0; b.empuje = null;
+      b.escape = 0; b.atasco = 0; b.sinAvance = 0; b.marca = null; b.reintentos = 0;
+      if (j.t - (b.cap.ultReagrupe ?? -99) > 8) aviso(b.cap, '¡Tu flota se reagrupó junto a tu barco!', 'info');
+      b.cap.ultReagrupe = j.t;
+      return true;
+    }
   }
   return false;
 }
@@ -1044,8 +1096,10 @@ function cofreParaEscolta(j, b, lider, escoltas) {
 
 function iaEscolta(j, b, dt) {
   if (b.hundiendo) return;
-  if (bloqueado(j, b, dt)) return;
   const cap = b.cap, lider = cap.barco;
+  // lejísimos de su jefe (trabada en una costa, perdida): aparece a su lado
+  if (!lider.hundiendo && Math.hypot(lider.x - b.x, lider.y - b.y) > REAGRUPE_FLOTA && !(b.cap.gancho && b.cap.gancho.obj === b) && reagrupar(j, b, lider)) return;
+  if (bloqueado(j, b, dt)) return;
   const sana = b.vida > b.stats.vidaMax * 0.3;
   const enemigo = cap.ordenFlota === 'ataque' && sana ? masCercano(j, b, 520) : null;
   if (enemigo && Math.hypot(enemigo.o.x - lider.x, enemigo.o.y - lider.y) < 700) {
@@ -1281,8 +1335,10 @@ function marcaTesoro(j, cap, galeon) {
   // la última marca lo despierta en actualizarKraken (si ya hay uno en el mar, espera a que ese se vaya)
 }
 
+// Los avisos del Kraken y de las monedas malditas: se leen 7 s y salen en letra grande (el "grande" va pegado al tipo, así
+// viaja por la red sin cambiar el mensaje: un cliente viejo lo toma como una clase más y lo muestra normal).
 function avisoLargo(quien, texto, tipo, p) {
-  aviso(quien, texto, tipo, p);
+  aviso(quien, texto, tipo + ' grande', p);
   for (const c of quien.capitanes || [quien]) { const a = c.avisos[c.avisos.length - 1]; if (a) a.t = 7; }
 }
 

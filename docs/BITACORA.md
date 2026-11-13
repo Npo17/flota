@@ -3,6 +3,17 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (barcos encajados en la costa, flota que se reagrupa y avisos grandes) — Cristian + Claude
+
+**Estado: probado en localhost, sin subir. TOCA LA SIMULACIÓN: hay que republicar el servidor (lo hace Nicolás).** Los avisos grandes viajan por la red sin cambiar el mensaje.
+
+- **Por qué se encajaban:** `bloqueado` (src/juego.js) detectaba el atasco por velocidad (`v < 14`). Pegado a una costa o al borde del mapa el barco seguía con `v` alta (60–90) sin moverse, o daba vueltas en el lugar, y nunca se lo daba por trabado. Medido con 4 escoltas y un jefe que cruza el mapa 10 minutos en los 20 mapas: hasta **556 s seguidos pegadas a la costa** (Lepanto, Magallanes, Kealakekua) y escoltas a más de 7000 del jefe.
+- **Arreglo:** ahora se mide el avance real (ventana de 1,5 s: lo que anduvo contra lo que debió andar; dos ventanas malas seguidas = trabado). El escape ya no es "al lado contrario de la isla más cercana" (en un borde del mapa apuntaba afuera del mapa): `rumboLibre` prueba 24 rumbos y elige el de más agua libre, sin alejarse de más del jefe. En `moverBarco` la salida de las islas hace dos pasadas (entre dos tierras pegadas salir de una metía en la otra). Medido después: peor caso **25 s** pegada a la costa, y bots enemigos 31 s.
+- **Reagrupe de la flota (pedido de Cristian):** una escolta a más de `REAGRUPE_FLOTA` (2500, `src/config.js`) de su jefe aparece en el agua detrás de él (240 a 680, sin pisar tierra ni otro barco) con un salpicón en los dos lugares y el aviso "¡Tu flota se reagrupó junto a tu barco!" (máximo uno cada 8 s). Si una escolta se traba 3 veces en 40 s y está a más de 700 del jefe, también aparece a su lado. No pasa si el jefe la está abordando.
+- **Avisos grandes:** `avisoLargo` (monedas, "falta UNA moneda", Kraken despierto, furioso, caído, deuda saldada) agrega " grande" al tipo y sale en letra grande, con entrada animada, 7 s. Cliente viejo: ve una clase de más y lo muestra normal. Los avisos de cada ataque del Kraken (lluvia, barrido…) siguen chicos.
+- Pruebas nuevas en `probar-sim`: reagrupe a 2500, aparece en el agua y avisa; escolta pegada al borde sale sola. Texto nuevo con 7 traducciones.
+- **Pendiente / idea:** el reagrupe vale solo para las escoltas; un barco enemigo trabado sale del paso pero no se teletransporta.
+
 ## 2026-11-13 (Kraken: monedas de Flint Braun, deuda saldada y ocho ataques) — Cristian + Claude
 
 **Estado: probado en localhost y commiteado. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea rijan los ataques nuevos, las monedas en la tabla y la deuda saldada.** Un navegador viejo con el servidor nuevo, o al revés, no se rompe: los datos nuevos van al final de la foto y quien no los conoce los ignora.
