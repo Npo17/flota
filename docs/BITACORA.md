@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (los tritones ya no cruzan la tierra) — Nicolás + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**
+
+- **Problema (captura de Nicolás):** los tritones iban en línea recta al barco y cruzaban islas y costas caminando.
+- **Arreglo (`actualizarTritones` en `src/juego.js`):** salen solo del agua (`enTierra`); si se meten en la costa quedan en la orilla y la bordean hacia el lado del barco; entre dos tierras pegadas, si el empujón los mete en otra, se quedan donde estaban; trabados más de 10 s contra la costa (caleta sin salida) se sumergen y desaparecen.
+- **Prueba nueva** en `scripts/probar-sim.mjs` ("tritones"): en los 20 mapas, 8 tritones del otro lado de una isla suelta durante 25 s; ninguno pisa tierra y al menos 4 la rodean y llegan al barco. Con el código anterior fallaba en los 20 mapas.
+
 ## 2026-11-15 (la flota ya no se estrella sola) — Nicolás + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**

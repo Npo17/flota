@@ -85,7 +85,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/mapas.js` | Los 20 mapas históricos: clima, costas y reglas de cada uno |
 | `src/mundo.js` | Genera el mundo de una partida a partir del mapa (con semilla: el mismo mapa sale siempre igual) |
 | `src/barcos.js` | Estadísticas de un barco según su diseño |
-| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota, remolinos, tritones, flota del tesoro |
+| `src/juego.js` | La simulación: movimiento, viento y ráfagas, cañones, bots, gancho de abordaje, flota, remolinos, tritones (nadan bordeando la costa, nunca cruzan tierra), flota del tesoro |
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
 | `src/arte-britanico.js`, `src/arte-vikingo.js`, `src/arte-espanol.js`, `src/arte-portugues.js`, `src/arte-frances.js` | Arte propio de los barcos de esas cinco civilizaciones (un diseño por casco y 4 estados de daño). `dibujo.js` los usa a través del mapa `ARTE`; sumar otra civilización = un archivo nuevo y una línea ahí |
 | `src/arte-motor.js`, `src/arte-emblemas*.js` | Motor de arte por piezas (cascos, velas cuadras, latinas, de junco y cangrejas, castillos, casetas, remos…) y las tallas y emblemas. Mismo estilo que los cinco de arriba, con los cuatro estados de daño |

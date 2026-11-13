@@ -198,6 +198,33 @@ for (const id of Object.keys(MAPAS)) {
   for (let i = 0; i < 60 * 10; i++) { yo.x = 1500; yo.y = 4500; yo.a = 0; yo.v = 0; a.x = 1500; a.y = 4680; a.v = 0; actualizar(j, 1 / 60, { fuego: 1 }); }
   ok(a.vida === vidaA, 'equipos: le hice daño a un aliado');
 }
+// --- tritones: nadan, no caminan. En todos los mapas, con el barco del otro lado de una isla, ninguno pisa la tierra
+// (captura de Nicolás, 15/11/2026: cruzaban la costa)
+for (const id of Object.keys(MAPAS)) {
+  const k = crearPartida(crearMundo(id), diseno, 100), yo = k.jugador;
+  k.barcos = [yo]; k.enemigosVivos = 0; k.proxConvoy = 999;
+  // una isla suelta (sin otra tierra cerca) para ver que la rodean; si el mapa no tiene, un pedazo de costa (ahí solo se mira que no pisen)
+  const lejosDelBorde = (i) => Math.min(i.x, i.y, k.mundo.ancho - i.x, k.mundo.alto - i.y) > i.r + 500;
+  const suelta = (i) => k.mundo.islas.every((o) => o === i || Math.hypot(o.x - i.x, o.y - i.y) - o.r - i.r > 300);
+  const sueltas = k.mundo.islas.filter((i) => i.tipo !== 'puerto' && i.r < 450 && lejosDelBorde(i) && suelta(i)).sort((a, b) => b.r - a.r);
+  const isla = sueltas[0] || k.mundo.islas.filter((i) => i.tipo !== 'puerto' && i.r < 450 && lejosDelBorde(i)).sort((a, b) => b.r - a.r)[0];
+  yo.x = isla.x; yo.y = isla.y + isla.r + 120; yo.v = 0;
+  const pisa = (x, y) => k.mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r);
+  // tritones del lado de enfrente de la isla, y además los que salen solos
+  for (let n = 0; n < 8; n++) { const a = Math.PI + (n - 3.5) * 0.12; k.tritones.push({ x: isla.x + Math.sin(a) * (isla.r + 60), y: isla.y + Math.cos(a) * (isla.r + 60), a: 0, t: n, muerto: false }); }
+  k.yo.proxTritones = 0;
+  let piso = 0, llegaron = 0;
+  for (let i = 0; i < 60 * 25; i++) {
+    const antes = k.tritones.length;
+    yo.vida = yo.stats.vidaMax; yo.trip = yo.stats.tripMax; yo.v = 0; yo.x = isla.x; yo.y = isla.y + isla.r + 120;
+    actualizar(k, 1 / 60, { quieto: true });
+    llegaron += Math.max(0, antes - k.tritones.length);
+    piso += k.tritones.filter((tr) => pisa(tr.x, tr.y)).length;
+  }
+  ok(piso === 0, `tritones (${id}): pisaron la tierra ${piso} veces`);
+  if (sueltas.length) ok(llegaron >= 4, `tritones (${id}): no rodearon la isla para llegar al barco (llegaron ${llegaron})`);
+}
+
 // --- rachas, habilidades, refuerzo, guardias que no abandonan al tesoro y mundo sin callejones
 {
   const { HABILIDADES } = await import('../src/config.js');

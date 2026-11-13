@@ -1088,6 +1088,10 @@ function actualizarConvoy(j, dt) {
 }
 
 // ---------- Tritones ----------
+function enTierra(j, x, y, margen = 0) {
+  return j.mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + margen);
+}
+
 function actualizarTritones(j, dt) {
   for (const cap of j.capitanes) {
     if (cap.fin) continue;
@@ -1098,8 +1102,14 @@ function actualizarTritones(j, dt) {
     cap.proxTritones = azar.rango(40, 70);
     const n = 2 + zona + Math.min(2, Math.floor(cap.stats.tiempo / 360));
     for (let k = 0; k < n; k++) {
-      const ang = azar.rango(0, TAU), d = azar.rango(420, 560);
-      j.tritones.push({ x: yo.x + Math.cos(ang) * d, y: yo.y + Math.sin(ang) * d, a: 0, t: azar.rango(0, 3), muerto: false });
+      // salen del agua, nunca de adentro de una isla (si no hay lugar en este intento, ese tritón no sale)
+      for (let intento = 0; intento < 12; intento++) {
+        const ang = azar.rango(0, TAU), d = azar.rango(420, 560);
+        const x = yo.x + Math.cos(ang) * d, y = yo.y + Math.sin(ang) * d;
+        if (enTierra(j, x, y, 40)) continue;
+        j.tritones.push({ x, y, a: 0, t: azar.rango(0, 3), muerto: false });
+        break;
+      }
     }
     aviso(cap, '¡Tritones! {n} vienen a abordarte. Bajalos a cañonazos', 'malo', { n });
   }
@@ -1117,9 +1127,28 @@ function actualizarTritones(j, dt) {
     if (!obj || od > 1400) continue; // se pierden en el mar
     const ang = Math.atan2(obj.y - tr.y, obj.x - tr.x) + Math.sin(tr.t * 3) * 0.5;
     tr.a = ang;
-    const vel = 120;
+    const vel = 120, px = tr.x, py = tr.y;
     tr.x += Math.cos(ang) * vel * dt;
     tr.y += Math.sin(ang) * vel * dt;
+    // Nadan, no caminan (Nicolás, 15/11/2026: los vio cruzar la tierra): si se meten en la costa, quedan en la orilla
+    // y la bordean hacia el lado del barco, como los barcos que rozan una isla.
+    let roza = false;
+    for (const i of j.mundo.islas) {
+      const dx = tr.x - i.x, dy = tr.y - i.y, d = Math.hypot(dx, dy) || 1, lim = i.r + 14;
+      if (d >= lim) continue;
+      const nx = dx / d, ny = dy / d;
+      // la tangente a la costa que apunta hacia el barco
+      const s = -ny * (obj.x - tr.x) + nx * (obj.y - tr.y) >= 0 ? 1 : -1, tx = -ny * s, ty = nx * s;
+      tr.x = i.x + nx * lim + tx * vel * dt;
+      tr.y = i.y + ny * lim + ty * vel * dt;
+      tr.a = Math.atan2(ty, tx);
+      roza = true;
+    }
+    // entre dos tierras pegadas el empujón de una puede meterlo en la otra: entonces se queda donde estaba
+    if (enTierra(j, tr.x, tr.y)) { tr.x = px; tr.y = py; }
+    // trabado contra la costa (una caleta sin salida hacia el barco): al rato se sumerge y se va
+    tr.costa = roza ? (tr.costa || 0) + dt : Math.max(0, (tr.costa || 0) - dt);
+    if (tr.costa > 10) continue;
     if (!j.eventos && Math.random() < dt * 8) j.particulas.push({ tipo: 'estela', x: tr.x, y: tr.y, t: 0, vida: 0.8, r: 4 });
     if (dentroDelCasco(obj, tr.x, tr.y, 6)) {
       const bajas = Math.max(0, Math.min(obj.trip - 1, azar.entero(1, 2)));
