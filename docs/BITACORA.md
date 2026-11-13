@@ -3,6 +3,17 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (tesoro sin abordaje, flota que junta oro, mosquetes contra tritones, bots que pierden gente) — Cristian + Claude
+
+**Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.** En modo solo y en salas locales ya anda todo.
+
+- **El galeón del tesoro no se aborda nunca** (pedido de Cristian): hay que hundir a los guardias y después hundirlo a él. El gancho que lo toca se suelta con el aviso "El galeón del tesoro no se aborda: hundilo a cañonazos", y la ayuda de F ya no lo ofrece (`actualizarGancho` y `barcoBajo` en `src/juego.js`). La lámina del tesoro de la guía lo dice (texto y sus 7 traducciones).
+- **La flota junta el oro que está a la vista:** cuando no está peleando, cada barco capturado va al cofre flotante más cercano dentro de 650 del barco del jugador (`VISTA_ORO`) que no tenga otro barco de la flota más cerca, lo levanta y vuelve a su lugar. Vale para las dos órdenes (seguir y atacar) y todas las formaciones (`cofreParaEscolta` en `iaEscolta`).
+- **La tripulación les tira con mosquetes a los tritones:** tu barco y los de tu flota, solos, a los que están a menos de 280 de la borda (`MOSQUETES` y `mosquetes()` en `src/juego.js`). Con más gente en cubierta tiran más seguido; aciertan un 65 %. Bajan cerca de la mitad de una ola; el resto sigue siendo con cañonazos. Se ve un humito y un salpicón y suena un chasquido (evento nuevo `'m'`; un navegador viejo lo ignora sin romperse).
+- **A los bots el casco castigado también les baja la gente:** además de la baja al azar por bala (que sigue igual para todos), cada punto de casco que pierde un bot se lleva su parte de la tripulación (`BAJAS_CASCO = 0.75`: con el 60 % del casco perdido le queda cerca de la mitad de la gente). Así un bot castigado es más fácil de abordar. **A los barcos de los jugadores no se les cambió nada.**
+- **Pruebas nuevas** en `scripts/probar-sim.mjs`: el tesoro sin guardias no se puede abordar y avisa; la flota junta los cofres a la vista, no va a uno lejano y vuelve a su lugar; los mosquetes bajan al menos un tercio de 10 olas de tritones (sin bajarlos a todos); un bot con el 60 % del casco perdido queda con 40-65 % de la gente. También se probó en el navegador (localhost): 5 tritones abatidos sin perder marineros y la flota levantando un cofre.
+- Pendiente / a decidir: los números (alcance y cadencia de los mosquetes, `BAJAS_CASCO`, `VISTA_ORO`) salieron a ojo; si se juega distinto de lo esperado, se tocan ahí. Nadie lo jugó todavía en línea.
+
 ## 2026-11-15 (la flota no hunde al barco que estás abordando) — Nicolás + Claude
 
 **Estado: subido a `main`. EL SERVIDOR HAY QUE REPUBLICARLO (lo hace Nicolás) para que en línea también rija.**

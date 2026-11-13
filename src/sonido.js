@@ -454,7 +454,7 @@ function chasquido(cuando, nivel, lado, hz, dura) { // golpes en la madera y sal
   r.start(cuando, Math.random() * 2, dura + 0.05);
 }
 
-// Un evento del mar (los mismos que dibujan el humo y las astillas): 'c' cañonazo, 'g' golpe en un casco, 'h' un barco se hunde, 's' salpicón.
+// Un evento del mar (los mismos que dibujan el humo y las astillas): 'c' cañonazo, 'g' golpe en un casco, 'h' un barco se hunde, 's' salpicón, 'm' mosquete.
 // oyente: dónde está el barco del jugador. Lo lejano suena más bajo, más apagado y un instante después.
 // de: para un cañonazo, { casco, municion } del barco que disparó (si se sabe)
 export function evento(ev, oyente, de) {
@@ -474,6 +474,7 @@ export function evento(ev, oyente, de) {
     estallido(cuando, 0.9 * nivel, lado, { grave: 60, cola: 1.5, brillo: 700 });
     chasquido(cuando + 0.25, 0.35 * nivel, lado, 500, 1.2);
   } else if (ev.k === 's' && cerca > 0.45) chasquido(cuando, 0.16 * nivel, lado, 2600, 0.22);
+  else if (ev.k === 'm' && cerca > 0.5) chasquido(cuando, 0.3 * nivel, lado, 3200, 0.06); // tiro de mosquete contra un tritón: un chasquido seco
 }
 // Un cañonazo de muestra, para oír el volumen al mover la barra en Ajustes
 export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, nivel, 0, 0.9, casco, municion); }

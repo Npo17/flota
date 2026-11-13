@@ -198,6 +198,11 @@ export function efecto(j, ev) {
     }
   } else if (ev.k === 's') P.push({ tipo: 'salpicon', x: ev.x, y: ev.y, t: 0, vida: 0.7, r: ev.r });
   else if (ev.k === 'p') P.push({ tipo: 'polvo', x: ev.x, y: ev.y, t: 0, vida: 0.6, r: 8 });
+  else if (ev.k === 'm') { // tiro de mosquete: humito en la borda y un salpicón chico donde estaba el tritón
+    const a = Math.atan2(ev.ty - ev.y, ev.tx - ev.x);
+    P.push({ tipo: 'humo', x: ev.x + Math.cos(a) * 12, y: ev.y + Math.sin(a) * 12, vx: Math.cos(a) * 25, vy: Math.sin(a) * 25, t: 0, vida: 0.6, r: 3 });
+    P.push({ tipo: 'salpicon', x: ev.tx, y: ev.ty, t: 0, vida: 0.4, r: 4 });
+  }
   else if (ev.k === 't') j.textos.push({ x: ev.x, y: ev.y, texto: ev.s, datos: ev.q, color: ev.c, t: 1.6 });
 }
 
@@ -367,6 +372,7 @@ export function avanzar(j, dt, entradas) {
   moverBalas(j, dt);
   actualizarConvoy(j, dt);
   actualizarTritones(j, dt);
+  mosquetes(j, dt);
   actualizarCofres(j, dt);
   actualizarHundidos(j, dt);
   if (!j.eventos) actualizarParticulas(j, dt);
@@ -556,6 +562,8 @@ function moverBalas(j, dt) {
   j.balas = quedan;
 }
 
+const BAJAS_CASCO = 0.75; // parte de la tripulación de un bot que cae a lo largo de todo su casco (a cero de casco le queda un cuarto)
+
 function golpear(j, b, bl) {
   // mientras le quede un guardia, el galeón del tesoro no recibe daño: primero hay que hundirlos
   if (b.convoy && b.bando === 'enemigo' && guardiasDe(j, b) > 0) {
@@ -569,6 +577,12 @@ function golpear(j, b, bl) {
   const agresor = bl.dueno && bl.dueno.cap ? bl.dueno.cap : null;
   if (agresor) b.ultimoAgresor = agresor;
   if (Math.random() < bl.tripu && b.trip > 0) b.trip -= 1;
+  // A los bots el casco castigado también les baja la gente (Cristian, 13/11/2026): cada punto de casco que pierden se lleva
+  // su parte de la tripulación, así un bot medio hundido ya no tiene la cubierta llena y abordarlo vale la pena.
+  if (!b.cap && b.trip > 1) {
+    b.bajasCasco = (b.bajasCasco || 0) + (bl.dano / b.stats.vidaMax) * b.stats.tripMax * BAJAS_CASCO;
+    while (b.bajasCasco >= 1 && b.trip > 1) { b.bajasCasco--; b.trip--; }
+  }
   emitir(j, { k: 'g', x: Math.round(bl.x), y: Math.round(bl.y) });
   if (esInsignia(b)) b.cap.sacudon = Math.max(b.cap.sacudon, 5);
   if (agresor && bl.dano >= 5) textoFlotante(j, bl.x, bl.y - 8, `-${Math.round(bl.dano)}`, '#ffd166', agresor);
@@ -684,7 +698,7 @@ function barcoBajo(j, cap, p) {
   const yo = cap.barco, mio = equipoDe(yo);
   let bajo = null, bajoD = Infinity, aTiro = null, aTiroD = Infinity;
   for (const b of j.barcos) {
-    if (b.hundiendo || b.cap === cap || equipoDe(b) === mio) continue;
+    if (b.hundiendo || b.cap === cap || equipoDe(b) === mio || b.convoy) continue; // el galeón del tesoro no se aborda
     const dc = Math.hypot(b.x - p.x, b.y - p.y);
     if (dc < b.stats.largo * 0.75 && dc < bajoD) { bajo = b; bajoD = dc; }
     if (entreCascos(yo, b) <= ABORDAJE.alcance && dc < aTiroD) { aTiro = b; aTiroD = dc; }
@@ -737,7 +751,8 @@ function actualizarGancho(j, cap, dt) {
     const mio = equipoDe(yo);
     for (const b of j.barcos) {
       if (b.cap === cap || b.hundiendo || equipoDe(b) === mio || (b.cap && enPuerto(j, b)) || !dentroDelCasco(b, g.x, g.y, 8)) continue;
-      if (b.convoy && guardiasDe(j, b) > 0) return soltarGancho(cap, 2, 'Primero los guardias');
+      // el galeón del tesoro no se aborda nunca: se lo hunde a cañonazos (Cristian, 13/11/2026)
+      if (b.convoy) return soltarGancho(cap, 2, 'El galeón del tesoro no se aborda: hundilo a cañonazos');
       cap.gancho = { fase: 'enganchado', obj: b, t: 0, x: b.x, y: b.y, yo0: yo.trip, el0: b.trip, acYo: 0, acEl: 0, bajas: 0 };
       aviso(cap, '¡Garfios al {barco}! Empieza el abordaje', 'bueno', { barco: b.nombre });
       if (esInsignia(b)) aviso(b.cap, '¡{nombre} te aborda! Peleá o cortá las sogas con F', 'malo', { nombre: cap.nombre });
@@ -984,6 +999,22 @@ export const FORMACIONES = [
   { id: 'frente', nombre: 'En frente', aviso: 'Formación: en frente, abriendo paso', lugar: (k) => [110 + Math.floor(k / 2) * 40, (k % 2 ? 1 : -1) * (70 + Math.floor(k / 2) * 95)] },
 ];
 
+// La flota junta el oro que está a la vista (Cristian, 13/11/2026): si hay cofres flotando cerca tuyo, cada barco va al más
+// cercano que no tenga otro barco tuyo más cerca, lo levanta y vuelve a su lugar. Es lo que hace siempre que no está peleando.
+export const VISTA_ORO = 650;
+function cofreParaEscolta(j, b, lider, escoltas) {
+  let mejor = null, mejorD = Infinity;
+  for (const c of j.cofres) {
+    if (Math.abs(c.x - lider.x) > VISTA_ORO || Math.hypot(c.x - lider.x, c.y - lider.y) > VISTA_ORO) continue;
+    if (enTierra(j, c.x, c.y, b.stats.ancho)) continue;
+    const d = Math.hypot(c.x - b.x, c.y - b.y);
+    if (d >= mejorD) continue;
+    if (escoltas.some((o) => o !== b && Math.hypot(c.x - o.x, c.y - o.y) < d)) continue;
+    mejor = c; mejorD = d;
+  }
+  return mejor ? { c: mejor, d: mejorD } : null;
+}
+
 function iaEscolta(j, b, dt) {
   if (b.hundiendo) return;
   if (bloqueado(j, b, dt)) return;
@@ -993,8 +1024,18 @@ function iaEscolta(j, b, dt) {
   if (enemigo && Math.hypot(enemigo.o.x - lider.x, enemigo.o.y - lider.y) < 700) {
     combatir(j, b, enemigo.o, enemigo.d);
   } else {
-    // en formación: a la par del jefe, una de cada lado
     const escoltas = j.barcos.filter((x) => x.cap === cap && x.bando === 'escolta' && !x.hundiendo);
+    const oro = cofreParaEscolta(j, b, lider, escoltas);
+    if (oro) {
+      // va derecho al cofre y afloja al llegar para no pasarlo de largo
+      timonHacia(b, Math.atan2(oro.c.y - b.y, oro.c.x - b.x));
+      b.velas = oro.d > 220 ? 3 : oro.d > 90 ? 2 : 1;
+      b.apuro = oro.d > 220 ? 1.25 : 1;
+      fuegoOportunista(j, b);
+      esquivarIslas(j, b);
+      return;
+    }
+    // en formación: a la par del jefe, una de cada lado
     const k = escoltas.indexOf(b);
     // La formación se arma según el rumbo con el que venías navegando, no según la proa del momento: si estás quieto y solo
     // girás, los lugares no dan vueltas alrededor tuyo y la flota se queda donde está (Nicolás, 15/11/2026: parado al lado
@@ -1095,6 +1136,31 @@ function actualizarConvoy(j, dt) {
 }
 
 // ---------- Tritones ----------
+// La tripulación les tira con mosquetes a los tritones que se acercan (Cristian, 13/11/2026): tu barco y los de tu flota,
+// solos, sin apuntar. Con más gente en cubierta tiran más seguido. Los cañonazos siguen bajándolos como antes.
+export const MOSQUETES = { alcance: 280, cadencia: 0.8, acierto: 0.65 };
+function mosquetes(j, dt) {
+  if (!j.tritones.length) return;
+  for (const b of j.barcos) {
+    if (!b.cap || b.hundiendo || b.trip < 2) continue;
+    b.mosquete = (b.mosquete || 0) - dt;
+    if (b.mosquete > 0) continue;
+    let obj = null, od = MOSQUETES.alcance + b.stats.largo * 0.5;
+    for (const tr of j.tritones) {
+      if (tr.muerto) continue;
+      const d = Math.hypot(tr.x - b.x, tr.y - b.y);
+      if (d < od) { obj = tr; od = d; }
+    }
+    if (!obj) { b.mosquete = 0.3; continue; }
+    b.mosquete = MOSQUETES.cadencia * Math.max(0.5, Math.min(2.5, b.stats.tripNecesaria / Math.max(1, b.trip))) * azar.rango(0.8, 1.2);
+    emitir(j, { k: 'm', x: Math.round(b.x), y: Math.round(b.y), tx: Math.round(obj.x), ty: Math.round(obj.y) });
+    if (Math.random() < MOSQUETES.acierto) {
+      obj.muerto = true;
+      textoFlotante(j, obj.x, obj.y, '¡Tritón abatido!', '#9be7c4');
+    }
+  }
+}
+
 function enTierra(j, x, y, margen = 0) {
   return j.mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + margen);
 }

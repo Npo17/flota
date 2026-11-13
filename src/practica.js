@@ -40,7 +40,7 @@ export const GUIA = [
   { dibujo: 'remolino', titulo: 'Remolinos y costas',
     texto: 'Los remolinos te chupan hacia el centro y te hacen girar: pasales lejos o salí a toda vela. Las costas golpean el casco si las chocás. Pero si te quedás quieto junto a una isla, la tripulación repara el casco hasta el 75 %.' },
   { dibujo: 'tesoro', titulo: 'El galeón del tesoro',
-    texto: 'Cada pocos minutos zarpa un galeón cargado de oro desde una punta del mapa. Suena la campana y arriba aparece un cartel con el tiempo que le queda para llegar al puerto: entre 2 y 2 minutos y medio. Va con guardias, y hay que vencerlos antes de abordarlo. Si llega al puerto, el oro se pierde.' },
+    texto: 'Cada pocos minutos zarpa un galeón cargado de oro desde una punta del mapa. Suena la campana y arriba aparece un cartel con el tiempo que le queda para llegar al puerto: entre 2 y 2 minutos y medio. Va con guardias: primero hay que hundirlos y después hundirlo a él, porque no se puede abordar. Si llega al puerto, el oro se pierde.' },
   { dibujo: 'civs', titulo: 'Las civilizaciones',
     texto: 'Hay 20 civilizaciones. Cada una tiene su barco, su bandera y una ventaja propia: más casco, más velocidad, mejores abordajes, más oro… Los barcos de tu misma civilización son de tu equipo: no se dañan entre ellos y pelean a tu favor.' },
   { dibujo: 'cascos', titulo: 'Tu barco',

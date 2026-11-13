@@ -358,5 +358,67 @@ for (const abordo of [true, false]) {
     ok(m.islas.every((i) => i.esPuerto || Math.hypot(i.x - m.puerto.x, i.y - m.puerto.y) > i.r + 200), `mundo ${id}: hay tierra encima del puerto`);
   }
 }
+
+// --- pedidos de Cristian (13/11/2026): tesoro sin abordaje, la flota junta el oro, mosquetes contra tritones, bots que pierden gente
+{
+  // el galeón del tesoro no se aborda, ni sin guardias
+  const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
+  k.barcos = [yo]; k.enemigosVivos = 0; k.proxConvoy = 0.01; yo.x = 3200; yo.y = 3600;
+  actualizar(k, 1 / 30, {});
+  const g = k.barcos.find((b) => b.convoy);
+  k.barcos = [yo, g]; // sin guardias
+  yo.x = g.x; yo.y = g.y - 120; // donde zarpó, lejos del puerto
+  g.x = yo.x; g.y = yo.y + 120; g.a = 0; g.velFija = 0; yo.a = 0; k.cdAbordaje = 0; yo.trip = 200;
+  actualizar(k, 1 / 60, { abordar: true, objetivo: { x: g.x, y: g.y } });
+  let avisado = false;
+  for (let i = 0; i < 60 * 6; i++) {
+    g.x = yo.x; g.y = yo.y + 120; g.v = 0; yo.v = 0; actualizar(k, 1 / 60, {});
+    avisado = avisado || k.avisos.some((q) => q.texto === 'El galeón del tesoro no se aborda: hundilo a cañonazos');
+  }
+  ok(g.bando === 'enemigo' && !(k.gancho && k.gancho.fase === 'enganchado'), 'tesoro: se pudo abordar el galeón del tesoro');
+  ok(avisado, 'tesoro: no avisó que no se aborda');
+}
+{
+  // la flota, sin enemigos a la vista, va a juntar los cofres que flotan cerca y vuelve con el oro
+  const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
+  const flota = k.barcos.filter((b) => b.bando === 'enemigo').slice(0, 2);
+  k.barcos = [yo, ...flota]; k.enemigosVivos = 0; k.proxConvoy = 999; k.mundo.islas = k.mundo.islas.filter((i) => i.tipo === 'puerto'); k.mundo.remolinos = []; k.tritones = []; k.yo.proxTritones = 1e9;
+  yo.x = 3000; yo.y = 5200; yo.a = 0; yo.v = 0;
+  flota.forEach((b, n) => { b.bando = 'escolta'; b.cap = k.yo; b.ia = { estado: 'sigue' }; b.x = 2900; b.y = 5100 + n * 200; b.a = 0; b.v = 0; });
+  k.cofres = [{ id: 1, x: 3450, y: 5550, oro: 100, t: 0 }, { id: 2, x: 2600, y: 4750, oro: 100, t: 0 }, { id: 3, x: 4300, y: 5200, oro: 100, t: 0 }];
+  const antes = k.oroBodega;
+  for (let i = 0; i < 60 * 30; i++) { yo.v = 0; yo.velas = 0; yo.x = 3000; yo.y = 5200; actualizar(k, 1 / 60, {}); }
+  ok(k.cofres.filter((c) => c.id < 3).length === 0 && k.oroBodega > antes, `flota: no juntó el oro a la vista (quedan ${k.cofres.length}, oro ${k.oroBodega - antes})`);
+  ok(k.cofres.some((c) => c.id === 3), 'flota: fue a buscar un cofre fuera de la vista');
+  const lejos = flota.map((b) => Math.hypot(b.x - yo.x, b.y - yo.y));
+  ok(lejos.every((d) => d < 320), `flota: no volvió a su lugar después de juntar el oro (${lejos.map((d) => d | 0)})`);
+}
+{
+  // la tripulación les tira a los tritones: con mosquetes, sin cañones, la mayoría no llega a abordar
+  const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
+  k.barcos = [yo]; k.enemigosVivos = 0; k.proxConvoy = 999; k.mundo.islas = k.mundo.islas.filter((i) => i.tipo === 'puerto'); k.yo.proxTritones = 1e9;
+  yo.x = 3000; yo.y = 5200; yo.v = 0; yo.trip = yo.stats.tripMax;
+  // promedio de varias olas de 4 tritones, a la distancia a la que salen en el juego: los mosquetes bajan una buena parte, no todos
+  let abatidos = 0, total = 0;
+  for (let ola = 0; ola < 10; ola++) {
+    const tr = [0, 1, 2, 3].map((n) => { const d = 420 + ((n * 37 + ola * 53) % 140); return { x: yo.x + Math.cos(n * 1.6 + ola) * d, y: yo.y + Math.sin(n * 1.6 + ola) * d, a: 0, t: 0, muerto: false }; });
+    k.tritones = [...tr]; yo.trip = yo.stats.tripMax;
+    for (let i = 0; i < 60 * 8 && k.tritones.length; i++) { yo.v = 0; actualizar(k, 1 / 60, {}); }
+    abatidos += tr.filter((t) => t.muerto).length; total += tr.length;
+  }
+  ok(abatidos >= total * 0.35, `tritones: la tripulación bajó solo ${abatidos} de ${total}`);
+  ok(abatidos < total, 'tritones: los mosquetes los bajan a todos, ya no hacen falta los cañones');
+}
+{
+  // a un bot castigado a cañonazos le baja la gente junto con el casco
+  const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
+  const e = k.barcos.find((b) => b.bando === 'enemigo');
+  k.barcos = [yo, e]; k.enemigosVivos = 0;
+  e.trip = e.stats.tripMax; e.vida = e.stats.vidaMax;
+  const bala = { dano: e.stats.vidaMax * 0.1, tripu: 0, dueno: yo, x: e.x, y: e.y };
+  for (let n = 0; n < 6; n++) { k.balas = [{ ...bala, vx: 0, vy: 0, vida: 1, radio: 4, equipo: 'x' }]; actualizar(k, 1 / 60, {}); }
+  const parte = e.trip / e.stats.tripMax;
+  ok(parte < 0.65 && parte > 0.4, `bots: con el 60 % del casco perdido la tripulación quedó al ${(parte * 100) | 0} %`);
+}
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);
