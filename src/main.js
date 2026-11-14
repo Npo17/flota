@@ -1041,6 +1041,10 @@ function pintarAjustes() {
   res.oninput = () => { $('aj-res-n').textContent = res.value + ' %'; };
   res.onchange = () => { guardarGraficos({ res: res.value / 100 }); ajustar(); };
   pintarTeclas();
+  // el crédito de la música (lo pide la licencia del autor)
+  const cred = $('aj-credito');
+  cred.textContent = t('Música: «{tema}», de {autor}', MUSICA) + ' · ';
+  cred.append(Object.assign(document.createElement('a'), { href: 'https://ivanduch.com', target: '_blank', rel: 'noopener', textContent: 'ivanduch.com' }));
   for (const [id, clave] of [['aj-calma', 'calma'], ['aj-formas', 'formas']]) { $(id).checked = !!g[clave]; $(id).onchange = () => guardarGraficos({ [clave]: $(id).checked }); }
   for (const cual of ['sonido', 'musica']) {
     const barra = $('aj-vol-' + cual), numero = $('aj-vol-' + cual + '-n');
@@ -1085,6 +1089,7 @@ for (const b of document.querySelectorAll('#pantalla-ajustes .aj-seccion')) {
 }
 
 // Ajustes → Controles: una fila por acción con su tecla. Clic en la tecla, y la próxima que se apriete queda (ESC cancela).
+const MUSICA = { tema: "Givmaru Trading Harbor", autor: "Ivan Duch" }; // nombres propios: no se traducen
 let esperandoTecla = null;
 function pintarTeclas() {
   const caja = $('aj-teclas');

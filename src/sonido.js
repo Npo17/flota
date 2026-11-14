@@ -19,6 +19,7 @@ let sonando = 0; // cañonazos que suenan ahora (para no apilar cien en una anda
 
 export const volumen = (cual) => vol[cual];
 export const estado = () => (ctx ? ctx.state : 'sin arrancar'); // para probar
+export const tema = () => ({ cargado: !!bufTema, sonando: !!fuenteTema, nivel: gTema ? +gTema.gain.value.toFixed(3) : 0 }); // para probar
 export const grabaciones = () => ({ canones: grab.canones.length, gritos: grab.gritos.length, espadas: grab.espadas.length }); // para probar: cuántas cargaron
 export function ponerVolumen(cual, v) {
   vol[cual] = Math.max(0, Math.min(1, v));
@@ -360,6 +361,17 @@ export function abordaje(fase) {
 
 // Las grabaciones (ver sonido/LEEME.md): cañonazos, gritos de combate y choques de espadas, todos de verdad.
 // Se bajan una sola vez, cuando arranca el sonido. Lo que no llegue a cargar se reemplaza por el sonido armado a mano.
+// La música del juego: "Givmaru Trading Harbor (Combat)", de Ivan Duch (https://ivanduch.com). Suena en bucle: fuerte en
+// los menús y el puerto, más baja en el mar. Su volumen es el de "Música" en Ajustes.
+const TEMA = 'musica-givmaru.mp3', NIVEL_TEMA = { lobby: 0.55, mar: 0.3 };
+let bufTema = null, fuenteTema = null, gTema = null, temaListo = false;
+function sonarTema(modo) {
+  if (!bufTema) return false;
+  if (!gTema) { gTema = ctx.createGain(); gTema.gain.value = 0; gTema.connect(gMusica); }
+  if (!fuenteTema) { fuenteTema = ctx.createBufferSource(); fuenteTema.buffer = bufTema; fuenteTema.loop = true; fuenteTema.connect(gTema); fuenteTema.start(); }
+  gTema.gain.setTargetAtTime(NIVEL_TEMA[modo] || 0, ctx.currentTime, modo === 'lobby' ? 1.0 : 0.8);
+  return true;
+}
 const GRABACIONES = { canones: ['canon-1.mp3', 'canon-2.mp3'], gritos: ['pelea-gritos.mp3'], espadas: ['espada-1.mp3', 'espada-2.mp3'] };
 const grab = { canones: [], gritos: [], espadas: [] };
 let pidiendoGrabaciones = false;
@@ -370,6 +382,12 @@ function cargarGrabaciones() {
   for (const [grupo, archivos] of Object.entries(GRABACIONES)) for (const archivo of archivos) {
     fetch(new URL('../sonido/' + archivo, import.meta.url)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
       .then((datos) => ctx.decodeAudioData(datos)).then((b) => { grab[grupo].push(b); }).catch(() => {});
+  }
+  // la música del juego (ver sonido/LEEME.md): se baja aparte, y hasta que llega suena la música armada con notas
+  if (!temaListo) {
+    temaListo = true;
+    fetch(new URL('../sonido/' + TEMA, import.meta.url)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then((datos) => ctx.decodeAudioData(datos)).then((b) => { bufTema = b; ultimoAjuste = -1; ambiente(modoActual, fuerzaViento, cercaRemolino); }).catch(() => {});
   }
 }
 let ronco = null;
@@ -496,7 +514,7 @@ export function evento(ev, oyente, de) {
 // Un cañonazo de muestra, para oír el volumen al mover la barra en Ajustes
 export function muestra(casco, municion, nivel = 0.7) { if (ctx && ctx.state === 'running') canonazo(ctx.currentTime + 0.02, nivel, 0, 0.9, casco, municion); }
 
-// En qué pantalla está el jugador: 'lobby' (música y un mar lejano), 'mar' (mar y viento, sin música) o 'nada'.
+// En qué pantalla está el jugador: 'lobby' (música y un mar lejano), 'mar' (mar y viento, con la música más baja) o 'nada'.
 // viento: de 0 a 1, cuánto sopla donde está el barco. remolino: de 0 a 1, cuán adentro de un remolino está (0 = lejos, 1 = en el centro).
 // Se puede llamar en cada cuadro: solo ajusta cada tanto.
 let cercaRemolino = 0;
@@ -515,8 +533,9 @@ export function ambiente(modo, viento = 0, remolino = 0, tormenta = 0) {
   filtroRemolino.frequency.setTargetAtTime(200 + 620 * r * r, ahora, 0.4);
   for (const o of giroRemolino) o.frequency.setTargetAtTime(0.55 + 2.6 * r * r, ahora, 0.5);
   gLluvia.gain.setTargetAtTime(modo === 'mar' ? 0.75 * tormenta : 0, ahora, 0.8);
-  gMusicaModo.gain.setTargetAtTime(modo === 'lobby' ? 2.8 : 0, ahora, modo === 'lobby' ? 1.2 : 0.5);
-  if (modo === 'lobby') arrancarMusica(); else if (relojMusica && gMusicaModo.gain.value < 0.01) pararMusica();
+  const conTema = sonarTema(modo); // con el tema grabado cargado, la música armada con notas no suena
+  gMusicaModo.gain.setTargetAtTime(modo === 'lobby' && !conTema ? 2.8 : 0, ahora, modo === 'lobby' ? 1.2 : 0.5);
+  if (modo === 'lobby' && !conTema) arrancarMusica(); else if (relojMusica && gMusicaModo.gain.value < 0.01) pararMusica();
 }
 
 // Arranca con el primer gesto (el navegador no deja antes). En la app de escritorio suena desde el principio.

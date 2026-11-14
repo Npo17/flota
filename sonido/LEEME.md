@@ -11,4 +11,10 @@ Se probaron y se descartaron: "Cannon fire" de Thimras en OpenGameArt (un golpe 
 | `espada-1.mp3` | Choque de espadas | "Swords Clash - High Quality #3", de Christopherderp, en https://freesound.org/people/Christopherderp/sounds/364531/ — **CC0**. |
 | `espada-2.mp3` | Otro choque de espadas | "Sword Clash", de Bird_man, en https://freesound.org/people/Bird_man/sounds/275159/ — **CC0**. |
 
+## Música
+
+| Archivo | Qué es | Origen y licencia |
+|---|---|---|
+| `musica-givmaru.mp3` | La música del juego, en bucle (fuerte en los menús y el puerto, más baja en el mar) | "Givmaru Trading Harbor (Combat)", del álbum *Pirates* de **Ivan Duch**, en https://ivanduch.com — libre de regalías **con crédito obligatorio**: "Music: Givmaru Trading Harbor by Ivan Duch (https://ivanduch.com)". El crédito está en Ajustes → Sonido y tiene que ir también en la página de Steam. Su licencia pide no repartir el audio como archivo suelto ni registrarlo en Content ID. Recomprimido a 160 kbps, sin la tapa. Elegida por Nicolás y Cristian el 13/11/2026. |
+
 Regla: solo grabaciones con licencia que permita uso comercial (CC0 o similar), anotadas en esta tabla con su origen. Nada sacado de videos.

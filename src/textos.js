@@ -9,6 +9,7 @@ export const TEXTOS = [
   ["Media", "Medium", "Média", "Moyenne", "Średnia", "Media", "Mittel", "Orta"],
   ["Alta", "High", "Alta", "Haute", "Wysoka", "Alta", "Hoch", "Yüksek"],
   ["Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra"],
+  ["Música: «{tema}», de {autor}", "Music: “{tema}” by {autor}", "Música: “{tema}”, de {autor}", "Musique : « {tema} », de {autor}", "Muzyka: „{tema}”, {autor}", "Musica: «{tema}», di {autor}", "Musik: „{tema}“ von {autor}", "Müzik: “{tema}”, {autor}"],
   // ----- Ajustes: controles -----
   ["Configuración de gráficos", "Graphics settings", "Configurações gráficas", "Paramètres graphiques", "Ustawienia grafiki", "Impostazioni grafiche", "Grafikeinstellungen", "Grafik ayarları"],
   ["Configuración de controles", "Control settings", "Configurações de controles", "Paramètres des commandes", "Ustawienia sterowania", "Impostazioni dei comandi", "Steuerungseinstellungen", "Kontrol ayarları"],

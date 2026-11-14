@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (música nueva: "Givmaru Trading Harbor", de Ivan Duch) — Nicolás + Claude
+
+**Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.
+
+- **La música del juego** ahora es "Givmaru Trading Harbor (Combat)", del álbum *Pirates* de **Ivan Duch** (https://ivanduch.com), elegida por Nicolás y Cristian. Archivo `sonido/musica-givmaru.mp3` (recomprimido a 160 kbps, 1,3 MB). Suena en bucle: más fuerte en los menús y el puerto (`NIVEL_TEMA.lobby` 0,55) y más baja en el mar (`mar` 0,3), con el volumen de "Música" de Ajustes. Hasta que termina de bajar suena la música armada con notas de antes, que queda como respaldo (`src/sonido.js`).
+- **Crédito obligatorio** (lo pide su licencia): está en Ajustes → Sonido ("Música: «Givmaru Trading Harbor», de Ivan Duch · ivanduch.com", en los 8 idiomas). **Falta ponerlo en la página de Steam**: "Music: Givmaru Trading Harbor by Ivan Duch (https://ivanduch.com)". Detalle de la licencia en `sonido/LEEME.md`.
+- **Ojo con la licencia:** pide no repartir el audio como archivo suelto. En el .exe va empaquetado; en la web y en este repo público el MP3 queda descargable. Se recomendó pedirle a Ivan Duch el OK por escrito para Steam y la web.
+- **No verificado:** el cambio de volumen al pasar del menú al mar se probó solo leyendo el código (en la prueba automática el audio queda en pausa).
+
 ## 2026-11-13 (la brisa avanzaba a saltos en línea) — Nicolás + Claude
 
 **Estado: commiteado en local, falta el OK de Nicolás para subir.** Solo el cliente (`src/red.js`): no hay que republicar el servidor.
