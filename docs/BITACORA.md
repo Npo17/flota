@@ -5,7 +5,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-13 (aspecto del mar, Tandas C y D: tierra con relieve, barcos con volumen, bruma, llegada y ajustes de gráficos) — Nicolás + Claude
 
-**Estado: en localhost, SIN commitear y sin subir (junto con las Tandas A y B). Nicolás lo prueba antes de decidir.** Sigue sin tocar la simulación ni el servidor: no hay que republicar nada.
+**Estado: subido el 13/11 con el OK de Nicolás (falta republicar el servidor).** Sigue sin tocar la simulación ni el servidor: no hay que republicar nada.
 
 - **`src/terreno.js` (nuevo): la tierra con relieve.** Arena mojada y seca, vegetación, bosque con copas, roca en las pendientes, sierras tierra adentro en las tierras grandes, nieve y roca en los mapas de hielo, arena negra en los volcánicos, icebergs de caras quebradas y bancos de arena que se transparentan. Usa las mismas costas que el juego (la forma exacta se recorta con el mismo trazo que antes), así que se choca donde se ve. El mundo se pinta por baldosas de 400 unidades, una vez cada una (una por cuadro como mucho); mientras falta alguna a la vista se ve la tierra lisa de antes. La luz del relieve es la del escenario. Los colores salen de `tema` en `src/mapas.js`.
 - **Barcos con volumen (`imagenLuz` en `src/dibujo.js`):** el dibujo de cada barco queda igual y se lo ilumina como relieve: la altura sale del propio dibujo (casco redondeado hacia la borda, lo claro más alto) y la luz es la del escenario. 24 versiones por dirección de luz, armadas cuando hacen falta. Además un cabeceo y rolido muy leve. **No es un modelo 3D**: para eso hace falta arte nuevo (ver pendientes).
@@ -33,6 +33,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 - **Pendiente / no hecho:**
   - **Sincronización vertical:** no se puede prender o apagar desde el juego; en la app necesita un arranque con otra opción (cambio en `age-of-navies-steam`). Hoy la app va siempre sincronizada con el monitor.
   - **Sin medir en equipo modesto ni Steam Deck.**
+  - **Para Cristian:** la prueba nueva "flota quieta" de `probar-sim` falla a veces (1 de cada 10 corridas, "anduvo 484 px dando vueltas", límite 400). Arma la flota con barcos enemigos al azar, y con solo 12 civilizaciones en juego cambian los barcos que salen. Con tu versión sola no la vi fallar en 6 corridas. No es del dibujo: es el movimiento de la escolta o el límite de la prueba.
   - **Dato suelto:** en Gibraltar, pegado a la costa norte con 12 barcos, da 37–50 fps **también en la versión publicada** (medido contra `HEAD`): no viene de estos cambios; hay que mirarlo aparte.
   - **Barcos como modelo de verdad (Tanda E):** necesita arte nuevo por barco; lo decide Nicolás con Cristian.
   - Las civilizaciones sin arte propio siguen con su dibujo genérico y su sombra fija.
@@ -40,7 +41,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-13 (aspecto del mar, Tanda B: faroles, cañonazos, sombras y escenarios completos) — Nicolás + Claude
 
-**Estado: en localhost, SIN commitear y sin subir (igual que la Tanda A, de la que depende). Nicolás lo prueba antes de decidir.** Sigue sin tocar la simulación ni el servidor.
+**Estado: subido el 13/11 con el OK de Nicolás (falta republicar el servidor).** Sigue sin tocar la simulación ni el servidor.
 
 - **`src/luces.js` (nuevo):** los faroles de cada barco como datos (`LUCES`: por civilización y por casco, lista de puntos con `x`, `y`, `r`, `i` y `color` opcional). Galeones europeos con dos fanales de popa y uno de proa; galeras otomanas bajo la toldilla y en el espolón; vikingos con teas rojizas; juncos chinos con faroles de papel repartidos; japoneses en las esquinas del castillo. Para ajustar un barco se toca su fila, no la lógica.
 - **`dibujarLuces` (`src/dibujo.js`):** resplandores sumados, encima del velo del escenario, con parpadeo leve. `faroles` del escenario dice cuánto se notan (casi nada de mañana, mucho de noche). También los faroles del muelle y un brillo en el oro que flota. El farol fijo que pintaba `dibujarBarco` queda solo para las vistas del astillero (`sinFarol`).
@@ -55,7 +56,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-13 (aspecto del mar, Tanda A: paleta, agua nueva y estelas) — Nicolás + Claude
 
-**Estado: en localhost, SIN commitear y sin subir. Espera el visto bueno de los socios antes de seguir con la Tanda B.** No toca la simulación ni el servidor: no hay nada que republicar.
+**Estado: subido el 13/11 con el OK de Nicolás (falta republicar el servidor).** No toca la simulación ni el servidor: no hay nada que republicar.
 
 Pedido: que entrar al juego no sea un corte seco con el inicio de la app (cinematográfico, con escenarios). Se hace por tandas con parada: A ambiente base, B luz (faroles, cañonazos, sombras, escenarios completos), C atmósfera y transición, D calidad y plataforma, E profundidad (solo si se aprueba).
 
