@@ -1,5 +1,5 @@
 // Cómo se arma un barco a partir de su diseño (casco, velas, cañones, munición, tripulación).
-import { CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PESO_CANON, ENEMIGOS, FACCIONES } from './config.js';
+import { CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, PESO_CANON, ENEMIGOS, FACCIONES, FACCIONES_JUEGO, enJuego } from './config.js';
 
 export function costoDiseno(d) {
   return CASCOS[d.casco].costo + VELAS[d.velas].costo + d.canones * COSTO_CANON
@@ -83,7 +83,8 @@ export function rearmar(b) {
 }
 
 function faccionAlAzar(lista) {
-  const ids = lista && lista.length ? lista : Object.keys(FACCIONES);
+  const deLaLista = (lista || []).filter(enJuego); // un mapa puede nombrar civilizaciones que hoy no están en el juego
+  const ids = deLaLista.length ? deLaLista : Object.keys(FACCIONES_JUEGO);
   return ids[Math.floor(Math.random() * ids.length)];
 }
 

@@ -6,6 +6,9 @@
   --carta: linear-gradient(#1a405a, #143247); --carta-elegida: linear-gradient(#245674, #1b4560);
   --oro: #ffd166; --acento: #ffd166; --boton: #2a5f80; --boton-2: #1d4763; --campo: #0c2233; --texto-campo: #fff;
   --surco: rgba(0, 0, 0, 0.45); --error: #ff8f8f; --yo: #b8ffcb; --maldita: #b9e8a0; --maldita-borde: #3d5a2a;
+  /* La identidad del mar, compartida con el inicio de la app y con src/escenarios.js (PALETA): vidrio oscuro, borde dorado y los
+     cálidos reservados para luces y acentos. */
+  --vidrio: rgba(5, 18, 28, 0.66); --vidrio-fuerte: rgba(5, 18, 28, 0.80); --borde-oro: rgba(255, 233, 168, 0.3); --farol: #ffb45e; --marfil: #f3ead2;
   color-scheme: dark;
 }
 :root[data-tema="claro"] {
@@ -19,8 +22,14 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--texto); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+/* el agua (WebGL) va debajo del lienzo del juego, que es transparente donde hay mar */
+canvas#agua { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 canvas#mar { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: none; }
 .oculto { display: none !important; }
+/* En el mar, los paneles son del mismo vidrio que el inicio: oscuro, translúcido, con el borde dorado (la pantalla clara conserva los suyos) */
+:root:not([data-tema="claro"]) #hud .panel { background: var(--vidrio); border-color: var(--borde-oro); backdrop-filter: blur(6px); }
+:root:not([data-tema="claro"]) #hud .accion:not(.apagada), :root:not([data-tema="claro"]) #hud .aviso { background: var(--vidrio-fuerte); backdrop-filter: blur(6px); }
+:root:not([data-tema="claro"]) #minimapa { box-shadow: 0 0 0 1px var(--borde-oro); }
 .oro { color: var(--oro); }
 .suave { color: var(--suave); font-size: 12px; }
 
@@ -265,6 +274,15 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .chips.dos { grid-template-columns: repeat(2, 1fr); }
 .aj-vol { display: grid; grid-template-columns: 1fr 1.4fr 3.2em; align-items: center; gap: 10px; margin: 8px 0; font-weight: 700; }
 .aj-vol input { width: 100%; accent-color: #ffd166; cursor: pointer; }
+.aj-vol .chips { gap: 4px; } .aj-vol .chips .chip { padding: 5px 2px; font-size: 12px; }
+.aj-teclas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 6px 0 8px; }
+.aj-tecla { display: grid; grid-template-columns: 1fr 6.5em; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+.aj-tecla .chip { padding: 6px 4px; font-size: 12px; letter-spacing: 0; }
+.aj-nota { margin: 2px 0 4px; font-size: 12px; }
+.aj-reset { margin-bottom: 8px; }
+@media (max-width: 560px) { .aj-teclas { grid-template-columns: 1fr; } }
+.aj-tilde { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-weight: 700; cursor: pointer; }
+.aj-tilde input { accent-color: var(--oro, #ffd166); width: 16px; height: 16px; }
 .aj-vol b { text-align: right; font-variant-numeric: tabular-nums; color: var(--rotulo); font-size: 13px; }
 .chip { font: inherit; font-weight: 800; letter-spacing: 1px; padding: 12px 8px; border-radius: 10px; border: 2px solid transparent; background: var(--tarjeta); color: inherit; cursor: pointer; }
 .chip:hover { background: var(--tarjeta-hover); }

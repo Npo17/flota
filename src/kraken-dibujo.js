@@ -66,14 +66,17 @@ function cadena(semilla, ox, oy, ang, largo, grosor, o = {}) {
   };
   x.lineCap = 'round';
   x.globalAlpha = 0.26 * alfa; tramo(0, sale, PIEL.sombra, (w) => w, () => 0);            // lo que va bajo el agua
+  x.globalAlpha = 0.30 * alfa;                                                            // la sombra que echa sobre el agua lo que ya salió
+  x.save(); x.translate(9, 12); tramo(sale, n, '#030a12', (w) => w + 8, () => 0); x.restore();
   x.globalAlpha = alfa;
   tramo(sale, n, PIEL.borde, (w) => w + 6, () => 0);                                       // borde
   tramo(sale, n, o.herido ? PIEL.herido : PIEL.lomo, (w) => w, () => 0);                   // lomo oscuro
-  tramo(sale, n, 'rgba(28, 20, 24, 0.4)', (w) => w * 0.3, (w) => -w * 0.34);               // sombra del canto
+  tramo(sale, n, 'rgba(18, 12, 16, 0.55)', (w) => w * 0.34, (w) => -w * 0.36);             // sombra del canto: el tentáculo es redondo
+  tramo(sale, n, 'rgba(150, 118, 132, 0.38)', (w) => w * 0.30, (w) => -w * 0.10);          // el lomo, donde le da la luz
   tramo(sale, n, PIEL.panza, (w) => w * 0.46, (w) => w * 0.25);                            // cara pálida, la de las ventosas
   x.fillStyle = 'rgba(38, 26, 32, 0.5)';                                                   // manchas de la piel
   for (let k = sale + 1; k < n - 2; k += 2) if (azar(semilla * 31 + k) > 0.4) { const p = pts[k], m = al(p, -p[2] * (0.05 + azar(semilla + k) * 0.3)); x.beginPath(); x.ellipse(m[0], m[1], p[2] * 0.2, p[2] * 0.11, p[3] + azar(k) * 2, 0, TAU); x.fill(); }
-  x.strokeStyle = 'rgba(235, 240, 245, 0.2)'; x.lineWidth = 2.5; x.beginPath();            // reflejo mojado, suave
+  x.strokeStyle = 'rgba(235, 240, 245, 0.36)'; x.lineWidth = 2.5; x.beginPath();           // reflejo mojado
   for (let k = sale; k <= n - 4; k++) { const m = al(pts[k], -pts[k][2] * 0.14); k === sale ? x.moveTo(m[0], m[1]) : x.lineTo(m[0], m[1]); }
   x.stroke();
   for (let k = sale + 1; k < n; k++) {                                                     // ventosas: dos filas, grandes en la base y chicas en la punta
@@ -112,6 +115,7 @@ function cabeza(claro, asoma, ojosAbre) {
   if (asoma <= 0.01) return;
   espuma(K.x, K.y, 126 + Math.sin(t * 2) * 4, 0.55 * asoma * alfaK);
   x.save(); x.translate(K.x, K.y); x.rotate(K.a); x.scale(late, 2 - late); x.globalAlpha = asoma * alfaK;
+  x.fillStyle = 'rgba(3, 10, 18, 0.34)'; x.beginPath(); x.ellipse(-28, 16, 150, 84, 0, 0, TAU); x.fill(); // la sombra del cuerpo sobre el agua
   x.strokeStyle = PIEL.borde; x.lineWidth = 5; x.lineJoin = 'round';
   x.fillStyle = '#4a3640'; // aletas redondeadas
   for (const s of [-1, 1]) { x.beginPath(); x.moveTo(-66, s * 36); x.bezierCurveTo(-96, s * 96, -150, s * 86, -156, s * 34); x.quadraticCurveTo(-130, s * 22, -108, s * 24); x.closePath(); x.fill(); x.stroke(); }
@@ -120,13 +124,18 @@ function cabeza(claro, asoma, ojosAbre) {
   x.beginPath(); x.moveTo(84, 0); x.bezierCurveTo(84, -70, -20, -74, -90, -40); x.quadraticCurveTo(-150, -14, -168, 0); x.quadraticCurveTo(-150, 14, -90, 40); x.bezierCurveTo(-20, 74, 84, 70, 84, 0); x.closePath(); x.fill(); x.stroke();
   x.save(); x.clip();
   x.fillStyle = 'rgba(28, 18, 26, 0.45)'; x.beginPath(); x.ellipse(-60, 30, 130, 30, 0.08, 0, TAU); x.fill();           // sombra
+  { // el manto es un bulto: luz arriba, y se oscurece hacia los bordes
+    const lz = x.createRadialGradient(-10, -22, 8, -30, 0, 150);
+    lz.addColorStop(0, 'rgba(176, 140, 152, 0.42)'); lz.addColorStop(0.45, 'rgba(120, 92, 104, 0.10)'); lz.addColorStop(1, 'rgba(10, 6, 10, 0.50)');
+    x.fillStyle = lz; x.fillRect(-180, -90, 280, 180);
+  }
   for (let i = 0; i < 12; i++) {                                                                                          // manchas: oscuras y algunas gris verdoso
     x.fillStyle = i % 3 ? 'rgba(34, 22, 30, 0.5)' : 'rgba(112, 120, 96, 0.28)';
     x.beginPath(); x.ellipse(-150 + azar(i + 61) * 215, (azar(i + 71) - 0.5) * 104, 8 + azar(i + 81) * 17, 5 + azar(i + 91) * 9, azar(i) * 3, 0, TAU); x.fill();
   }
   x.strokeStyle = 'rgba(28, 18, 26, 0.5)'; x.lineWidth = 1.6;                                                             // arrugas de piel vieja
   for (let i = 0; i < 9; i++) { const y0 = -52 + i * 13; x.beginPath(); x.moveTo(40 - azar(i) * 30, y0); x.quadraticCurveTo(-30, y0 + (azar(i + 5) - 0.5) * 18, -120 + azar(i + 9) * 30, y0 * 0.45); x.stroke(); }
-  x.strokeStyle = 'rgba(235, 240, 245, 0.2)'; x.lineWidth = 5; x.lineCap = 'round'; x.beginPath(); x.moveTo(52, -42); x.bezierCurveTo(8, -58, -50, -50, -96, -30); x.stroke(); // reflejo mojado
+  x.strokeStyle = 'rgba(235, 240, 245, 0.34)'; x.lineWidth = 5; x.lineCap = 'round'; x.beginPath(); x.moveTo(52, -42); x.bezierCurveTo(8, -58, -50, -50, -96, -30); x.stroke(); // reflejo mojado
   x.restore();
   for (const [px, py, tam, n] of [[-34, -18, 5, 6], [-96, 8, 4.5, 5], [-58, 34, 3.5, 4], [-128, -8, 3.5, 4], [6, 20, 3, 3]]) percebes(px, py, tam, px + py, n); // percebes en racimos
   x.strokeStyle = PIEL.cicatriz; x.lineWidth = 2.6; x.lineCap = 'round';                                                  // cicatrices
@@ -269,27 +278,85 @@ export function dibujarKrakenArriba(ctx, j, visible) {
   x.globalAlpha = 1;
 }
 
+// Lo que brilla del Kraken, encima de lo oscuro del escenario: los ojos (ámbar, y encendidos cuando se enfurece) y un
+// resplandor frío del agua revuelta a su alrededor, para que la silueta se lea en la tormenta.
+export function dibujarKrakenLuz(ctx, j, visible) {
+  const k = j.kraken;
+  if (!k || (k.buceo && k.buceo > 1.1) || !visible(k.x, k.y, 420)) return;
+  const emerge = k.emerge ?? 1, asoma = suave((emerge - 0.55) / 0.3) * (1 - hunde * hunde), abre = suave((emerge - 0.86) / 0.14);
+  if (asoma <= 0.02) return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  let g = ctx.createRadialGradient(k.x, k.y, 60, k.x, k.y, 330);
+  g.addColorStop(0, `rgba(70, 120, 140, ${0.20 * asoma})`); g.addColorStop(0.6, `rgba(50, 96, 118, ${0.09 * asoma})`); g.addColorStop(1, 'rgba(40, 80, 100, 0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(k.x, k.y, 330, 0, TAU); ctx.fill();
+  const ca = Math.cos(k.a), sa = Math.sin(k.a), furia = !!k.furia && !k.muerte, late = 1 + 0.12 * Math.sin(j.t * (furia ? 7 : 2.2));
+  for (const s of [-1, 1]) {
+    const ex = k.x + ca * 24 - sa * s * 62, ey = k.y + sa * 24 + ca * s * 62, R = (furia ? 78 : 52) * late;
+    g = ctx.createRadialGradient(ex, ey, 2, ex, ey, R);
+    const c = furia ? '255, 150, 60' : '214, 196, 96';
+    g.addColorStop(0, `rgba(${c}, ${(furia ? 0.85 : 0.55) * abre * asoma})`); g.addColorStop(0.3, `rgba(${c}, ${(furia ? 0.34 : 0.20) * abre * asoma})`); g.addColorStop(1, `rgba(${c}, 0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ex, ey, R, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
 // La noche con tormenta mientras el Kraken está despierto (en la pantalla, no en el mar): se oscurece, llueve y caen relámpagos.
 // fuerza va de 0 a 1 (la pantalla la sube y la baja despacio, para que anochezca y amanezca de a poco).
 let rayo = -9, proxRayo = 3;
-export function dibujarTormenta(ctx, j, ancho, alto, fuerza) {
+export function dibujarTormenta(ctx, j, ancho, alto, fuerza, o = {}) {
   if (fuerza <= 0.01) return;
   x = ctx; t = j.t;
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = fuerza;
-  const g = ctx.createRadialGradient(ancho / 2, alto / 2, Math.min(ancho, alto) * 0.15, ancho / 2, alto / 2, Math.max(ancho, alto) * 0.75);
-  g.addColorStop(0, 'rgba(8, 10, 34, 0.42)'); g.addColorStop(1, 'rgba(4, 6, 22, 0.8)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, ancho, alto);
-  ctx.strokeStyle = 'rgba(190, 215, 240, 0.4)'; ctx.lineWidth = 1.6; ctx.beginPath(); // la lluvia
-  const gotas = Math.round(Math.min(260, ancho * alto / 6000));
-  for (let i = 0; i < gotas; i++) {
-    const px = (azar(i + 300) * (ancho + 300) - 150 - t * 240) % (ancho + 300), py = (azar(i + 500) * alto + t * (760 + azar(i) * 300)) % alto, qx = px < -150 ? px + ancho + 300 : px;
-    ctx.moveTo(qx, py); ctx.lineTo(qx - 9, py + 26);
+  if (!o.sinOscuro) { // con los escenarios, lo oscuro lo pone el escenario (src/escenarios.js) y acá quedan la lluvia y los rayos
+    const g = ctx.createRadialGradient(ancho / 2, alto / 2, Math.min(ancho, alto) * 0.15, ancho / 2, alto / 2, Math.max(ancho, alto) * 0.75);
+    g.addColorStop(0, 'rgba(8, 10, 34, 0.42)'); g.addColorStop(1, 'rgba(4, 6, 22, 0.8)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, ancho, alto);
   }
-  ctx.stroke();
-  if (t > proxRayo || proxRayo - t > 20) { rayo = t; proxRayo = t + 3 + Math.random() * 6; }
+  // La lluvia. No es una sola tanda de rayas pegadas a la pantalla: son tres capas a distinta altura (las de abajo, chicas,
+  // muchas y lentas; las de arriba, pocas, largas y rápidas) que se corren distinto cuando el barco avanza, así se sienten
+  // en el aire y no en el vidrio. Caen inclinadas según el viento.
+  const zoom = o.zoom || 1, camX = (o.camX || 0) * zoom, camY = (o.camY || 0) * zoom, lento = o.calma ? 0.45 : 1;
+  const vx = Math.cos(o.viento ?? -0.6) * 0.42, largoDir = Math.hypot(vx, 1), dx = vx / largoDir, dy = 1 / largoDir;
+  const base = Math.min(620, ancho * alto / 3200) * (o.calma ? 0.5 : 1);
+  for (const [cuantas, largo, grosor, alfa, vel, par, sem] of [[0.62, 8, 1.1, 0.30, 430, 0.9, 300], [0.30, 15, 1.4, 0.36, 720, 1.2, 900], [0.08, 30, 2.4, 0.17, 1080, 1.6, 1700]]) {
+    const W = ancho + 80, H = alto + 80, n = Math.round(base * cuantas);
+    ctx.strokeStyle = `rgba(200, 222, 244, ${alfa})`; ctx.lineWidth = grosor; ctx.lineCap = 'round'; ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const v = vel * (0.8 + 0.4 * azar(i + sem + 7)) * lento, l = largo * (0.7 + 0.6 * azar(i + sem + 11));
+      let px = (azar(i + sem) * W + dx * t * v - camX * par) % W, py = (azar(i + sem + 500) * H + dy * t * v - camY * par) % H;
+      if (px < 0) px += W; if (py < 0) py += H;
+      ctx.moveTo(px - 40, py - 40); ctx.lineTo(px - 40 + dx * l, py - 40 + dy * l);
+    }
+    ctx.stroke();
+  }
+  // cortinas: franjas anchas donde llueve más tupido, que cruzan la pantalla con el viento
+  for (let q = 0; q < 2; q++) {
+    const anchoF = ancho * (0.26 + 0.1 * q), paso = ancho + anchoF * 2, pos = ((t * (95 + q * 60) * lento * (dx >= 0 ? 1 : -1) + q * paso * 0.55 - camX * 0.4) % paso + paso) % paso - anchoF;
+    const g = ctx.createLinearGradient(pos, 0, pos + anchoF, 0);
+    g.addColorStop(0, 'rgba(176, 198, 220, 0)'); g.addColorStop(0.5, `rgba(176, 198, 220, ${0.075 - q * 0.02})`); g.addColorStop(1, 'rgba(176, 198, 220, 0)');
+    ctx.save(); ctx.transform(1, 0, dx * 0.5, 1, 0, 0); ctx.fillStyle = g; ctx.fillRect(pos - alto, 0, anchoF + alto * 2, alto); ctx.restore();
+  }
+  // las gotas que revientan sobre las cubiertas: puntitos blancos que duran un instante, en cada barco a la vista
+  if (o.zoom) {
+    ctx.fillStyle = 'rgba(232, 242, 252, 0.8)';
+    for (const b of j.barcos) {
+      const sx = (b.x - o.camX) * zoom + ancho / 2, sy = (b.y - o.camY) * zoom + alto / 2;
+      if (b.hundiendo || sx < -80 || sy < -80 || sx > ancho + 80 || sy > alto + 80) continue;
+      const L = b.stats.largo * 0.46, Wd = b.stats.ancho * 0.42, ca = Math.cos(b.a), sa = Math.sin(b.a), cuantas = Math.max(3, Math.round(b.stats.largo / 14));
+      for (let k = 0; k < cuantas; k++) {
+        const tanda = Math.floor(t * 9 + k * 0.37 + b.id), fx = azar(tanda * 3.1 + k * 17 + b.id) * 2 - 1, fy = (azar(tanda * 5.3 + k * 29 + b.id) * 2 - 1) * Math.sqrt(Math.max(0, 1 - fx * fx));
+        const edad = (t * 9 + k * 0.37 + b.id) % 1, r = (0.7 + edad * 1.5) * zoom;
+        ctx.globalAlpha = fuerza * (1 - edad) * 0.9;
+        ctx.beginPath(); ctx.arc(sx + (ca * fx * L - sa * fy * Wd) * zoom, sy + (sa * fx * L + ca * fy * Wd) * zoom, r, 0, TAU); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = fuerza;
+  }
+  const cada = 1 / Math.max(0.2, o.rayos || 1.7); // un escenario con menos rayos los espacia
+  if (!(o.rayos <= 0) && (t > proxRayo || proxRayo - t > 40)) { rayo = t; proxRayo = t + (5 + Math.random() * 10) * cada; }
   const fr = t - rayo;
   if (fr >= 0 && fr < 0.5) { // el relámpago: un fogonazo doble y el rayo
-    ctx.fillStyle = `rgba(225, 235, 255, ${0.45 * Math.max(0, 1 - fr / 0.5) * (fr < 0.08 || (fr > 0.16 && fr < 0.24) ? 1 : 0.35)})`; ctx.fillRect(0, 0, ancho, alto);
+    ctx.fillStyle = `rgba(225, 235, 255, ${(o.calma ? 0.15 : 0.45) * Math.max(0, 1 - fr / 0.5) * (fr < 0.08 || (fr > 0.16 && fr < 0.24) ? 1 : 0.35)})`; ctx.fillRect(0, 0, ancho, alto);
     if (fr < 0.26) {
       ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 4; ctx.lineJoin = 'miter'; ctx.beginPath();
       let px = ancho * (0.12 + azar(Math.floor(rayo * 10)) * 0.76), py = 0; ctx.moveTo(px, py);

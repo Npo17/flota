@@ -1,6 +1,7 @@
 // Arte de los barcos franceses (navíos del Rey Sol, azul y oro), vista 100 % cenital, proa hacia +x. Un diseño propio por casco:
 // balandra (cúter de dos capas de vela, flor de lis), bergantín (tres capas en el palo mayor, espada Joyeuse) y galeón (navío con castillos y balcón de popa, sol radiante).
 // Todo el aparejo es de velas cuadras, con flores de lis doradas y relinga azul.
+import { REAL, formaReal, velaAntes, velaDespues, lateralDespues, cubiertaReal, canonReal, sombraAparejo } from './arte-real.js';
 const TAU = Math.PI * 2;
 const TIPOS = {
   balandra: {
@@ -102,6 +103,7 @@ function cubierta(ctx, c) {
   ctx.save(); casco(ctx, c, .9, .76); ctx.clip(); tablones(ctx, L, W); ctx.restore();
   if (c.popaAlta !== undefined) alto(ctx, c, c.popaAlta * L, -1);
   if (c.proaAlta !== undefined) alto(ctx, c, c.proaAlta * L, 1);
+  if (REAL.on) cubiertaReal(ctx, () => casco(ctx, c, .9, .76), () => casco(ctx, c), L, W);
 }
 
 function itemsCubierta(ctx, c) {
@@ -140,6 +142,7 @@ function puertos(ctx, c, d, r) {
     const x = L * (c.px[0] + ((c.px[1] - c.px[0]) * (n === 1 ? .5 : i / (n - 1))));
     for (const s of [-1, 1]) {
       const y = s * mitad(c, x) * .83, roto = r() < pRoto;
+      if (REAL.on && !roto) { canonReal(ctx, x, s * mitad(c, x), s, W, L); continue; }
       ctx.fillStyle = '#0a0604'; ctx.fillRect(x - L * .016, y - W * .033, L * .032, W * .066);
       ctx.strokeStyle = E.oro; ctx.lineWidth = .5; ctx.strokeRect(x - L * .016, y - W * .033, L * .032, W * .066);
       if (roto) {
@@ -222,12 +225,13 @@ function lis(ctx, x, y, s) {
   ctx.fillRect(x - s * .28, y - s * .6, s * .32, s * 1.2);
   ctx.beginPath(); ctx.ellipse(x - s * .75, y, s * .35, s * .16, 0, 0, TAU); ctx.fill();
 }
-function velaForma(ctx, mx, h, bul) {
+function velaForma(ctx, mx, h, bul) { if (REAL.on) return formaReal(ctx, mx, h, bul);
   ctx.beginPath(); ctx.moveTo(mx, -h); ctx.quadraticCurveTo(mx + bul, 0, mx, h); ctx.quadraticCurveTo(mx + bul * .28, 0, mx, -h); ctx.closePath();
 }
 function pano(ctx, mx, h, bul, col, cruz) {
   if (ABIERTAS <= 0) { ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx, -h); ctx.lineTo(mx, h); ctx.stroke(); ctx.strokeStyle = E.palo; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(mx, -h - 1.5); ctx.lineTo(mx, h + 1.5); ctx.stroke(); return; }
   bul *= .25 + .75 * ABIERTAS;
+  if (REAL.on) { velaAntes(ctx, () => velaForma(ctx, mx, h, bul)); }
   ctx.save(); ctx.translate(2.4, 3.2); velaForma(ctx, mx, h, bul); ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fill(); ctx.restore();
   velaForma(ctx, mx, h, bul); ctx.fillStyle = col; ctx.fill();
   ctx.save(); velaForma(ctx, mx, h, bul); ctx.clip();
@@ -247,6 +251,7 @@ function pano(ctx, mx, h, bul, col, cruz) {
   ctx.restore();
   ctx.strokeStyle = 'rgba(50,35,15,.75)'; ctx.lineWidth = .5; velaForma(ctx, mx, h, bul); ctx.stroke();
   ctx.strokeStyle = E.palo; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx, -h - 1.5); ctx.lineTo(mx, h + 1.5); ctx.stroke();
+  if (REAL.on) velaDespues(ctx, () => velaForma(ctx, mx, h, bul), mx, h, bul);
 }
 // vela de un solo lado (foque o cangreja): borde recto sobre el eje y panza hacia +y
 function velaLateral(ctx, x0, x1, panza, col) {
@@ -258,6 +263,7 @@ function velaLateral(ctx, x0, x1, panza, col) {
   f(); ctx.fillStyle = col; ctx.fill(); ctx.strokeStyle = 'rgba(50,35,15,.75)'; ctx.lineWidth = .5; ctx.stroke();
   ctx.strokeStyle = 'rgba(90,70,40,.28)'; ctx.lineWidth = .35;
   for (let k = .2; k < .95; k += .22) { const x = x0 + (x1 - x0) * k; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, panza * .5 * (1 - Math.pow(2 * k - 1, 2))); ctx.stroke(); }
+  if (REAL.on) lateralDespues(ctx, x0, x1, panza);
 }
 
 function agujero(ctx, x, y, rad, r) {
@@ -286,7 +292,7 @@ export function pintarFrances(ctx, tipo, o) {
   const pos = c.mastiles.map((f) => f * L);
   ctx.save(); ctx.lineJoin = 'round';
   // sombra en el agua
-  ctx.save(); ctx.translate(4, 6); casco(ctx, c, 1.05, 1.12); ctx.fillStyle = 'rgba(0,20,40,.3)'; ctx.fill(); ctx.restore();
+  if (!o.sinSombra) { ctx.save(); ctx.translate(4, 6); casco(ctx, c, 1.05, 1.12); ctx.fillStyle = 'rgba(0,20,40,.3)'; ctx.fill(); ctx.restore(); }
   cubierta(ctx, c);
   itemsCubierta(ctx, c);
   // daño sobre cubierta
@@ -351,6 +357,7 @@ export function pintarFrances(ctx, tipo, o) {
     tc.fillStyle = E.palo; tc.beginPath(); tc.arc(mx, 0, W * .06, 0, TAU); tc.fill();
     if (m === c.principal) { tc.strokeStyle = '#8a5a2b'; tc.lineWidth = 1; tc.beginPath(); tc.arc(mx, 0, W * .1, 0, TAU); tc.stroke(); }
   });
+  if (REAL.on) sombraAparejo(ctx, tmp, () => casco(ctx, c));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tmp, 0, 0); ctx.restore();
   // bauprés y mascarón encima de la tela, para que el león se vea
   ctx.save(); ctx.translate(1, 1.6); ctx.globalAlpha = .25; ctx.translate(L * .5 - W * .06, 0); ctx.fillStyle = '#001428'; ctx.beginPath(); ctx.arc(0, 0, W * .12, 0, TAU); ctx.fill(); ctx.restore();

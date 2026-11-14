@@ -42,7 +42,7 @@ export const GUIA = [
   { dibujo: 'tesoro', titulo: 'El galeón del tesoro',
     texto: 'Cada pocos minutos zarpa un galeón cargado de oro desde una punta del mapa. Suena la campana y arriba aparece un cartel con el tiempo que le queda para llegar al puerto: entre 2 y 2 minutos y medio. Va con guardias: primero hay que hundirlos y después hundirlo a él, porque no se puede abordar. Si llega al puerto, el oro se pierde.' },
   { dibujo: 'civs', titulo: 'Las civilizaciones',
-    texto: 'Hay 20 civilizaciones. Cada una tiene su barco, su bandera y una ventaja propia: más casco, más velocidad, mejores abordajes, más oro… Los barcos de tu misma civilización son de tu equipo: no se dañan entre ellos y pelean a tu favor.' },
+    texto: 'Hay 12 civilizaciones. Cada una tiene su barco, su bandera y una ventaja propia: más casco, más velocidad, mejores abordajes, más oro… Los barcos de tu misma civilización son de tu equipo: no se dañan entre ellos y pelean a tu favor.' },
   { dibujo: 'cascos', titulo: 'Tu barco',
     texto: 'En el astillero armás tu barco con 1000 de oro. Tres cascos: balandra (rápida), bergantín (equilibrado) y galeón (una fortaleza lenta). Además elegís las velas, cuántos cañones, la munición (bala redonda, metralla contra la tripulación o bala pesada contra el casco), la tripulación y una habilidad.' },
   { dibujo: 'puerto', titulo: 'Las mejoras del puerto',

@@ -1,6 +1,7 @@
 // Arte de los barcos vikingos, vista 100 % cenital, proa hacia +x. Balandra con proa de voluta (estilo Oseberg),
 // bergantín con dragón sin cuernos y galeón con dragón con cuernos enroscados.
 // Se pinta una sola vez en la imagen cacheada de dibujo.js; la bandera del bando, el farol, los remos y el humo los pone dibujo.js.
+import { REAL, formaReal, velaAntes, velaDespues, lateralDespues, cubiertaReal, canonReal, sombraAparejo } from './arte-real.js';
 const TAU = Math.PI * 2;
 let ABIERTAS = 1; // 0 (velas aferradas) a 1 (todo desplegado)
 let CANONES = { n: 0, grosor: 3.2 };
@@ -94,6 +95,7 @@ function cubierta(ctx, L, W, d, r, mastiles) {
     ctx.restore();
   }
   ctx.restore();
+  if (REAL.on) cubiertaReal(ctx, () => ruta(ctx, L, W, .9, .76), () => ruta(ctx, L, W, 1, 1), L, W);
 }
 
 // Proa tallada: la cabeza de dragón es de madera oscura con vetas doradas, como las de los barcos de Oseberg.
@@ -202,12 +204,13 @@ function popa(ctx, L, W) {
   ctx.scale(.7, .7); espiral(ctx, W);
   ctx.restore();
 }
-function velaForma(ctx, mx, h, bul) {
+function velaForma(ctx, mx, h, bul) { if (REAL.on) return formaReal(ctx, mx, h, bul);
   ctx.beginPath(); ctx.moveTo(mx, -h); ctx.quadraticCurveTo(mx + bul, 0, mx, h); ctx.quadraticCurveTo(mx + bul * .28, 0, mx, -h); ctx.closePath();
 }
 function vela(ctx, mx, h, bul, d, r) {
   if (ABIERTAS <= 0) { ctx.strokeStyle = ESTILO.vela2; ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(mx, -h); ctx.lineTo(mx, h); ctx.stroke(); ctx.strokeStyle = '#4a2c12'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(mx, -h - 2); ctx.lineTo(mx, h + 2); ctx.stroke(); return; }
   bul *= .25 + .75 * ABIERTAS;
+  if (REAL.on) { velaAntes(ctx, () => velaForma(ctx, mx, h, bul)); }
   const sombra = () => { ctx.save(); ctx.translate(3, 4); velaForma(ctx, mx, h, bul); ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fill(); ctx.restore(); };
   sombra();
   velaForma(ctx, mx, h, bul);
@@ -221,6 +224,7 @@ function vela(ctx, mx, h, bul, d, r) {
   // verga
   ctx.strokeStyle = '#4a2c12'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(mx, -h - 2); ctx.lineTo(mx, h + 2); ctx.stroke();
+  if (REAL.on) velaDespues(ctx, () => velaForma(ctx, mx, h, bul), mx, h, bul);
 }
 
 function agujero(ctx, x, y, rad, r) {
@@ -250,7 +254,7 @@ export function pintarVikingo(ctx, tipo, o) {
   const posiciones = palos === 1 ? [L * .06] : Array.from({ length: palos }, (_, m) => (-.24 + (.48 * m) / (palos - 1)) * L);
   ctx.save(); ctx.lineJoin = 'round';
   // sombra en el agua
-  ctx.save(); ctx.translate(4, 6); ruta(ctx, L, W, 1.05, 1.12); ctx.fillStyle = 'rgba(0,20,40,.3)'; ctx.fill(); ctx.restore();
+  if (!o.sinSombra) { ctx.save(); ctx.translate(4, 6); ruta(ctx, L, W, 1.05, 1.12); ctx.fillStyle = 'rgba(0,20,40,.3)'; ctx.fill(); ctx.restore(); }
   cubierta(ctx, L, W, d, azar(seed + 2), posiciones);
   // daño sobre cubierta
   if (d >= 1) {
@@ -304,6 +308,7 @@ export function pintarVikingo(ctx, tipo, o) {
     tc.fillStyle = '#4a2c12'; tc.beginPath(); tc.arc(mx, 0, W * .06, 0, TAU); tc.fill();
     if (principal && !roto) { tc.strokeStyle = '#8a5a2b'; tc.lineWidth = 1; tc.beginPath(); tc.arc(mx, 0, W * .1, 0, TAU); tc.stroke(); }
   });
+  if (REAL.on) sombraAparejo(ctx, tmp, () => ruta(ctx, L, W, 1, 1));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(tmp, 0, 0); ctx.restore();
   ctx.restore();
   return posiciones[Math.floor(palos / 2)]; // x del palo principal, donde dibujo.js cuelga la bandera de la civilización

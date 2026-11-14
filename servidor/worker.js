@@ -5,7 +5,7 @@ import { crearMundo } from '../src/mundo.js';
 import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe, ataquesAFoto } from '../src/juego.js';
 import { comprar } from '../src/puerto.js';
 import { costoDiseno } from '../src/barcos.js';
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES, KRAKEN } from '../src/config.js';
+import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES, KRAKEN, enJuego } from '../src/config.js';
 import { MAPAS } from '../src/mapas.js';
 
 const MAX_JUGADORES = 24; // en el mar de todos
@@ -160,7 +160,7 @@ export class Mar {
     if (c.cap && !c.cap.fin) return;
     const d = m.diseno || {};
     const diseno = { faccion: d.faccion, casco: d.casco, velas: d.velas, canones: d.canones | 0, municion: d.municion, trip: d.trip, habilidad: HABILIDADES[d.habilidad] ? d.habilidad : 'andanada' };
-    const valido = FACCIONES[diseno.faccion] && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
+    const valido = enJuego(diseno.faccion) && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
       && diseno.canones >= 2 && diseno.canones % 2 === 0 && diseno.canones <= CASCOS[diseno.casco].maxCanones && costoDiseno(diseno) <= PRESUPUESTO;
     if (!valido) return ws.send(JSON.stringify({ t: 'no', motivo: 'Ese diseño de barco no es válido.' }));
     if (this.sala && !this.cfg) { // una sala existe mientras tenga gente: la arma el primero que entra con "crear"

@@ -49,6 +49,14 @@ export const FACCIONES = {
     estilo: { forma: 'caja', casco: '#9a7a44', franja: '#c9a85a', cubierta: '#dcc27e', vela: '#f2ead0', patron: 'sol', colorPatron: '#e0a82e' } },
 };
 
+// Las civilizaciones que están en el juego son las 12 que tienen sus barcos terminados. Las otras 8 quedan guardadas para
+// más adelante (por ejemplo como contenido adicional): siguen definidas arriba, con su bandera y su dibujo, pero no se pueden
+// elegir, no aparecen en las listas y no salen como barcos del mar. Para devolver una al juego alcanza con sacarla de acá.
+export const FUERA_DE_JUEGO = ['daneses', 'rusos', 'polacos', 'coreanos', 'mogoles', 'omanies', 'mexicas', 'incas'];
+for (const id of FUERA_DE_JUEGO) if (FACCIONES[id]) FACCIONES[id].dlc = true;
+export const enJuego = (id) => !!FACCIONES[id] && !FACCIONES[id].dlc;
+export const FACCIONES_JUEGO = Object.fromEntries(Object.entries(FACCIONES).filter(([, f]) => !f.dlc)); // lo que se muestra y se elige
+
 export const CASCOS = {
   balandra: { nombre: 'Balandra', desc: 'Liviana y rápida. Pocos cañones.', costo: 150, vida: 90, vel: 170, giro: 2.0, maxCanones: 6, largo: 58, ancho: 20, tripBase: 14 },
   bergantin: { nombre: 'Bergantín', desc: 'El equilibrio: aguanta y pega.', costo: 320, vida: 165, vel: 138, giro: 1.45, maxCanones: 10, largo: 78, ancho: 26, tripBase: 22 },

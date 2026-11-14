@@ -1,11 +1,14 @@
 // Pega todo: pantallas (astillero, puerto, fin), teclado y el ciclo del juego.
-import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, HABILIDADES, KRAKEN } from './config.js';
+import { PRESUPUESTO, FACCIONES, FACCIONES_JUEGO, enJuego, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, COSTO_CANON, HABILIDADES, KRAKEN } from './config.js';
 import { costoDiseno, barrasDe, crearBarco, statsDe } from './barcos.js';
 import { crearMundo, nivelZona, nombreZona } from './mundo.js';
 import { MAPAS, mapaAlAzar } from './mapas.js';
 import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeViento, difAng, vientoEn, FORMACIONES } from './juego.js';
 import { catalogoPuerto, comprar } from './puerto.js';
 import { conectar, estadoDelMar, salasPublicas } from './red.js';
+import { crearAgua } from './agua.js';
+import { graficos, guardarGraficos } from './escenarios.js';
+import { ACCIONES, accionDe, teclaDe, teclaDefecto, cambiarTecla, restablecerTeclas, nombreTecla } from './controles.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
 import { dibujarBandera } from './banderas.js';
 import { t, IDIOMAS, registrarTextos, idiomaActual, idiomaInicial, elegirIdioma } from './idioma.js';
@@ -52,14 +55,16 @@ function cambiarZoom(f) {
 // Si el equipo no llega a 60 cuadros por segundo, se baja la resolución del dibujo en dos escalones
 let calidad = 1;
 function ajustar() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1) * calidad;
+  const dpr = Math.min(2, window.devicePixelRatio || 1) * calidad * Math.max(0.5, Math.min(1, graficos().res || 1));
   canvas.width = Math.round(innerWidth * dpr);
   canvas.height = Math.round(innerHeight * dpr);
   vista.ancho = canvas.width;
   vista.alto = canvas.height;
   vista.zoom = dpr * Math.max(0.7, Math.min(1.15, innerHeight / 800)) * zoomJugador;
+  if (vista.agua) vista.agua.ajustar(canvas.width, canvas.height, Math.max(0.35, Math.min(1, graficos().escala)));
   canvas.style.imageRendering = 'auto';
 }
+vista.agua = crearAgua($('agua')); // el agua nueva; si el equipo no tiene WebGL queda en null y el mar se pinta liso
 addEventListener('resize', ajustar);
 ajustar();
 
@@ -92,7 +97,7 @@ function pintarAstillero() {
   const cont = $('ast-opciones');
   cont.innerHTML = '';
   $('ast-sub').innerHTML = t('Diseñá tu barco con {oro} de oro. Lo que no gastes te queda guardado en el puerto para después.', { oro: `<b>${PRESUPUESTO}</b>` });
-  cont.append(...grupo(t('Civilización · cambia el barco, la bandera y da una ventaja'), FACCIONES, 'faccion'), ...grupo(t('Casco'), CASCOS, 'casco'), ...grupo(t('Velas'), VELAS, 'velas'));
+  cont.append(...grupo(t('Civilización · cambia el barco, la bandera y da una ventaja'), FACCIONES_JUEGO, 'faccion'), ...grupo(t('Casco'), CASCOS, 'casco'), ...grupo(t('Velas'), VELAS, 'velas'));
   const max = CASCOS[diseno.casco].maxCanones;
   const h = document.createElement('h3');
   h.textContent = t('Cañones · {n} oro cada uno (cada cañón te hace un poco más lento)', { n: COSTO_CANON });
@@ -132,7 +137,7 @@ function pintarAstillero() {
 // Menú de mapas: un botón muestra el elegido y abre la grilla con vista previa y banderas de cada lugar
 const mundosVista = {};
 const mundoVista = (id) => mundosVista[id] || (mundosVista[id] = crearMundo(id));
-const banderasDe = (m) => [...new Set(m.reglas.facciones || [])].slice(0, 4);
+const banderasDe = (m) => [...new Set((m.reglas.facciones || []).filter(enJuego))].slice(0, 4);
 
 function pintarMapa() {
   const m = MAPAS[mapaElegido];
@@ -573,7 +578,7 @@ function pintarLamina(cual) {
     x.fillStyle = '#ffd166'; x.fillRect(716, 76, 150, 12);
     rotulo('2:10', 835, 58, 24, '#ffd166');
   } else if (cual === 'civs') {
-    const ids = Object.keys(FACCIONES), bw = 84, bh = 56;
+    const ids = Object.keys(FACCIONES_JUEGO), bw = 84, bh = 56;
     ids.forEach((id, q) => {
       const col = q % 10, fila = Math.floor(q / 10);
       x.save(); x.translate(22 + col * 98, 46 + fila * 150);
@@ -617,22 +622,23 @@ addEventListener('keydown', (e) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
-  teclaDibujada(k, true);
-  // Teclas (13/11/2026, pedido de Nicolás): Q y W son de la flota, como en los juegos de estrategia. El disparo por teclado pasó
-  // a A (babor) y D (estribor) — además del ratón y la barra — y las velas quedan en las flechas y la rueda.
-  if (k === 'a') pulsos.fuego = -1;
-  if (k === 'd') pulsos.fuego = 1;
-  if (k === ' ') pulsos.fuegoTodo = true;
-  if (k === 'r') pulsos.habilidad = true;
-  if (k === 'arrowup') cambiarVelas(1);
-  if (k === 'arrowdown') cambiarVelas(-1);
-  if (k === 'f') pulsos.abordar = true;
-  if (k === 'q' || k === 'g') pulsos.ordenFlota = true; // G y H siguen andando, por costumbre
-  if (k === 'w' || k === 'h') pulsos.formacion = true;
-  if (k === 'p' && !partida.fin && cercaDelPuerto()) entrarPuerto();
+  // Cada tecla dice qué acción hace según Ajustes → Controles (src/controles.js). Por defecto: A y D disparan (babor y
+  // estribor), espacio la andanada, R la habilidad, flechas las velas, F aborda, Q la flota, W la formación, P el puerto.
+  const acc = accionDe(k);
+  teclaDibujada(acc ? teclaDefecto(acc) : k, true); // el teclado dibujado de la práctica muestra las teclas de fábrica
+  if (acc === 'babor') pulsos.fuego = -1;
+  if (acc === 'estribor') pulsos.fuego = 1;
+  if (acc === 'andanada') pulsos.fuegoTodo = true;
+  if (acc === 'habilidad') pulsos.habilidad = true;
+  if (acc === 'masVela') cambiarVelas(1);
+  if (acc === 'menosVela') cambiarVelas(-1);
+  if (acc === 'abordar') pulsos.abordar = true;
+  if (acc === 'flota') pulsos.ordenFlota = true;
+  if (acc === 'formacion') pulsos.formacion = true;
+  if (acc === 'puerto' && !partida.fin && cercaDelPuerto()) entrarPuerto();
   if (k === 'tab') e.preventDefault();
 });
-addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); teclas.delete(k); teclaDibujada(k, false); });
+addEventListener('keyup', (e) => { const k = e.key.toLowerCase(), acc = accionDe(k); teclas.delete(k); teclaDibujada(acc ? teclaDefecto(acc) : k, false); });
 addEventListener('blur', () => teclas.clear());
 let ratonVisto = false;
 addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; teclaDibujada('mover', true, 200); });
@@ -660,8 +666,9 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function ratonAMundo() {
   const dpr = canvas.width / innerWidth, yo = partida.jugador;
-  vista.raton.x = yo.x + (vista.ratonPx.x * dpr - vista.ancho / 2) / vista.zoom;
-  vista.raton.y = yo.y + (vista.ratonPx.y * dpr - vista.alto / 2) / vista.zoom;
+  const z = vista.zoomDibujo || vista.zoom; // durante la llegada desde el menú la cámara está más cerca
+  vista.raton.x = yo.x + (vista.ratonPx.x * dpr - vista.ancho / 2) / z;
+  vista.raton.y = yo.y + (vista.ratonPx.y * dpr - vista.alto / 2) / z;
 }
 
 // ---------- HUD ----------
@@ -864,10 +871,15 @@ let anterior = performance.now();
 let cuadros = 0, lentos = 0, medidos = 0;
 function cuadro(ahora) {
   requestAnimationFrame(cuadro); // primero: si algo falla en este cuadro, el juego sigue en el próximo en vez de quedar congelado
+  // tope de cuadros por segundo elegido en Ajustes: los cuadros de más se saltean. El resto de la cuenta se guarda para
+  // que un tope de 60 en un monitor de 144 dé 60 y no 48.
+  const tope = graficos().fps, intervalo = tope > 0 ? 1000 / tope : 0;
+  if (intervalo && ahora - anterior < intervalo - 1.5) return;
   const real = ahora - anterior;
   const dt = Math.min(0.05, real / 1000);
-  anterior = ahora;
-  if (estado === 'mar' && !document.hidden && real < 250) {
+  anterior = intervalo && real < 250 ? ahora - (real % intervalo) : ahora;
+  // con tope, un cuadro "lento" es el que tarda bastante más que el tope; si no, cualquier tope bajaba solo la resolución
+  if (estado === 'mar' && !document.hidden && real < 250 && (!intervalo || intervalo < 21)) {
     medidos++;
     if (real > 21) lentos++;
     if (medidos >= 120) {
@@ -911,7 +923,7 @@ function cuadro(ahora) {
     const g = estado === 'mar' && !partida.fin ? partida.gancho : null;
     const meAbordan = estado === 'mar' && !partida.fin && (partida.meAbordan || (partida.capitanes || []).some((c) => c.gancho && c.gancho.fase === 'enganchado' && c.gancho.obj === yo && c.barco !== yo));
     sonido.abordaje((g && g.fase === 'enganchado') || meAbordan ? 'pelea' : g ? 'vuelo' : 'nada');
-    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino, partida.tormenta || 0);
+    sonido.ambiente('mar', estado === 'mar' && yo ? Math.min(1, sopla + 0.17 * Math.min(1, Math.abs(yo.v) / 170)) : sopla * 0.5, remolino, Math.max(partida.tormenta || 0, partida.lluviaVista || 0));
   }
 }
 
@@ -1021,6 +1033,15 @@ function pintarAjustes() {
     b.classList.toggle('elegida', b.dataset.id === tema);
     b.onclick = () => { ponerTema(b.dataset.id); pintarAjustes(); };
   }
+  const g = graficos();
+  for (const b of $('aj-calidad').children) { b.classList.toggle('elegida', b.dataset.id === g.calidad); b.onclick = () => { guardarGraficos({ calidad: b.dataset.id }); ajustar(); pintarAjustes(); }; }
+  for (const b of $('aj-fps').children) { b.classList.toggle('elegida', +b.dataset.id === (g.fps || 0)); b.onclick = (ev) => { ev.preventDefault(); guardarGraficos({ fps: +b.dataset.id }); pintarAjustes(); }; }
+  const res = $('aj-res');
+  res.value = Math.round((g.res || 1) * 100); $('aj-res-n').textContent = res.value + ' %';
+  res.oninput = () => { $('aj-res-n').textContent = res.value + ' %'; };
+  res.onchange = () => { guardarGraficos({ res: res.value / 100 }); ajustar(); };
+  pintarTeclas();
+  for (const [id, clave] of [['aj-calma', 'calma'], ['aj-formas', 'formas']]) { $(id).checked = !!g[clave]; $(id).onchange = () => guardarGraficos({ [clave]: $(id).checked }); }
   for (const cual of ['sonido', 'musica']) {
     const barra = $('aj-vol-' + cual), numero = $('aj-vol-' + cual + '-n');
     barra.value = Math.round(sonido.volumen(cual) * 100);
@@ -1053,7 +1074,32 @@ function abrirAjustes() {
   $('aj-dejar').classList.toggle('oculto', !jugando);
   $('pantalla-ajustes').classList.remove('oculto');
 }
-function cerrarAjustes() { $('pantalla-ajustes').classList.add('oculto'); }
+function cerrarAjustes() { esperandoTecla = null; $('pantalla-ajustes').classList.add('oculto'); }
+
+// Ajustes → Controles: una fila por acción con su tecla. Clic en la tecla, y la próxima que se apriete queda (ESC cancela).
+let esperandoTecla = null;
+function pintarTeclas() {
+  const caja = $('aj-teclas');
+  caja.innerHTML = '';
+  for (const a of ACCIONES) {
+    const fila = document.createElement('div'), boton = document.createElement('button');
+    fila.className = 'aj-tecla';
+    fila.append(Object.assign(document.createElement('span'), { textContent: t(a.nombre) }), boton);
+    boton.type = 'button'; boton.className = 'chip' + (esperandoTecla === a.id ? ' elegida' : '');
+    boton.textContent = esperandoTecla === a.id ? t('Apretá una tecla…') : t(nombreTecla(teclaDe(a.id)));
+    boton.onclick = () => { esperandoTecla = esperandoTecla === a.id ? null : a.id; pintarTeclas(); };
+    caja.append(fila);
+  }
+}
+// Va antes que el teclado del juego (captura): la tecla que se elige no hace nada más
+addEventListener('keydown', (e) => {
+  if (!esperandoTecla) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (e.key !== 'Escape') cambiarTecla(esperandoTecla, e.key.toLowerCase());
+  esperandoTecla = null;
+  pintarTeclas();
+}, true);
+$('aj-teclas-reset').onclick = () => { esperandoTecla = null; restablecerTeclas(); pintarTeclas(); };
 $('aj-abrir').onclick = abrirAjustes;
 $('aj-cerrar').onclick = cerrarAjustes;
 $('aj-dejar').onclick = () => { cerrarAjustes(); if (partida) { reportar(true); volverAlAstillero(); } };
