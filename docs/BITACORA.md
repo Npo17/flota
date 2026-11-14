@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (la brisa avanzaba a saltos en línea) — Nicolás + Claude
+
+**Estado: commiteado en local, falta el OK de Nicolás para subir.** Solo el cliente (`src/red.js`): no hay que republicar el servidor.
+
+- **Qué pasaba:** en las partidas en línea la brisa (la mancha de viento) iba "de a tramos" aunque el juego fuera fluido. Su posición llega con cada foto del servidor, pocas veces por segundo, y se dibujaba tal cual. Antes casi no se notaba (era un círculo tenue); con el agua nueva la brisa se ve rizada y el salto se nota. Jugando solo no pasaba.
+- **Arreglo:** cada brisa sigue donde se la venía viendo y guarda adónde dice el servidor que está; en cada cuadro avanza con el viento de su zona (igual que en el servidor, `VIENTO.velRafaga`) y se arrima a ese punto. Si quedó a más de 260 (dio la vuelta al mapa), salta directo.
+- **Medido** en una partida contra el servidor publicado: se mueve en todos los cuadros (0,39 por cuadro, máximo 0,41, ninguno quieta).
+
 ## 2026-11-13 (tirones en la web y Ajustes ordenado) — Nicolás + Claude
 
 **Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.

@@ -3,8 +3,8 @@
 // El servidor decide posiciones, daño y oro; acá solo se suaviza el movimiento y se dibujan los efectos.
 import { crearMundo } from './mundo.js';
 import { crearBarco, statsDe } from './barcos.js';
-import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto } from './juego.js';
-import { KRAKEN } from './config.js';
+import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto, vientoEn } from './juego.js';
+import { KRAKEN, VIENTO } from './config.js';
 import { t } from './idioma.js';
 
 // En la compu se usa el servidor publicado, salvo que la dirección lleve ?mar=local (servidor de prueba con wrangler dev)
@@ -85,8 +85,15 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   function foto(m) {
     if (!j.mundo || esperandoHola) return;
     if (m.vi) {
-      const rafagas = [];
-      for (let k = 1; k + 2 < m.vi.length; k += 3) rafagas.push({ x: m.vi[k], y: m.vi[k + 1], r: m.vi[k + 2] });
+      // Las brisas llegan con cada foto, pocas veces por segundo. Si se dibujaran donde dice la foto avanzarían a saltos:
+      // cada una sigue donde se la venía viendo y se guarda adónde dice el servidor que está (sx, sy); cuadro() la mueve
+      // en cada cuadro y la va arrimando a ese punto. Si quedó muy lejos (dio la vuelta al mapa), salta directo.
+      const rafagas = [], antes = j.viento ? j.viento.rafagas : [];
+      for (let k = 1; k + 2 < m.vi.length; k += 3) {
+        const sx = m.vi[k], sy = m.vi[k + 1], r = m.vi[k + 2], v = antes[rafagas.length];
+        const sigue = v && v.r === r && Math.hypot(v.x - sx, v.y - sy) < 260;
+        rafagas.push({ x: sigue ? v.x : sx, y: sigue ? v.y : sy, r, sx, sy });
+      }
       const rachas = [];
       if (m.rc) for (let k = 0; k + 4 < m.rc.length; k += 5) rachas.push({ x: m.rc[k], y: m.rc[k + 1], r: m.rc[k + 2], a: m.rc[k + 3] / 100, t: m.rc[k + 4] / 10 });
       j.viento = { a: m.vi[0] / 100, rafagas, rachas, curvo: !!m.vf, f1: m.vf ? m.vf[0] / 100 : 0, f2: m.vf ? m.vf[1] / 100 : 0, cambios: m.vf ? m.vf[2] : 0 }; // sin vf: servidor anterior, un solo rumbo
@@ -167,6 +174,12 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
   // Un cuadro: mandar lo que hace el jugador y mover todo con suavidad hacia lo último que dijo el servidor
   function cuadro(dt, entrada) {
     j.t += dt;
+    // las brisas avanzan en cada cuadro como en el servidor (con el viento de su zona) y se arriman a lo último que mandó
+    if (j.viento) for (const g of j.viento.rafagas) {
+      const ag = vientoEn(j, g.x, g.y), vx = Math.cos(ag) * VIENTO.velRafaga * dt, vy = Math.sin(ag) * VIENTO.velRafaga * dt, k = Math.min(1, dt * 2.5);
+      g.sx += vx; g.sy += vy;
+      g.x += vx + (g.sx - g.x) * k; g.y += vy + (g.sy - g.y) * k;
+    }
     j.sacudon = Math.max(0, j.sacudon - dt * 12);
     objetivo = entrada.objetivo || null;
     quieto = !!entrada.quieto;
