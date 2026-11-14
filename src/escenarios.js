@@ -32,7 +32,7 @@ export const ESCENAS = {
 };
 export const ESCENA_BASE = 'atardecer';
 
-// El escenario elegido en el inicio de la app (queda guardado en 'aon-inicio'). En la web, donde no hay selector, es el de base.
+// El escenario elegido (queda guardado en 'aon-inicio'): en la app, en su menú de inicio; en la web, en Ajustes → Configuración de gráficos.
 export function escenaElegida() {
   try {
     const e = JSON.parse(localStorage.getItem('aon-inicio') || '{}').escena;

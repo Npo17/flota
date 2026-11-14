@@ -3,6 +3,13 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (en la web se elige el escenario) — Nicolás + Claude
+
+**Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.
+
+- **Ajustes → Configuración de gráficos → Escenario** (solo en la web): Atardecer, Día, Noche y Tormenta. Se guarda en `aon-inicio` (el mismo lugar que usa la app) y cambia en el momento, también en medio de una partida (`partida.escenaVista`). Eclipse y Kraken no están: el Kraken es la tormenta que trae él.
+- **En la app no aparece** (`location.protocol === 'app:'`): ahí el escenario se elige en su menú de inicio, donde Noche, Tormenta, Eclipse y Kraken se desbloquean jugando. Si se mostrara, saltearía esos desbloqueos.
+
 ## 2026-11-13 (música nueva: "Givmaru Trading Harbor", de Ivan Duch) — Nicolás + Claude
 
 **Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.

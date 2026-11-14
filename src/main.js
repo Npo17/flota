@@ -7,7 +7,7 @@ import { crearPartida, actualizar, candidatoAbordaje, aviso, atracar, rindeVient
 import { catalogoPuerto, comprar } from './puerto.js';
 import { conectar, estadoDelMar, salasPublicas } from './red.js';
 import { crearAgua } from './agua.js';
-import { graficos, guardarGraficos } from './escenarios.js';
+import { graficos, guardarGraficos, escenaElegida } from './escenarios.js';
 import { ACCIONES, accionDe, teclaDe, teclaDefecto, cambiarTecla, restablecerTeclas, nombreTecla } from './controles.js';
 import { dibujarEscena, dibujarMinimapa, dibujarBarco, dibujarVistaMapa } from './dibujo.js';
 import { dibujarBandera } from './banderas.js';
@@ -1041,6 +1041,20 @@ function pintarAjustes() {
   res.oninput = () => { $('aj-res-n').textContent = res.value + ' %'; };
   res.onchange = () => { guardarGraficos({ res: res.value / 100 }); ajustar(); };
   pintarTeclas();
+  // el escenario (la luz y el clima del mar). En la app de escritorio se elige en su menú, donde se van desbloqueando: acá no va.
+  const enApp = location.protocol === 'app:';
+  $('aj-escenario-bloque').classList.toggle('oculto', enApp);
+  if (!enApp) for (const b of $('aj-escenario').children) {
+    b.classList.toggle('elegida', b.dataset.id === escenaElegida());
+    b.onclick = () => {
+      let ini = {};
+      try { ini = JSON.parse(localStorage.getItem('aon-inicio') || '{}') || {}; } catch {}
+      ini.escena = b.dataset.id;
+      try { localStorage.setItem('aon-inicio', JSON.stringify(ini)); } catch {}
+      if (partida) partida.escenaVista = b.dataset.id; // cambia en el momento, también en medio de una partida
+      pintarAjustes();
+    };
+  }
   // el crédito de la música (lo pide la licencia del autor)
   const cred = $('aj-credito');
   cred.textContent = t('Música: «{tema}», de {autor}', MUSICA) + ' · ';

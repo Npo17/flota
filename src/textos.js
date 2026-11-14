@@ -10,6 +10,11 @@ export const TEXTOS = [
   ["Alta", "High", "Alta", "Haute", "Wysoka", "Alta", "Hoch", "Yüksek"],
   ["Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra"],
   ["Música: «{tema}», de {autor}", "Music: “{tema}” by {autor}", "Música: “{tema}”, de {autor}", "Musique : « {tema} », de {autor}", "Muzyka: „{tema}”, {autor}", "Musica: «{tema}», di {autor}", "Musik: „{tema}“ von {autor}", "Müzik: “{tema}”, {autor}"],
+  ["Escenario", "Setting", "Cenário", "Ambiance", "Sceneria", "Scenario", "Szenerie", "Ortam"],
+  ["Atardecer", "Sunset", "Entardecer", "Coucher de soleil", "Zachód słońca", "Tramonto", "Sonnenuntergang", "Gün batımı"],
+  ["Día", "Day", "Dia", "Jour", "Dzień", "Giorno", "Tag", "Gündüz"],
+  ["Noche", "Night", "Noite", "Nuit", "Noc", "Notte", "Nacht", "Gece"],
+  ["Tormenta", "Storm", "Tempestade", "Tempête", "Burza", "Tempesta", "Sturm", "Fırtına"],
   // ----- Ajustes: controles -----
   ["Configuración de gráficos", "Graphics settings", "Configurações gráficas", "Paramètres graphiques", "Ustawienia grafiki", "Impostazioni grafiche", "Grafikeinstellungen", "Grafik ayarları"],
   ["Configuración de controles", "Control settings", "Configurações de controles", "Paramètres des commandes", "Ustawienia sterowania", "Impostazioni dei comandi", "Steuerungseinstellungen", "Kontrol ayarları"],
