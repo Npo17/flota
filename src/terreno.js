@@ -84,7 +84,8 @@ export function crearTerreno(mundo) {
   let reloj = 0, claveLuz = '', px = 0;
   const cerca = (tx, ty, m) => islas.filter((i) => i.x + i.r * 1.3 + m > tx && i.x - i.r * 1.3 - m < tx + LADO && i.y + i.r * 1.3 + m > ty && i.y - i.r * 1.3 - m < ty + LADO);
 
-  function armar(tx, ty, rumbo) {
+  // Arma una baldosa de a poco: es un generador que se pausa (yield) cada unas filas, así el cuadro sigue fluido.
+  function* armar(tx, ty, rumbo) {
     const lista = cerca(tx, ty, 8);
     if (!lista.length) return null;
     const P = Math.round(LADO * px), N = P + 2, s = px; // un punto de margen de cada lado, para empalmar
@@ -103,7 +104,7 @@ export function crearTerreno(mundo) {
     const tierras = lista.filter((i) => i.tipo !== 'iceberg' && i.tipo !== 'arrecife'), hielos = lista.filter((i) => i.tipo === 'iceberg'), bancos = lista.filter((i) => i.tipo === 'arrecife');
     const H = new Float32Array(N * N), D = new Float32Array(N * N), G = new Float32Array(N * N), B = new Float32Array(N * N), M = new Uint8Array(N * N);
     // 1) altura de cada punto
-    for (let py = 0; py < N; py++) for (let qx = 0; qx < N; qx++) {
+    for (let py = 0; py < N; py++) { if ((py & 3) === 3) yield; for (let qx = 0; qx < N; qx++) {
       const k = py * N + qx, o = k * 4;
       if (!d[o + 3]) continue;
       const x = tx + (qx - 1) / s, y = ty + (py - 1) / s;
@@ -126,10 +127,10 @@ export function crearTerreno(mundo) {
       } else {
         H[k] = Math.min(dd, 10) * 0.12 + nubes(x / 9, y / 9) * 1.2;
       }
-    }
+    } }
     // 2) color: material según la altura y la distancia a la costa, y luz según la pendiente
     const lx = Math.cos(rumbo) * 0.62, ly = Math.sin(rumbo) * 0.62, lz = 0.5, ln = Math.hypot(lx, ly, lz);
-    for (let py = 1; py < N - 1; py++) for (let qx = 1; qx < N - 1; qx++) {
+    for (let py = 1; py < N - 1; py++) { if ((py & 3) === 3) yield; for (let qx = 1; qx < N - 1; qx++) {
       const k = py * N + qx, o = k * 4, tipo = M[k];
       if (!tipo) continue;
       const x = tx + (qx - 1) / s, y = ty + (py - 1) / s, dd = D[k], h = H[k];
@@ -191,38 +192,68 @@ export function crearTerreno(mundo) {
         a = a * (0.55 + 0.45 * suave(1, 12, dd)) * (0.75 + 0.25 * piedra); // un banco apenas bajo el agua: se transparenta hacia el borde
       }
       d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = a;
-    }
+    } }
     // el margen copia a su vecino de adentro
     for (let q = 0; q < N; q++) for (const [k, de] of [[q, q + N], [(N - 1) * N + q, (N - 2) * N + q], [q * N, q * N + 1], [q * N + N - 1, q * N + N - 2]]) { d[k * 4] = d[de * 4]; d[k * 4 + 1] = d[de * 4 + 1]; d[k * 4 + 2] = d[de * 4 + 2]; }
     ctx.putImageData(img, 0, 0);
     return lienzo;
   }
 
+  let trabajo = null; // la baldosa que se está armando: { clave, tx, ty, gen }
+  let ultimo = 0; // cuándo se dibujó el cuadro anterior: si el equipo viene justo, ese cuadro se arma menos
+  const clavesDe = (x0, y0, x1, y1) => {
+    const lista = [];
+    for (let ty = Math.floor(y0 / LADO) * LADO; ty < y1; ty += LADO) for (let tx = Math.floor(x0 / LADO) * LADO; tx < x1; tx += LADO) {
+      if (tx < -LADO || ty < -LADO || tx > mundo.ancho || ty > mundo.alto) continue;
+      lista.push([tx, ty]);
+    }
+    return lista;
+  };
   return {
-    // Dibuja las baldosas a la vista. Devuelve true si están todas; si falta alguna arma de a una por cuadro y devuelve false
-    // (dibujo.js pinta antes la tierra lisa, que queda debajo de lo que todavía no está).
+    // Dibuja las baldosas a la vista. Arma las que faltan de a poco (unos milisegundos por cuadro, nunca una entera de golpe),
+    // primero las que se ven y después las de alrededor, para que estén listas antes de llegar.
+    // Devuelve true si están todas las que se ven; dibujo.js pinta la tierra lisa solo de las islas que todavía no tienen relieve.
     listo(x0, y0, vw, vh, nombreLuz, rumbo, calidad) {
-      if (claveLuz !== nombreLuz + '|' + calidad) { baldosas.clear(); claveLuz = nombreLuz + '|' + calidad; px = calidad; }
-      let faltan = 0, armadas = 0;
-      const t0 = performance.now();
+      if (claveLuz !== nombreLuz + '|' + calidad) { baldosas.clear(); trabajo = null; claveLuz = nombreLuz + '|' + calidad; px = calidad; }
       this.vista = [];
-      for (let ty = Math.floor(y0 / LADO) * LADO; ty < y0 + vh; ty += LADO) for (let tx = Math.floor(x0 / LADO) * LADO; tx < x0 + vw; tx += LADO) {
-        if (tx < -LADO || ty < -LADO || tx > mundo.ancho || ty > mundo.alto) continue;
-        const clave = tx + ',' + ty;
-        let b = baldosas.get(clave);
-        if (!b) {
-          if (armadas && performance.now() - t0 > 7) { faltan++; continue; }
-          b = { img: armar(tx, ty, rumbo), tx, ty, uso: 0 };
-          baldosas.set(clave, b); armadas++;
+      let faltan = 0;
+      const pendientes = [];
+      for (const [tx, ty] of clavesDe(x0, y0, x0 + vw, y0 + vh)) {
+        const b = baldosas.get(tx + ',' + ty);
+        if (b) { b.uso = ++reloj; if (b.img) this.vista.push(b); } else { faltan++; pendientes.push([tx, ty]); }
+      }
+      // las de alrededor (una baldosa de margen), cuando ya están todas las que se ven
+      if (!pendientes.length) for (const [tx, ty] of clavesDe(x0 - LADO, y0 - LADO, x0 + vw + LADO, y0 + vh + LADO)) if (!baldosas.has(tx + ',' + ty)) { pendientes.push([tx, ty]); if (pendientes.length > 3) break; }
+      const t0 = performance.now(), entre = t0 - ultimo; ultimo = t0;
+      // pocos milisegundos por cuadro: si el cuadro anterior ya vino lento, casi nada (las que se ven, igual avanzan un poco)
+      const presupuesto = entre > 20 ? (faltan ? 1 : 0) : 1.8;
+      while (performance.now() - t0 < presupuesto) {
+        if (!trabajo) {
+          const sig = pendientes.shift();
+          if (!sig) break;
+          if (baldosas.has(sig[0] + ',' + sig[1])) continue;
+          trabajo = { clave: sig[0] + ',' + sig[1], tx: sig[0], ty: sig[1], gen: armar(sig[0], sig[1], rumbo) };
         }
-        b.uso = ++reloj;
-        if (b.img) this.vista.push(b);
+        const r = trabajo.gen.next();
+        if (r.done) {
+          const b = { img: r.value || null, tx: trabajo.tx, ty: trabajo.ty, uso: ++reloj };
+          baldosas.set(trabajo.clave, b);
+          if (b.img && b.tx < x0 + vw && b.tx + LADO > x0 && b.ty < y0 + vh && b.ty + LADO > y0) { this.vista.push(b); faltan--; }
+          else if (b.tx < x0 + vw && b.tx + LADO > x0 && b.ty < y0 + vh && b.ty + LADO > y0) faltan--;
+          trabajo = null;
+        }
       }
       if (baldosas.size > 150) { // se sueltan las que hace más que no se ven
         const viejas = [...baldosas.entries()].sort((a, b) => a[1].uso - b[1].uso).slice(0, 40);
         for (const [k] of viejas) baldosas.delete(k);
       }
-      return faltan === 0;
+      return faltan <= 0;
+    },
+    // ¿Ya tiene relieve toda esta isla? (todas las baldosas que toca están armadas)
+    cubierta(isla) {
+      const m = isla.r * 1.3;
+      for (const [tx, ty] of clavesDe(isla.x - m, isla.y - m, isla.x + m, isla.y + m)) if (!baldosas.has(tx + ',' + ty)) return false;
+      return true;
     },
     dibujar(ctx) {
       const m = 0.4, e = m / px;

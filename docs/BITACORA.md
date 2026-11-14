@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-13 (tirones en la web y Ajustes ordenado) — Nicolás + Claude
+
+**Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.
+
+- **Tirones al navegar (Nicolás: "corre, frena" y una línea amarilla en las orillas):** el relieve de la tierra (`src/terreno.js`) armaba cada baldosa entera en un cuadro (50–160 ms) y al entrar baldosas nuevas el juego se frenaba. Ahora cada baldosa se arma de a poco (un generador que se pausa cada 4 filas), con 1–2 ms por cuadro y menos si el cuadro anterior vino lento; primero las que se ven y después una de margen alrededor, para que estén listas antes de llegar. Medido navegando junto a la costa de Lepanto: antes, tirones de 83 a 161 ms; ahora, ninguno arriba de 67 ms. La "línea amarilla" era la arena de la tierra lisa provisoria (dibujada un 10 % más grande) que asomaba en todas las costas mientras faltaba alguna baldosa: ahora la tierra lisa se pinta solo para las islas que todavía no tienen relieve, y al tamaño exacto.
+- **Otros tirones:** el brillo de los barcos arma a lo sumo 2 direcciones de luz por cuadro (mientras, usa la más cercana); la caché de imágenes de barcos suelta las más viejas de a 20 en vez de vaciarse entera; `graficos()` lee `aon-graficos` a lo sumo cada medio segundo.
+- **Queda:** navegando rápido siguen apareciendo cuadros de 33–44 ms (con el monitor a 60, uno de cada 15 aprox.), y también con el terreno apagado: no vienen del terreno. Sin investigar.
+- **Ajustes ordenado (pedido de Nicolás):** tres botones que se abren de a uno: **Idioma**, **Configuración de gráficos** (pantalla clara u oscura, calidad, resolución, cuadros por segundo, menos movimiento, formas; en la app también la ventana) y **Configuración de controles** (las teclas). Sonido queda siempre a la vista. Se sacó la ayuda vieja de controles con las letras de fábrica. La app de escritorio (`preload.cjs`) mete "Ventana" dentro de gráficos.
+
 ## 2026-11-13 (aspecto del mar, Tandas C y D: tierra con relieve, barcos con volumen, bruma, llegada y ajustes de gráficos) — Nicolás + Claude
 
 **Estado: subido el 13/11 con el OK de Nicolás (servidor republicado por Nicolás, versión a4bfd313).** Sigue sin tocar la simulación ni el servidor: no hay que republicar nada.

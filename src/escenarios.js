@@ -56,7 +56,11 @@ export const CALIDADES = {
 // (agua: false deja el mar liso, sin el agua nueva).
 const BASE = { calidad: 'alta', agua: true, calma: false, formas: false, res: 1, fps: 0 };
 let crudo = null, armado = null, enMemoria = null; // enMemoria: lo elegido en esta sesión, por si el navegador no deja guardar
+let leido = 0;
 export function graficos() {
+  const ahora = typeof performance !== 'undefined' ? performance.now() : 0;
+  if (armado && ahora - leido < 500) return armado;
+  leido = ahora;
   let texto = '';
   try { texto = localStorage.getItem('aon-graficos') || ''; } catch {}
   if (texto === crudo && armado) return armado;
@@ -73,7 +77,7 @@ export function guardarGraficos(cambios) {
   if (!enMemoria) try { g = JSON.parse(localStorage.getItem('aon-graficos') || '{}') || {}; } catch {}
   if (cambios.calidad) g = { res: g.res, fps: g.fps, calma: g.calma, formas: g.formas }; // elegir una calidad borra los retoques sueltos
   Object.assign(g, cambios);
-  enMemoria = g; crudo = null;
+  enMemoria = g; crudo = null; leido = -1e9;
   try { localStorage.setItem('aon-graficos', JSON.stringify(g)); } catch {}
   return graficos();
 }

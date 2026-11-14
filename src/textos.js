@@ -10,6 +10,8 @@ export const TEXTOS = [
   ["Alta", "High", "Alta", "Haute", "Wysoka", "Alta", "Hoch", "Yüksek"],
   ["Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra", "Ultra"],
   // ----- Ajustes: controles -----
+  ["Configuración de gráficos", "Graphics settings", "Configurações gráficas", "Paramètres graphiques", "Ustawienia grafiki", "Impostazioni grafiche", "Grafikeinstellungen", "Grafik ayarları"],
+  ["Configuración de controles", "Control settings", "Configurações de controles", "Paramètres des commandes", "Ustawienia sterowania", "Impostazioni dei comandi", "Steuerungseinstellungen", "Kontrol ayarları"],
   ["Clic en una tecla para cambiarla", "Click a key to change it", "Clique numa tecla para mudá-la", "Cliquez sur une touche pour la changer", "Kliknij klawisz, aby go zmienić", "Clicca su un tasto per cambiarlo", "Klicke auf eine Taste, um sie zu ändern", "Değiştirmek için bir tuşa tıkla"],
   ["Apretá una tecla…", "Press a key…", "Aperte uma tecla…", "Appuyez sur une touche…", "Naciśnij klawisz…", "Premi un tasto…", "Drücke eine Taste…", "Bir tuşa bas…"],
   ["Restablecer teclas", "Reset keys", "Restaurar teclas", "Réinitialiser les touches", "Przywróć klawisze", "Ripristina tasti", "Tasten zurücksetzen", "Tuşları sıfırla"],

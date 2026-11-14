@@ -1075,6 +1075,14 @@ function abrirAjustes() {
   $('pantalla-ajustes').classList.remove('oculto');
 }
 function cerrarAjustes() { esperandoTecla = null; $('pantalla-ajustes').classList.add('oculto'); }
+// Ajustes en tres partes que se abren de a una: idioma, gráficos y controles (el sonido queda siempre a la vista)
+for (const b of document.querySelectorAll('#pantalla-ajustes .aj-seccion')) {
+  b.onclick = () => {
+    const abrir = $('aj-sec-' + b.dataset.sec).classList.contains('oculto');
+    for (const o of document.querySelectorAll('#pantalla-ajustes .aj-seccion')) { o.classList.toggle('abierta', abrir && o === b); $('aj-sec-' + o.dataset.sec).classList.toggle('oculto', !(abrir && o === b)); }
+    esperandoTecla = null; pintarTeclas();
+  };
+}
 
 // Ajustes → Controles: una fila por acción con su tecla. Clic en la tecla, y la próxima que se apriete queda (ESC cancela).
 let esperandoTecla = null;

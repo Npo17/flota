@@ -163,7 +163,7 @@ function imagenBarco(b, e) {
   const pintar = prueba ? (c, casco, o) => pintarGaleonRealista(c, o, aguila) : ARTE[d.faccion], dano = pintar ? nivelDano(b) : 0;
   const clave = `${REAL.on ? 'R' : ''}${d.faccion}|${d.casco}|${d.canones}|${d.municion}|${b.velas}|${b.colorVela || ''}|${dano}`;
   let img = imagenes.get(clave);
-  if (img) return img;
+  if (img) { imagenes.delete(clave); imagenes.set(clave, img); return img; } // al final: es de las recién usadas
   const s = b.stats, L = s.largo, W = s.ancho;
   img = document.createElement('canvas');
   img.width = Math.ceil((L * 1.5 + 24) * ESCALA_IMG);
@@ -178,7 +178,7 @@ function imagenBarco(b, e) {
       L, W, canones: d.canones / 2, grosor: d.municion === 'pesada' ? 4.6 : 3.2, abiertas: b.velas / 3,
       colorVela: b.colorVela || e.vela, velaForzada: b.colorVela, colorRayas: e.colorPatron, escudos: e.escudos, d: dano, sinSombra: true, // la sombra la pone dibujarBarco o el escenario
     });
-    if (imagenes.size > 160) imagenes.clear(); // cada imagen arrastra sus versiones iluminadas: se suelta todo antes
+    if (imagenes.size > 160) for (const k of [...imagenes.keys()].slice(0, 20)) imagenes.delete(k); // las más viejas primero
     imagenes.set(clave, img);
     return img;
   }
@@ -332,7 +332,7 @@ function imagenBarco(b, e) {
     }
   }
 
-  if (imagenes.size > 160) imagenes.clear(); // cada imagen arrastra sus versiones iluminadas: se suelta todo antes
+  if (imagenes.size > 160) for (const k of [...imagenes.keys()].slice(0, 20)) imagenes.delete(k); // las más viejas primero
   imagenes.set(clave, img);
   return img;
 }
@@ -340,12 +340,20 @@ function imagenBarco(b, e) {
 // El barco con volumen: se toma su dibujo tal cual está y se lo ilumina como si tuviera relieve. La altura sale del propio dibujo
 // (el casco se redondea hacia la borda y lo claro, como las velas, queda más alto), y la luz es la del escenario. Como el barco
 // gira y la luz no, hay una versión por cada dirección de luz (24), armada la primera vez que hace falta.
-const relieves = new WeakMap(), CUBOS = 12; // 12 direcciones de luz: de a 30°, no se nota el salto y gasta la mitad de memoria
+const relieves = new WeakMap(), CUBOS = 12, presupuestoLuz = { t: 0, n: 0 }; // 12 direcciones de luz: de a 30°, no se nota el salto y gasta la mitad de memoria
 function imagenLuz(img, rel) {
   let r = relieves.get(img);
   if (!r) relieves.set(img, r = { v: [] });
   const cubo = ((Math.round((rel / TAU) * CUBOS) % CUBOS) + CUBOS) % CUBOS;
   if (r.v[cubo]) return r.v[cubo];
+  // armar una dirección cuesta unos milisegundos: se arman pocas por cuadro y, mientras, se usa la más cercana que ya esté
+  const ahora = performance.now();
+  if (ahora - presupuestoLuz.t > 12) { presupuestoLuz.t = ahora; presupuestoLuz.n = 0; }
+  if (presupuestoLuz.n >= 2) {
+    for (let d = 1; d <= CUBOS / 2; d++) { const a = r.v[(cubo + d) % CUBOS] || r.v[(cubo - d + CUBOS) % CUBOS]; if (a) return a; }
+    return img;
+  }
+  presupuestoLuz.n++;
   const w = img.width, h = img.height, n = w * h;
   let datos;
   try { datos = img.getContext('2d').getImageData(0, 0, w, h); } catch { return img; }
@@ -981,9 +989,10 @@ export function dibujarEscena(ctx, j, vista) {
   // tierras, por capas: así las manchas que se tocan forman una sola costa
   const tema = j.mundo.tema;
   const aLaVista = j.mundo.islas.filter((isla) => visible(isla.x, isla.y, isla.r * 1.6));
+  let lisas = aLaVista; // las que se pintan lisas: todas sin relieve, o solo las que todavía no lo tienen armado
   const capa = (escala, color, soloTierra) => {
     ctx.fillStyle = color;
-    for (const isla of aLaVista) {
+    for (const isla of lisas) {
       if (soloTierra && ESCOLLO[isla.tipo]) continue;
       trazarIsla(ctx, isla, isla.r > 300 ? 1 + (escala - 1) * (300 / isla.r) : escala);
       ctx.fill();
@@ -1039,16 +1048,17 @@ export function dibujarEscena(ctx, j, vista) {
     const nombre = vista.escena || j.escenaVista;
     relieve = tr.listo(x0, y0, vw, vh, nombre, escenaPara(nombre, tema).rumbo, calTerreno);
   }
-  if (!relieve) {
-    capa(1.1, tema.arena[0], true);
+  if (tr) lisas = relieve ? [] : aLaVista.filter((isla) => !tr.cubierta(isla));
+  if (lisas.length) {
+    capa(tr ? 1.0 : 1.1, tema.arena[0], true); // con relieve en camino, sin el borde de arena de más (asomaba como una línea amarilla)
     capa(1.0, tema.arena[1], true);
     // pasto o nieve: en las tierras grandes llega casi hasta la costa
     ctx.fillStyle = tema.pasto[0];
-    for (const isla of aLaVista) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 60 / isla.r : 0.8); ctx.fill(); } }
+    for (const isla of lisas) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 60 / isla.r : 0.8); ctx.fill(); } }
     ctx.fillStyle = tema.pasto[1];
-    for (const isla of aLaVista) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 150 / isla.r : 0.52); ctx.fill(); } }
+    for (const isla of lisas) { if (!ESCOLLO[isla.tipo]) { trazarIsla(ctx, isla, isla.r > 300 ? 1 - 150 / isla.r : 0.52); ctx.fill(); } }
     // arrecifes y bancos: arena a flor de agua con algunas piedras
-    for (const isla of aLaVista) {
+    for (const isla of lisas) {
       if (isla.tipo !== 'arrecife') continue;
       ctx.fillStyle = tema.arena[0];
       trazarIsla(ctx, isla, 0.95); ctx.fill();
@@ -1061,7 +1071,7 @@ export function dibujarEscena(ctx, j, vista) {
       }
     }
     // icebergs: bloque blanco con una cara en sombra
-    for (const isla of aLaVista) {
+    for (const isla of lisas) {
       if (isla.tipo !== 'iceberg') continue;
       ctx.fillStyle = '#cfe6f2';
       trazarIsla(ctx, isla, 1.05, true); ctx.fill();

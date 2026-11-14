@@ -275,6 +275,12 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .aj-vol { display: grid; grid-template-columns: 1fr 1.4fr 3.2em; align-items: center; gap: 10px; margin: 8px 0; font-weight: 700; }
 .aj-vol input { width: 100%; accent-color: #ffd166; cursor: pointer; }
 .aj-vol .chips { gap: 4px; } .aj-vol .chips .chip { padding: 5px 2px; font-size: 12px; }
+.aj-seccion { display: flex; justify-content: flex-start; gap: 6px; align-items: center; width: 100%; margin: 8px 0 0; padding: 12px 14px; font: inherit; font-weight: 800; letter-spacing: 0.5px; text-align: left; border-radius: 10px; border: 2px solid transparent; background: var(--tarjeta); color: inherit; cursor: pointer; }
+.aj-seccion::after { content: '▸'; margin-left: auto; transition: transform 0.15s; }
+.aj-seccion:hover { background: var(--tarjeta-hover); }
+.aj-seccion.abierta { border-color: var(--acento); color: var(--oro); }
+.aj-seccion.abierta::after { transform: rotate(90deg); }
+.aj-panel { padding: 4px 4px 6px; }
 .aj-teclas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 6px 0 8px; }
 .aj-tecla { display: grid; grid-template-columns: 1fr 6.5em; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
 .aj-tecla .chip { padding: 6px 4px; font-size: 12px; letter-spacing: 0; }
