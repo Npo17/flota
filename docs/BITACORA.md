@@ -3,6 +3,12 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (cañones y casco hasta nivel 20) — Nicolás + Claude
+
+- En el puerto, los cañones y el refuerzo del casco suben hasta el nivel 20 (eran 10). Los precios siguen la misma cuenta: el nivel n de cañones cuesta 180 × n y el de casco 140 × n (el 20: 3.600 y 2.800 de oro).
+- Al 20, cada bala hace 4 veces el daño de base (+15 % por nivel) y el casco suma 900 puntos. La vida del Kraken no cambió (12.000 con un capitán, +60 % por cada capitán más): con todo al 20 se lo baja bastante más rápido.
+- **Servidor:** cambió `src/config.js`, que usa la simulación: hay que republicarlo para que en línea también se pueda llegar al 20.
+
 ## 2026-11-15 (la lluvia ya no se desliza de a tramos) — Nicolás + Claude
 
 - La lluvia sigue inclinada hacia donde va el viento, pero cuando el viento giraba toda la lluvia se corría de costado de golpe, "como deslizando imágenes". Causa: la posición de cada gota era dirección del viento × tiempo de partida, así que un giro chico movía todo cientos de píxeles. Ahora lo recorrido se suma cuadro a cuadro y la inclinación sigue al viento despacio (`src/kraken-dibujo.js`, `lluviaVa`).
