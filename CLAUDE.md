@@ -89,6 +89,7 @@ El sello de versión existe porque una vez el sitio quedó roto por mezclar arch
 | `src/dibujo.js` | Todo lo que se pinta en el canvas; los barcos se guardan como imagen para que sea fluido |
 | `src/escenarios.js` | La identidad visual del mar: paleta y escenarios (atardecer, mañana, noche, tormenta, eclipse, kraken) como números, el escenario elegido en el inicio de la app (`aon-inicio`) y las preferencias de dibujo (`aon-graficos`). Solo dibujo |
 | `src/terreno.js` | La tierra con relieve (arena, vegetación, bosque, roca, nieve, hielo), pintada por baldosas una sola vez con la luz del escenario. Solo dibujo; apagada (`terreno: 0`) queda la tierra lisa |
+| `src/terreno-obrero.js` | Hilos aparte (Web Workers) que arman las baldosas del relieve para no frenar el dibujo; hasta 4, compartidos por todas las partidas. Si el navegador no deja crear hilos, `terreno.js` las arma en el hilo principal de a poco |
 | `src/arte-real.js` | Acabado realista común de los barcos (velas, cubierta, casco, cañones, sombra del aparejo). Lo llaman todos los `arte-*.js`; no cambia diseños. `src/arte-realista.js`: el galeón español entero en ese estilo |
 | `src/controles.js` | Las teclas configurables (Ajustes → Controles): acción → tecla, guardadas en `aon-teclas`. `main.js` pregunta `accionDe(tecla)` en vez de comparar letras |
 | `src/luces.js` | Los faroles de cada barco como datos (por civilización y casco). Los dibuja `dibujarLuces` en `dibujo.js`, junto con el destello de los cañonazos |

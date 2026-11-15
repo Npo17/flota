@@ -3,6 +3,16 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-14 (tierra que no cargaba y tirones en mapas con mucha tierra) — Nicolás + Claude
+
+- **Qué pasaba:** en línea, al bajar al fondo de un mapa con mucha tierra, parte de la tierra quedaba lisa (sin relieve) un rato largo y el juego iba a tirones.
+- **Causa (medida):** armar el relieve de una pantalla entera cuesta 9 a 12 segundos de cuentas (medio segundo por baldosa con tierra) y se hacía en el mismo hilo que dibuja, de a ~3 ms por cuadro, con picos de 12 ms al empezar cada baldosa. En Ultra una pantalla tardaba cerca de un minuto en completarse.
+- **Arreglo:** las baldosas se arman en hilos aparte (`src/terreno-obrero.js`, hasta 4 a la vez, los mismos para todas las partidas: no se abren hilos nuevos en cada una). Medido en Ultra: una pantalla completa en 3,6 s y 0,06 ms por cuadro en el hilo del juego. Si el navegador no deja crear hilos, queda el camino anterior.
+- Además: se arman primero las del centro de la pantalla y dos baldosas de margen alrededor (antes una), y las imágenes que se sueltan se liberan.
+- **Sin probar:** el camino de respaldo sin hilos (es el código de antes) y navegadores que no sean Chromium.
+- **Puerto (un amigo tocó la P y no se abrió):** al lado del muelle, apenas afuera del círculo punteado, la P no hacía nada y no avisaba. Ahora, si no entrás, la pista de abajo dice por unos segundos que hay que meterse en el círculo. En línea, cerca del borde, se le pregunta igual al servidor (tu barco en pantalla puede ir un pelo distinto). Con teclados que no escriben letras latinas (ruso, griego…) las teclas se toman por su lugar, así P, A, D y las demás andan.
+- **Tritones "abatidos" sin dispararles:** no es un error: es el mosquete automático de la tripulación (Cristian, 13/11). Pendiente decidir entre los dos si se hace más visible o se saca.
+
 ## 2026-11-13 (en la web se elige el escenario) — Nicolás + Claude
 
 **Estado: subido con el OK de Nicolás.** No toca la simulación ni el servidor.

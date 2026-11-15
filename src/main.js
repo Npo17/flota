@@ -245,7 +245,7 @@ $('ast-linea').onclick = () => {
     nombre, diseno,
     alEntrar: (p) => { partida = p; mundo = p.mundo; empezar(); },
     alCerrar: (motivo) => { if (estado !== 'fin') volverAlAstillero(motivo); },
-    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); },
+    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); else if (!ok) avisarPuertoLejos(); },
   });
 };
 
@@ -288,7 +288,7 @@ function entrarSala(codigo, crear) {
       $('sal-info').textContent = motivo;
       pintarSalas();
     },
-    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); },
+    alPuerto: (ok) => { if (ok && estado === 'mar') abrirPuerto(); else if (!ok) avisarPuertoLejos(); },
   });
 }
 
@@ -314,10 +314,14 @@ async function pintarLinea(mensaje) {
 }
 
 // ---------- Puerto ----------
-function cercaDelPuerto() {
+function cercaDelPuerto(margen = 0) {
   const p = mundo.puerto, b = partida.jugador;
-  return Math.hypot(b.x - p.x, b.y - p.y) < p.radio;
+  return Math.hypot(b.x - p.x, b.y - p.y) < p.radio + margen;
 }
+// Si apretás la tecla del puerto y no entrás, que se sepa por qué (un amigo de Nicolás tocó la P al lado del muelle, apenas
+// afuera del círculo, y no pasó nada: creyó que el juego fallaba). Por unos segundos la pista de abajo lo explica.
+let avisoPuertoHasta = 0;
+const avisarPuertoLejos = () => { avisoPuertoHasta = performance.now() + 3500; };
 
 function entrarPuerto() {
   if (partida.enLinea) { red.atracar(); return; } // el servidor confirma y recién ahí se abre
@@ -609,6 +613,12 @@ function pintarLamina(cual) {
 pintarPrimeraVez();
 
 // ---------- Entrada ----------
+// La tecla apretada, en minúscula. Con un teclado que no escribe letras latinas (ruso, griego, árabe…) se toma la letra del
+// lugar de la tecla, así P, A, D y las demás andan igual.
+function teclaDeEvento(e) {
+  const k = e.key.toLowerCase();
+  return k.length === 1 && !/[ -~ñç]/.test(k) && /^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : k;
+}
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !e.repeat) {
     // ESC abre los ajustes (y los cierra). En una partida el mar NO se detiene (Nicolás, 14/11/2026: quería bajar el sonido jugando
@@ -618,7 +628,7 @@ addEventListener('keydown', (e) => {
     return abrirAjustes();
   }
   if (estado !== 'mar') return;
-  const k = e.key.toLowerCase();
+  const k = teclaDeEvento(e);
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
   if (e.repeat) return;
   teclas.add(k);
@@ -635,10 +645,11 @@ addEventListener('keydown', (e) => {
   if (acc === 'abordar') pulsos.abordar = true;
   if (acc === 'flota') pulsos.ordenFlota = true;
   if (acc === 'formacion') pulsos.formacion = true;
-  if (acc === 'puerto' && !partida.fin && cercaDelPuerto()) entrarPuerto();
+  // en línea decide el servidor, y tu barco en pantalla puede ir un pelo atrás o adelante: en el borde se le pregunta igual
+  if (acc === 'puerto' && !partida.fin) { if (cercaDelPuerto(partida.enLinea ? 40 : 0)) entrarPuerto(); else avisarPuertoLejos(); }
   if (k === 'tab') e.preventDefault();
 });
-addEventListener('keyup', (e) => { const k = e.key.toLowerCase(), acc = accionDe(k); teclas.delete(k); teclaDibujada(acc ? teclaDefecto(acc) : k, false); });
+addEventListener('keyup', (e) => { const k = teclaDeEvento(e), acc = accionDe(k); teclas.delete(k); teclaDibujada(acc ? teclaDefecto(acc) : k, false); });
 addEventListener('blur', () => teclas.clear());
 let ratonVisto = false;
 addEventListener('mousemove', (e) => { vista.ratonPx = { x: e.clientX, y: e.clientY }; ratonVisto = true; teclaDibujada('mover', true, 200); });
@@ -721,6 +732,7 @@ function pintarHud() {
   const cand = candidatoAbordaje(j, vista.raton);
   if (j.fin) pista = '';
   else if (cercaDelPuerto()) pista = j.oroBodega ? t('P: entrar al puerto y guardar {n} de oro', { n: j.oroBodega }) : t('P: entrar al puerto');
+  else if (performance.now() < avisoPuertoHasta) pista = t('Para entrar al puerto, metete dentro del círculo punteado que lo rodea');
   else if (j.gancho && j.gancho.fase === 'enganchado') pista = t('Abordando el {barco}: tu gente {a} contra {b} · F para cortar las sogas', { barco: j.gancho.obj.nombre, a: b.trip, b: j.gancho.obj.trip });
   else if (b.reparando) pista = t('Reparando el casco en la costa (hasta el 75 %)');
   else if (cand && j.cdAbordaje <= 0 && !j.gancho) pista = t(cand.cerca ? 'F: abordar el {barco} · tu gente {a} contra {b} ({ventaja})' : 'Arrimate al {barco} para abordarlo · tu gente {a} contra {b} ({ventaja})', { barco: cand.b.nombre, a: b.trip, b: cand.b.trip, ventaja: cand.ventaja });

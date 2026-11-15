@@ -1,7 +1,9 @@
 // La tierra con relieve: arena mojada y seca, vegetación, bosque, roca, nieve y hielo, con la luz del escenario.
 // Solo dibujo: usa las mismas costas que el juego (las formas de mundo.js), así lo que se ve es donde se choca.
-// El mundo se pinta por baldosas (pedazos cuadrados), una sola vez cada una, y después solo se estampan. Una baldosa se arma
-// en un cuadro; mientras falta alguna a la vista, dibujo.js muestra la tierra lisa de siempre.
+// El mundo se pinta por baldosas (pedazos cuadrados), una sola vez cada una, y después solo se estampan. Armar una baldosa
+// con tierra cuesta cerca de medio segundo de cuentas: por eso se arman en hilos aparte (src/terreno-obrero.js), varios a la
+// vez, sin frenar el dibujo. Mientras falta alguna a la vista, dibujo.js muestra la tierra lisa de siempre.
+// Si el navegador no deja crear hilos, se arman acá mismo, de a poquito por cuadro (más lento, pero anda igual).
 import { hash2 } from './rng.js';
 
 const LADO = 400; // lo que mide una baldosa en el mundo
@@ -79,7 +81,37 @@ function materiales(tema) {
 }
 
 // calidad: 0 = apagado, y si no, cuántos puntos de imagen por unidad de mundo (0,6 a 1)
-export function crearTerreno(mundo) {
+const nuevoLienzo = (n) => { if (typeof document === 'undefined') return new OffscreenCanvas(n, n); const c = document.createElement('canvas'); c.width = c.height = n; return c; };
+
+// Los hilos aparte, compartidos por todos los terrenos (uno por partida). Se abren la primera vez que hacen falta.
+// Si el navegador no deja abrirlos, o uno se cae, la lista queda vacía y cada terreno arma sus baldosas en el hilo principal.
+let pool = null, sigId = 1;
+const duenos = new Map(); // número de terreno → { recibir, vivo }
+function hilos() {
+  if (pool) return pool;
+  pool = [];
+  const caer = () => { for (const o of pool) { try { o.w.terminate(); } catch {} } pool.length = 0; for (const r of duenos.values()) r.recibir({ todos: true }); };
+  try {
+    const cuantos = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 2));
+    // el hilo lleva la misma versión (?v=) que este archivo, para que el navegador no le dé uno viejo guardado
+    for (let n = 0; n < cuantos; n++) {
+      const o = { w: new Worker(new URL('./terreno-obrero.js' + new URL(import.meta.url).search, import.meta.url), { type: 'module' }), libre: true, tiene: new Set() };
+      o.w.onmessage = (e) => {
+        const m = e.data;
+        o.libre = true;
+        if (m.fallo && !m.clave) return caer();
+        const r = duenos.get(m.id);
+        if (r) r.recibir(m, o); else if (m.img) m.img.close();
+      };
+      o.w.onerror = caer;
+      pool.push(o);
+    }
+  } catch { caer(); }
+  return pool;
+}
+
+// opc.obrero: dentro de un hilo aparte; solo sirve armarYa()
+export function crearTerreno(mundo, opc = {}) {
   const mat = materiales(mundo.tema), baldosas = new Map(), islas = mundo.islas;
   let reloj = 0, claveLuz = '', px = 0;
   const cerca = (tx, ty, m) => islas.filter((i) => i.x + i.r * 1.3 + m > tx && i.x - i.r * 1.3 - m < tx + LADO && i.y + i.r * 1.3 + m > ty && i.y - i.r * 1.3 - m < ty + LADO);
@@ -89,7 +121,7 @@ export function crearTerreno(mundo) {
     const lista = cerca(tx, ty, 8);
     if (!lista.length) return null;
     const P = Math.round(LADO * px), N = P + 2, s = px; // un punto de margen de cada lado, para empalmar
-    const lienzo = document.createElement('canvas'); lienzo.width = lienzo.height = N;
+    const lienzo = nuevoLienzo(N);
     const ctx = lienzo.getContext('2d', { willReadFrequently: true });
     ctx.setTransform(s, 0, 0, s, 1 - tx * s, 1 - ty * s);
     // la forma exacta de cada costa, un color por tipo: rojo tierra, azul banco de arena, verde hielo
@@ -199,7 +231,38 @@ export function crearTerreno(mundo) {
     return lienzo;
   }
 
-  let trabajo = null; // la baldosa que se está armando: { clave, tx, ty, gen }
+  if (opc.obrero) return { // en el hilo aparte: arma una baldosa entera de una vez y la devuelve como imagen lista para estampar
+    armarYa(tx, ty, rumbo, calidad) {
+      px = calidad;
+      const g = armar(tx, ty, rumbo);
+      let r = g.next(); while (!r.done) r = g.next();
+      return r.value ? r.value.transferToImageBitmap() : null;
+    },
+  };
+
+  // Los hilos son de todo el juego (ver hilos(), más abajo): cada partida nueva usa los mismos, no abre otros.
+  // Este terreno se anota con un número; a cada hilo se le manda el mapa la primera vez que le toca una baldosa de acá.
+  const id = sigId++;
+  let tanda = 0; // cambia cuando cambia la luz o la calidad; lo que llega de una tanda vieja se tira
+  const enCurso = new Set();
+  const soltar = (b) => { if (b && b.img && b.img.close) b.img.close(); };
+  let datos = null;
+  const datosMundo = () => datos || (datos = { tema: JSON.parse(JSON.stringify(mundo.tema)), ancho: mundo.ancho, alto: mundo.alto, islas: islas.map((i) => ({ x: i.x, y: i.y, r: i.r, tipo: i.tipo, puntos: i.puntos.map((q) => ({ ang: q.ang, f: q.f })) })) });
+  const recibir = (m, o) => {
+    if (m.todos) { enCurso.clear(); return; }             // se cayeron los hilos: de acá en más se arma en este hilo
+    if (m.falta) { o.tiene.delete(id); enCurso.delete(m.clave); return; } // el hilo ya no tenía este mapa: se le vuelve a mandar
+    if (m.tanda !== tanda) { if (m.img) m.img.close(); return; }
+    enCurso.delete(m.clave);
+    // si falló, queda sin relieve (tierra lisa) en vez de pedirla de nuevo en cada cuadro
+    baldosas.set(m.clave, { img: m.img || null, tx: m.tx, ty: m.ty, uso: ++reloj });
+  };
+  // los mapas viejos (partidas que ya terminaron) no reciben más nada
+  for (const [k, r] of duenos) if (!r.vivo()) duenos.delete(k);
+  let ultimoUso = performance.now();
+  const registro = { recibir, vivo: () => performance.now() - ultimoUso < 60000 };
+  duenos.set(id, registro);
+
+  let trabajo = null; // (sin hilos) la baldosa que se está armando: { clave, tx, ty, gen }
   let ultimo = 0; // cuándo se dibujó el cuadro anterior: si el equipo viene justo, ese cuadro se arma menos
   const clavesDe = (x0, y0, x1, y1) => {
     const lista = [];
@@ -214,7 +277,7 @@ export function crearTerreno(mundo) {
     // primero las que se ven y después las de alrededor, para que estén listas antes de llegar.
     // Devuelve true si están todas las que se ven; dibujo.js pinta la tierra lisa solo de las islas que todavía no tienen relieve.
     listo(x0, y0, vw, vh, nombreLuz, rumbo, calidad) {
-      if (claveLuz !== nombreLuz + '|' + calidad) { baldosas.clear(); trabajo = null; claveLuz = nombreLuz + '|' + calidad; px = calidad; }
+      if (claveLuz !== nombreLuz + '|' + calidad) { for (const b of baldosas.values()) soltar(b); baldosas.clear(); trabajo = null; enCurso.clear(); tanda++; claveLuz = nombreLuz + '|' + calidad; px = calidad; }
       this.vista = [];
       let faltan = 0;
       const pendientes = [];
@@ -224,6 +287,28 @@ export function crearTerreno(mundo) {
       }
       // las de alrededor (una baldosa de margen), cuando ya están todas las que se ven
       if (!pendientes.length) for (const [tx, ty] of clavesDe(x0 - LADO, y0 - LADO, x0 + vw + LADO, y0 + vh + LADO)) if (!baldosas.has(tx + ',' + ty)) { pendientes.push([tx, ty]); if (pendientes.length > 3) break; }
+      ultimoUso = performance.now();
+      // si estuvo un rato sin usarse y lo dieron de baja, se vuelve a anotar (lo que estaba pidiendo se perdió: se pide de nuevo)
+      if (!duenos.has(id)) { duenos.set(id, registro); enCurso.clear(); }
+      const obreros = hilos();
+      if (obreros.length) {
+        // con hilos: primero las que se ven (las del centro antes), después dos baldosas de margen, para llegar con todo listo
+        const cx = x0 + vw / 2 - LADO / 2, cy = y0 + vh / 2 - LADO / 2;
+        pendientes.sort((a, b) => Math.hypot(a[0] - cx, a[1] - cy) - Math.hypot(b[0] - cx, b[1] - cy));
+        if (pendientes.length < obreros.length) for (const [tx, ty] of clavesDe(x0 - 2 * LADO, y0 - 2 * LADO, x0 + vw + 2 * LADO, y0 + vh + 2 * LADO)) if (!baldosas.has(tx + ',' + ty) && !pendientes.some((q) => q[0] === tx && q[1] === ty)) pendientes.push([tx, ty]);
+        for (const o of obreros) {
+          if (!o.libre) continue;
+          let sig = null;
+          while (pendientes.length) { const q = pendientes.shift(); if (!enCurso.has(q[0] + ',' + q[1])) { sig = q; break; } }
+          if (!sig) break;
+          const clave = sig[0] + ',' + sig[1];
+          enCurso.add(clave); o.libre = false;
+          if (!o.tiene.has(id)) { o.tiene.add(id); o.w.postMessage({ id, mundo: datosMundo() }); }
+          o.w.postMessage({ id, tanda, clave, tx: sig[0], ty: sig[1], rumbo, px });
+        }
+        if (baldosas.size > 220) for (const [k, b] of [...baldosas.entries()].sort((a, b) => a[1].uso - b[1].uso).slice(0, 50)) { soltar(b); baldosas.delete(k); }
+        return faltan <= 0;
+      }
       const t0 = performance.now(), entre = t0 - ultimo; ultimo = t0;
       // pocos milisegundos por cuadro: si el cuadro anterior ya vino lento, casi nada (las que se ven, igual avanzan un poco)
       const presupuesto = entre > 20 ? (faltan ? 1 : 0) : 1.8;
