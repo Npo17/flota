@@ -4,6 +4,8 @@
 // node scripts/probar-textos.mjs avisa si falta alguna fila o algún hueco.
 export const TEXTOS = [
   // ----- Ajustes: gráficos -----
+  ["Nombre de capitán", "Captain name", "Nome do capitão", "Nom du capitaine", "Imię kapitana", "Nome del capitano", "Kapitänsname", "Kaptan adı"],
+  ["Escribí tu nombre", "Type your name", "Escreva seu nome", "Écrivez votre nom", "Wpisz swoje imię", "Scrivi il tuo nome", "Gib deinen Namen ein", "Adını yaz"],
   ["Gráficos", "Graphics", "Gráficos", "Graphismes", "Grafika", "Grafica", "Grafik", "Grafikler"],
   ["Baja", "Low", "Baixa", "Basse", "Niska", "Bassa", "Niedrig", "Düşük"],
   ["Media", "Medium", "Média", "Moyenne", "Średnia", "Media", "Mittel", "Orta"],

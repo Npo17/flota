@@ -3,6 +3,12 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (nombre de capitán a mano) — Nicolás + Claude
+
+- En Ajustes, arriba de todo, un campo **Nombre de capitán** (hasta 16 letras, guardado en `aon-nombre`). Sirve sobre todo en la app de escritorio, donde no hay ingreso con Google hasta que llegue Steam: antes el nombre era "Capitán" y un número al azar.
+- Se usa en las partidas solas (cambia enseguida) y en línea (desde la próxima partida). Con cuenta, el campo no aparece y manda el nombre de la cuenta.
+- Mientras se escribe, las letras no disparan ni mueven las velas. No cambia el servidor: ya aceptaba cualquier nombre y le suma un número si se repite.
+
 ## 2026-11-15 (tritones sin mosquetes y flecha al Kraken) — Nicolás + Claude
 
 - **Tritones:** vuelven a ser como antes: si te alcanzan te sacan marineros, y solo mueren si les pegás. Se sacaron los mosquetes automáticos de la tripulación (Cristian, 13/11): los jugadores veían "¡Tritón abatido!" sin haber disparado. La prueba de `probar-sim` ahora comprueba que sin disparar no muere ninguno y que los que llegan se llevan gente.

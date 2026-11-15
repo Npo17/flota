@@ -207,12 +207,24 @@ function empezar() {
   $('hud-linea').classList.toggle('oculto', !partida.enLinea);
 }
 
+// Nombre de capitán a mano (Ajustes → Nombre de capitán), para quien no entró con una cuenta: en la app de escritorio el
+// ingreso con Google no está (la cuenta va a ser la de Steam). Con cuenta manda el nombre de la cuenta. Se limpia igual
+// que en el servidor (servidor/worker.js): sin < > & " ' y hasta 16 letras.
+const limpiarNombre = (s) => String(s || '').replace(/[<>&"']/g, '').trim().slice(0, 16);
+function nombreElegido() { try { return limpiarNombre(localStorage.getItem('aon-nombre')); } catch { return ''; } }
+const nombrePropio = () => cuenta.perfil?.nombre || nombreElegido();
+$('aj-nombre').oninput = () => {
+  const v = limpiarNombre($('aj-nombre').value);
+  try { if (v) localStorage.setItem('aon-nombre', v); else localStorage.removeItem('aon-nombre'); } catch {}
+  if (partida && !partida.enLinea) partida.nombreJugador = nombrePropio(); // en una partida sola se ve enseguida; en línea, desde la próxima
+};
+
 // Modo solo: vos contra los bots, en el mapa que elijas
 $('ast-zarpar').onclick = () => {
   mundo = crearMundo(mapaElegido === 'aleatorio' ? mapaAlAzar() : mapaElegido);
   reglasPartida = { ...reglas };
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida);
-  partida.nombreJugador = cuenta.perfil?.nombre || '';
+  partida.nombreJugador = nombrePropio();
   empezar();
   aviso(partida, '{mapa} · {lugar}', 'bueno', { mapa: mundo.nombre, lugar: mundo.lugar });
   aviso(partida, 'Llevá el cursor a donde quieras ir y salí a buscar mercantes', 'info');
@@ -240,7 +252,7 @@ function volverAlAstillero(mensaje) {
 $('ast-linea').onclick = () => {
   $('ast-linea').disabled = true;
   $('ast-linea-info').textContent = t('Conectando con el mar…');
-  const nombre = cuenta.perfil?.nombre || `${t('Capitán')} ${Math.floor(100 + Math.random() * 900)}`;
+  const nombre = nombrePropio() || `${t('Capitán')} ${Math.floor(100 + Math.random() * 900)}`;
   red = conectar({
     nombre, diseno,
     alEntrar: (p) => { partida = p; mundo = p.mundo; empezar(); },
@@ -277,7 +289,7 @@ function entrarSala(codigo, crear) {
   if (PRESUPUESTO - costoDiseno(diseno) < 0) { $('sal-info').textContent = t('Te pasaste del presupuesto'); return; }
   if (red) { red.cerrar(); red = null; }
   $('sal-info').textContent = t('Conectando con la sala…');
-  const nombre = cuenta.perfil?.nombre || `${t('Capitán')} ${Math.floor(100 + Math.random() * 900)}`;
+  const nombre = nombrePropio() || `${t('Capitán')} ${Math.floor(100 + Math.random() * 900)}`;
   let adentro = false;
   red = conectar({
     nombre, diseno, sala: { codigo, crear },
@@ -439,7 +451,7 @@ function reaparecer() {
   }
   if (practica) return iniciarPractica(); // te hundiste practicando (una costa, un remolino): la práctica empieza de nuevo
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida || reglas);
-  partida.nombreJugador = cuenta.perfil?.nombre || '';
+  partida.nombreJugador = nombrePropio();
   empezar();
 }
 
@@ -470,7 +482,7 @@ function iniciarPractica() {
   mundo = crearMundo('malta');
   reglasPartida = { viento: false, abordajes: true }; // sin viento: primero las maniobras; el viento se explica en la guía
   partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida);
-  partida.nombreJugador = cuenta.perfil?.nombre || '';
+  partida.nombreJugador = nombrePropio();
   practica = crearPractica(partida);
   empezar();
   $('hud').classList.add('practica');
@@ -627,6 +639,7 @@ addEventListener('keydown', (e) => {
     if (estado === 'fin') return volverAlAstillero();
     return abrirAjustes();
   }
+  if (e.target && e.target.id === 'aj-nombre') return; // escribiendo el nombre: las letras no son disparos ni velas
   if (estado !== 'mar') return;
   const k = teclaDeEvento(e);
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -1037,6 +1050,10 @@ function ponerTema(id) {
 }
 
 function pintarAjustes() {
+  // el nombre a mano, solo si no hay cuenta con nombre (con cuenta se cambia desde la cuenta)
+  $('aj-nombre-fila').classList.toggle('oculto', !!cuenta.perfil?.nombre);
+  if (document.activeElement !== $('aj-nombre')) $('aj-nombre').value = nombreElegido();
+  $('aj-nombre').placeholder = t('Escribí tu nombre');
   $('aj-idiomas').innerHTML = Object.entries(IDIOMAS).map(([id, nombre]) =>
     `<button type="button" class="chip${id === idiomaActual() ? ' elegida' : ''}" data-id="${id}" title="${nombre}">${id.toUpperCase()}</button>`).join('');
   for (const b of $('aj-idiomas').children) b.onclick = () => cambiarIdioma(b.dataset.id);
