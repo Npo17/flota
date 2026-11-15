@@ -3,6 +3,13 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (ya no se queda atrapado en un remolino) — Nicolás + Claude
+
+- Nicolás quedó girando en el centro de un remolino sin poder salir (con 44.000 de oro). Causa: el remolino tiraba hacia el centro con una fuerza fija de 95, y un galeón cargado de cañones anda a 82; con viento en contra o el casco roto, ni un bergantín salía. Con el casco al nivel 20 tampoco se hundía rápido: quedaba ahí para siempre.
+- Ahora el remolino tira como mucho el 75 % de lo que anda ese barco a toda vela (con su casco, su gente y el viento de ese momento) y lo hace girar menos de lo que gira su timón. A toda vela y apuntando hacia afuera siempre se sale: un galeón con el casco roto tarda unos 16 s, una balandra sana unos 4 s. Quedarse adentro sigue rompiendo el casco.
+- Prueba nueva en `probar-sim`: galeón de 16 cañones con el casco roto en el centro de un remolino de Gibraltar; tiene que salir en menos de 30 s.
+- **Servidor:** cambió la simulación (`src/juego.js`): hay que republicarlo para que en línea tampoco se quede nadie atrapado.
+
 ## 2026-11-15 (cañones y casco hasta nivel 20) — Nicolás + Claude
 
 - En el puerto, los cañones y el refuerzo del casco suben hasta el nivel 20 (eran 10). Los precios siguen la misma cuenta: el nivel n de cañones cuesta 180 × n y el de casco 140 × n (el 20: 3.600 y 2.800 de oro).

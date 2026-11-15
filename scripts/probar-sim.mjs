@@ -447,5 +447,19 @@ for (const abordo of [true, false]) {
   }
   ok(peor < 8, `trabado: la escolta pegada al borde quedó ${peor.toFixed(1)} s sin avanzar`);
 }
+{
+  // un galeón cargado de cañones y con el casco roto, en el centro de un remolino, sale a toda vela (antes quedaba girando para siempre)
+  const k = crearPartida(crearMundo('gibraltar'), { faccion: 'espanoles', casco: 'galeon', velas: 'latinas', canones: 16, municion: 'redonda', trip: 'moderada' }, 0);
+  const yo = k.jugador, w = k.mundo.remolinos[0];
+  k.barcos = [yo]; k.tritones = []; k.yo.proxTritones = 1e9; k.proxConvoy = 999; k.kraken = null;
+  yo.x = w.x + 20; yo.y = w.y; yo.stats.vidaMax = 5000; yo.vida = 1500;
+  let t = 0;
+  while (t < 60 && Math.hypot(yo.x - w.x, yo.y - w.y) < w.radio + 5) {
+    const ang = Math.atan2(yo.y - w.y, yo.x - w.x);
+    actualizar(k, 1 / 60, { objetivo: { x: w.x + Math.cos(ang) * 2000, y: w.y + Math.sin(ang) * 2000 }, velas: 3 });
+    yo.vida = Math.max(yo.vida, 10); t += 1 / 60;
+  }
+  ok(t < 30, `remolino: un galeón con el casco roto no pudo salir en ${t.toFixed(0)} s`);
+}
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);
