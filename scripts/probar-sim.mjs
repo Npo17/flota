@@ -460,6 +460,18 @@ for (const abordo of [true, false]) {
     yo.vida = Math.max(yo.vida, 10); t += 1 / 60;
   }
   ok(t < 30, `remolino: un galeón con el casco roto no pudo salir en ${t.toFixed(0)} s`);
+  // y una balandra que ya perdió casi toda la gente en el centro (lo que el remolino hace), con el viento a favor
+  const b = crearPartida(crearMundo('gibraltar'), { faccion: 'japoneses', casco: 'balandra', velas: 'latinas', canones: 2, municion: 'redonda', trip: 'moderada' }, 0);
+  const yb = b.jugador, wb = b.mundo.remolinos[0];
+  b.barcos = [yb]; b.tritones = []; b.yo.proxTritones = 1e9; b.proxConvoy = 999; b.kraken = null;
+  yb.x = wb.x + 20; yb.y = wb.y; yb.stats.vidaMax = 5000; yb.vida = 1200; yb.trip = 2;
+  const va = vientoEn(b, wb.x, wb.y);
+  let tb = 0;
+  while (tb < 60 && Math.hypot(yb.x - wb.x, yb.y - wb.y) < wb.radio + 5) {
+    actualizar(b, 1 / 60, { objetivo: { x: yb.x + Math.cos(va) * 400, y: yb.y + Math.sin(va) * 400 }, velas: 3 });
+    yb.vida = Math.max(yb.vida, 10); tb += 1 / 60;
+  }
+  ok(tb < 20, `remolino: una balandra sin gente y con el casco roto no pudo salir en ${tb.toFixed(0)} s`);
 }
 console.log(fallas ? `${fallas} fallas` : 'todo bien');
 process.exit(fallas ? 1 : 0);

@@ -5,9 +5,9 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-15 (ya no se queda atrapado en un remolino) — Nicolás + Claude
 
-- Nicolás quedó girando en el centro de un remolino sin poder salir (con 44.000 de oro). Causa: el remolino tiraba hacia el centro con una fuerza fija de 95, y un galeón cargado de cañones anda a 82; con viento en contra o el casco roto, ni un bergantín salía. Con el casco al nivel 20 tampoco se hundía rápido: quedaba ahí para siempre.
-- Ahora el remolino tira como mucho el 75 % de lo que anda ese barco a toda vela (con su casco, su gente y el viento de ese momento) y lo hace girar menos de lo que gira su timón. A toda vela y apuntando hacia afuera siempre se sale: un galeón con el casco roto tarda unos 16 s, una balandra sana unos 4 s. Quedarse adentro sigue rompiendo el casco.
-- Prueba nueva en `probar-sim`: galeón de 16 cañones con el casco roto en el centro de un remolino de Gibraltar; tiene que salir en menos de 30 s.
+- Nicolás quedó girando en el centro de un remolino sin poder salir (con 44.000 de oro), con la balandra japonesa y el viento a favor. Causa: el remolino tiraba hacia el centro con una fuerza fija de 95. En el centro mata marineros y rompe el casco, y las dos cosas frenan al barco (poca gente: −35 %; casco roto: hasta −50 %): al rato hasta una balandra anda a 65 y ya no sale nunca. Un galeón cargado de cañones (82) no salía ni sano. Con el casco al nivel 20 tampoco se hundía rápido: quedaba ahí para siempre.
+- Ahora el remolino tira como mucho el 60 % de lo que anda ese barco a toda vela (con su casco, su gente y el viento de ese momento) y lo hace girar menos de lo que gira su timón. A toda vela y apuntando hacia afuera siempre se sale: desde el centro, una balandra sin gente y con el casco roto tarda unos 8 s, un galeón con el casco roto unos 9 s. Quedarse adentro sigue rompiendo el casco.
+- Pruebas nuevas en `probar-sim`: un galeón de 16 cañones con el casco roto y una balandra sin gente, en el centro de un remolino de Gibraltar, tienen que salir.
 - **Servidor:** cambió la simulación (`src/juego.js`): hay que republicarlo para que en línea tampoco se quede nadie atrapado.
 
 ## 2026-11-15 (cañones y casco hasta nivel 20) — Nicolás + Claude

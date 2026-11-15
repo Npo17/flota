@@ -461,17 +461,18 @@ function moverBarco(j, b, dt) {
     if (Math.abs(b.empuje.vx) + Math.abs(b.empuje.vy) < 6) b.empuje = null;
   }
 
-  // remolinos: te chupan y te hacen girar. Nunca más fuerte que el barco: tira como mucho el 75 % de lo que anda a toda vela
+  // remolinos: te chupan y te hacen girar. Nunca más fuerte que el barco: tira como mucho el 60 % de lo que anda a toda vela
   // (con su casco, su gente y el viento de ahora) y lo hace girar menos de lo que gira su timón, así que a toda vela y
-  // apuntando hacia afuera siempre se sale. Antes tiraba 95 fijo y un galeón cargado de cañones (82 de velocidad), o
-  // cualquier barco con el casco roto, quedaba girando en el centro para siempre (Nicolás, 15/11/2026).
+  // apuntando hacia afuera siempre se sale. Antes tiraba 95 fijo: un galeón cargado de cañones (82 de velocidad) no salía,
+  // y en el centro el remolino mata marineros y rompe el casco, que frenan al barco, así que hasta una balandra quedaba
+  // girando ahí para siempre (Nicolás, 15/11/2026).
   let enRemolino = false;
   for (const w of j.mundo.remolinos) {
     const dx = w.x - b.x, dy = w.y - b.y, d = Math.hypot(dx, dy);
     if (d >= w.radio) continue;
     enRemolino = true;
     const pleno = b.velFija || s.velMax * pocaGente * averia * rindeViento(j, b);
-    const f = (1 - d / w.radio) * Math.min(1, pleno * 0.75 / 95);
+    const f = (1 - d / w.radio) * Math.min(1, pleno * 0.6 / 95);
     const nx = dx / (d || 1), ny = dy / (d || 1);
     vx += nx * 95 * f + -ny * 85 * f * w.giro;
     vy += ny * 95 * f + nx * 85 * f * w.giro;
