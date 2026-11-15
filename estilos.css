@@ -283,7 +283,8 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .aj-panel { padding: 4px 4px 6px; }
 .aj-nombre { display: grid; grid-template-columns: 1fr 1.6fr; align-items: center; gap: 10px; margin: 8px 0 4px; font-weight: 700; }
 .aj-nombre input { width: 100%; box-sizing: border-box; font: inherit; font-weight: 700; padding: 9px 12px; border-radius: 10px; border: 2px solid transparent; background: var(--tarjeta); color: var(--oro); outline: none; }
-.aj-nombre input:focus { border-color: var(--acento); }
+.aj-nombre input:focus, #cuenta .nombre-propio:focus { border-color: var(--acento); }
+#cuenta .nombre-propio { width: 11em; font: inherit; font-weight: 700; padding: 7px 10px; border-radius: 10px; border: 2px solid transparent; background: var(--tarjeta); color: var(--oro); outline: none; }
 .aj-teclas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 6px 0 8px; }
 .aj-tecla { display: grid; grid-template-columns: 1fr 6.5em; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
 .aj-tecla .chip { padding: 6px 4px; font-size: 12px; letter-spacing: 0; }

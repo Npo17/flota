@@ -5,7 +5,7 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 
 ## 2026-11-15 (nombre de capitán a mano) — Nicolás + Claude
 
-- En Ajustes, arriba de todo, un campo **Nombre de capitán** (hasta 16 letras, guardado en `aon-nombre`). Sirve sobre todo en la app de escritorio, donde no hay ingreso con Google hasta que llegue Steam: antes el nombre era "Capitán" y un número al azar.
+- Un campo **Nombre de capitán** (en la app: en "Listo para zarpar", arriba de los botones de jugar; en la web: al lado de "Entrar con Google") (hasta 16 letras, guardado en `aon-nombre`). Sirve sobre todo en la app de escritorio, donde no hay ingreso con Google hasta que llegue Steam: antes el nombre era "Capitán" y un número al azar.
 - Se usa en las partidas solas (cambia enseguida) y en línea (desde la próxima partida). Con cuenta, el campo no aparece y manda el nombre de la cuenta.
 - Mientras se escribe, las letras no disparan ni mueven las velas. No cambia el servidor: ya aceptaba cualquier nombre y le suma un número si se repite.
 

@@ -207,17 +207,26 @@ function empezar() {
   $('hud-linea').classList.toggle('oculto', !partida.enLinea);
 }
 
-// Nombre de capitán a mano (Ajustes → Nombre de capitán), para quien no entró con una cuenta: en la app de escritorio el
-// ingreso con Google no está (la cuenta va a ser la de Steam). Con cuenta manda el nombre de la cuenta. Se limpia igual
-// que en el servidor (servidor/worker.js): sin < > & " ' y hasta 16 letras.
+// Nombre de capitán a mano, para quien no entró con una cuenta. En la app de escritorio (sin ingreso con Google: la cuenta
+// va a ser la de Steam) se escribe en "Listo para zarpar", arriba de Jugar online; en la web, al lado de "Entrar con Google".
+// Con cuenta manda el nombre de la cuenta. Se limpia igual que en el servidor (servidor/worker.js): sin < > & " ' y hasta 16 letras.
 const limpiarNombre = (s) => String(s || '').replace(/[<>&"']/g, '').trim().slice(0, 16);
 function nombreElegido() { try { return limpiarNombre(localStorage.getItem('aon-nombre')); } catch { return ''; } }
 const nombrePropio = () => cuenta.perfil?.nombre || nombreElegido();
-$('aj-nombre').oninput = () => {
-  const v = limpiarNombre($('aj-nombre').value);
-  try { if (v) localStorage.setItem('aon-nombre', v); else localStorage.removeItem('aon-nombre'); } catch {}
-  if (partida && !partida.enLinea) partida.nombreJugador = nombrePropio(); // en una partida sola se ve enseguida; en línea, desde la próxima
-};
+const enLaApp = location.protocol === 'app:';
+function campoNombre(inp) {
+  if (document.activeElement !== inp) inp.value = nombreElegido();
+  inp.placeholder = t('Escribí tu nombre');
+  inp.oninput = () => {
+    const v = limpiarNombre(inp.value);
+    try { if (v) localStorage.setItem('aon-nombre', v); else localStorage.removeItem('aon-nombre'); } catch {}
+  };
+}
+function pintarNombreZarpar() {
+  $('ast-nombre-fila').classList.toggle('oculto', !enLaApp || !!cuenta.perfil?.nombre);
+  campoNombre($('ast-nombre'));
+}
+pintarNombreZarpar();
 
 // Modo solo: vos contra los bots, en el mapa que elijas
 $('ast-zarpar').onclick = () => {
@@ -639,7 +648,7 @@ addEventListener('keydown', (e) => {
     if (estado === 'fin') return volverAlAstillero();
     return abrirAjustes();
   }
-  if (e.target && e.target.id === 'aj-nombre') return; // escribiendo el nombre: las letras no son disparos ni velas
+  if (e.target && e.target.classList && e.target.classList.contains('nombre-propio')) return; // escribiendo el nombre: las letras no son disparos ni velas
   if (estado !== 'mar') return;
   const k = teclaDeEvento(e);
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -958,11 +967,17 @@ const limpiar = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<'
 
 function pintarCuenta() {
   const caja = $('cuenta');
-  if (!cuenta.disponible) { caja.innerHTML = ''; return; }
+  pintarNombreZarpar();
+  // sin cuenta, en la web: al lado de "Entrar con Google" se puede escribir un nombre (en la app va en "Listo para zarpar")
+  const nombreSuelto = enLaApp ? '' : `<input id="cta-nombre-propio" class="nombre-propio" type="text" maxlength="16" autocomplete="off" spellcheck="false" aria-label="${t('Nombre de capitán')}">`;
+  const conNombre = () => { const inp = $('cta-nombre-propio'); if (inp) campoNombre(inp); };
+  if (!cuenta.disponible) { caja.innerHTML = nombreSuelto; conNombre(); return; }
   if (cuenta.cargando) { caja.innerHTML = `<span class="suave">${t('Cargando tu cuenta…')}</span>`; return; }
   if (!cuenta.usuario) {
-    caja.innerHTML = `<button id="cta-entrar" class="boton">${t('Entrar con Google')}</button><span class="suave">${t('Para guardar tus estadísticas')}</span>`;
+    if (document.activeElement && document.activeElement.id === 'cta-nombre-propio') return; // no borrar el campo mientras se escribe
+    caja.innerHTML = `<button id="cta-entrar" class="boton">${t('Entrar con Google')}</button><span class="suave">${t('Para guardar tus estadísticas')}</span>${nombreSuelto}`;
     $('cta-entrar').onclick = () => entrarConGoogle().catch((e) => alert(e.message));
+    conNombre();
     return;
   }
   if (!cuenta.perfil) { // entró con Google pero todavía no eligió su nombre de jugador
@@ -1050,10 +1065,6 @@ function ponerTema(id) {
 }
 
 function pintarAjustes() {
-  // el nombre a mano, solo si no hay cuenta con nombre (con cuenta se cambia desde la cuenta)
-  $('aj-nombre-fila').classList.toggle('oculto', !!cuenta.perfil?.nombre);
-  if (document.activeElement !== $('aj-nombre')) $('aj-nombre').value = nombreElegido();
-  $('aj-nombre').placeholder = t('Escribí tu nombre');
   $('aj-idiomas').innerHTML = Object.entries(IDIOMAS).map(([id, nombre]) =>
     `<button type="button" class="chip${id === idiomaActual() ? ' elegida' : ''}" data-id="${id}" title="${nombre}">${id.toUpperCase()}</button>`).join('');
   for (const b of $('aj-idiomas').children) b.onclick = () => cambiarIdioma(b.dataset.id);
