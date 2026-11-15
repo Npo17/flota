@@ -1441,23 +1441,29 @@ export function dibujarEscena(ctx, j, vista) {
   }
   ctx.globalAlpha = 1;
 
-  // flecha al puerto cuando queda fuera de pantalla
+  // flechas en el borde de la pantalla hacia lo que queda fuera de vista: el puerto y, si salió, el Kraken
+  // (Nicolás, 15/11/2026: desde la otra punta del mapa no había forma de saber dónde ir a verlo)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (!visible(p.x, p.y, -40)) {
-    const ang = Math.atan2(p.y - yo.y, p.x - yo.x);
+  const flechaA = (x, y, color, texto, grande) => {
+    if (visible(x, y, -40)) return;
+    const ang = Math.atan2(y - yo.y, x - yo.x), e = grande ? 1.35 : 1;
     const r = Math.min(ancho, alto) / 2 - 70;
     const fx = ancho / 2 + Math.cos(ang) * r, fy = alto / 2 + Math.sin(ang) * r;
     ctx.save();
     ctx.translate(fx, fy);
     ctx.rotate(ang);
-    ctx.fillStyle = 'rgba(255,236,170,0.9)';
+    ctx.scale(e, e);
+    ctx.fillStyle = color;
     ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-8, -10); ctx.lineTo(-3, 0); ctx.lineTo(-8, 10); ctx.closePath(); ctx.fill();
     ctx.restore();
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(255,236,170,0.95)';
-    ctx.fillText(tx('Puerto {n} m', { n: Math.round(Math.hypot(p.x - yo.x, p.y - yo.y) / 10) }), fx - Math.cos(ang) * 34, fy - Math.sin(ang) * 34 + 4);
-  }
+    ctx.fillStyle = color;
+    ctx.fillText(tx(texto, { n: Math.round(Math.hypot(x - yo.x, y - yo.y) / 10) }), fx - Math.cos(ang) * 34 * e, fy - Math.sin(ang) * 34 * e + 4);
+  };
+  flechaA(p.x, p.y, 'rgba(255,236,170,0.95)', 'Puerto {n} m');
+  const krf = j.kraken;
+  if (krf && !krf.muerte && !krf.sumerge) flechaA(krf.x, krf.y, `rgba(255,${110 + 40 * Math.sin(j.t * 4)},150,0.95)`, 'Kraken {n} m', true); // rosa, late
 }
 
 // El puerto: un pueblo chico sobre la isla (casas con techo a dos aguas, iglesia, depósito y faro), el muelle de madera con

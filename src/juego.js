@@ -380,7 +380,6 @@ export function avanzar(j, dt, entradas) {
   moverBalas(j, dt);
   actualizarConvoy(j, dt);
   actualizarTritones(j, dt);
-  mosquetes(j, dt);
   actualizarKraken(j, dt);
   actualizarCofres(j, dt);
   actualizarHundidos(j, dt);
@@ -1218,30 +1217,9 @@ function actualizarConvoy(j, dt) {
 }
 
 // ---------- Tritones ----------
-// La tripulación les tira con mosquetes a los tritones que se acercan (Cristian, 13/11/2026): tu barco y los de tu flota,
-// solos, sin apuntar. Con más gente en cubierta tiran más seguido. Los cañonazos siguen bajándolos como antes.
-export const MOSQUETES = { alcance: 280, cadencia: 0.8, acierto: 0.65 };
-function mosquetes(j, dt) {
-  if (!j.tritones.length) return;
-  for (const b of j.barcos) {
-    if (!b.cap || b.hundiendo || b.trip < 2) continue;
-    b.mosquete = (b.mosquete || 0) - dt;
-    if (b.mosquete > 0) continue;
-    let obj = null, od = MOSQUETES.alcance + b.stats.largo * 0.5;
-    for (const tr of j.tritones) {
-      if (tr.muerto) continue;
-      const d = Math.hypot(tr.x - b.x, tr.y - b.y);
-      if (d < od) { obj = tr; od = d; }
-    }
-    if (!obj) { b.mosquete = 0.3; continue; }
-    b.mosquete = MOSQUETES.cadencia * Math.max(0.5, Math.min(2.5, b.stats.tripNecesaria / Math.max(1, b.trip))) * azar.rango(0.8, 1.2);
-    emitir(j, { k: 'm', x: Math.round(b.x), y: Math.round(b.y), tx: Math.round(obj.x), ty: Math.round(obj.y) });
-    if (Math.random() < MOSQUETES.acierto) {
-      obj.muerto = true;
-      textoFlotante(j, obj.x, obj.y, '¡Tritón abatido!', '#9be7c4');
-    }
-  }
-}
+// Salen del agua y nadan hacia tu barco; si llegan, se llevan marineros. Solo mueren si les pegás (cañonazos).
+// (Cristian había sumado mosquetes automáticos de la tripulación el 13/11/2026; Nicolás los sacó el 15/11: los jugadores veían
+// "¡Tritón abatido!" sin haber disparado y no entendían qué pasaba.)
 
 function enTierra(j, x, y, margen = 0) {
   return j.mundo.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + margen);

@@ -359,7 +359,7 @@ for (const abordo of [true, false]) {
   }
 }
 
-// --- pedidos de Cristian (13/11/2026): tesoro sin abordaje, la flota junta el oro, mosquetes contra tritones, bots que pierden gente
+// --- pedidos de Cristian (13/11/2026): tesoro sin abordaje, la flota junta el oro, tritones que solo mueren si les disparás, bots que pierden gente
 {
   // el galeón del tesoro no se aborda, ni sin guardias
   const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
@@ -394,20 +394,15 @@ for (const abordo of [true, false]) {
   ok(lejos.every((d) => d < 320), `flota: no volvió a su lugar después de juntar el oro (${lejos.map((d) => d | 0)})`);
 }
 {
-  // la tripulación les tira a los tritones: con mosquetes, sin cañones, la mayoría no llega a abordar
+  // tritones sin disparar: ninguno muere solo (antes la tripulación les tiraba con mosquetes); los que llegan se llevan gente
   const k = rivales(crearPartida(crearMundo('malta'), diseno, 100)), yo = k.jugador;
   k.barcos = [yo]; k.enemigosVivos = 0; k.proxConvoy = 999; k.mundo.islas = k.mundo.islas.filter((i) => i.tipo === 'puerto'); k.yo.proxTritones = 1e9;
   yo.x = 3000; yo.y = 5200; yo.v = 0; yo.trip = yo.stats.tripMax;
-  // promedio de varias olas de 4 tritones, a la distancia a la que salen en el juego: los mosquetes bajan una buena parte, no todos
-  let abatidos = 0, total = 0;
-  for (let ola = 0; ola < 10; ola++) {
-    const tr = [0, 1, 2, 3].map((n) => { const d = 420 + ((n * 37 + ola * 53) % 140); return { x: yo.x + Math.cos(n * 1.6 + ola) * d, y: yo.y + Math.sin(n * 1.6 + ola) * d, a: 0, t: 0, muerto: false }; });
-    k.tritones = [...tr]; yo.trip = yo.stats.tripMax;
-    for (let i = 0; i < 60 * 8 && k.tritones.length; i++) { yo.v = 0; actualizar(k, 1 / 60, {}); }
-    abatidos += tr.filter((t) => t.muerto).length; total += tr.length;
-  }
-  ok(abatidos >= total * 0.35, `tritones: la tripulación bajó solo ${abatidos} de ${total}`);
-  ok(abatidos < total, 'tritones: los mosquetes los bajan a todos, ya no hacen falta los cañones');
+  const tr = [0, 1, 2, 3].map((n) => ({ x: yo.x + Math.cos(n * 1.6) * 450, y: yo.y + Math.sin(n * 1.6) * 450, a: 0, t: 0, muerto: false }));
+  k.tritones = [...tr];
+  for (let i = 0; i < 60 * 8 && k.tritones.length; i++) { yo.v = 0; actualizar(k, 1 / 60, {}); }
+  ok(!tr.some((t) => t.muerto), 'tritones: alguno murió sin que nadie le disparara');
+  ok(yo.trip < yo.stats.tripMax, 'tritones: llegaron al barco y no se llevaron a nadie');
 }
 {
   // a un bot castigado a cañonazos le baja la gente junto con el casco

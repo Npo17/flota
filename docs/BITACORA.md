@@ -3,6 +3,12 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (tritones sin mosquetes y flecha al Kraken) — Nicolás + Claude
+
+- **Tritones:** vuelven a ser como antes: si te alcanzan te sacan marineros, y solo mueren si les pegás. Se sacaron los mosquetes automáticos de la tripulación (Cristian, 13/11): los jugadores veían "¡Tritón abatido!" sin haber disparado. La prueba de `probar-sim` ahora comprueba que sin disparar no muere ninguno y que los que llegan se llevan gente.
+- **Kraken:** cuando sale, una flecha rosa que late en el borde de la pantalla apunta hacia él con la distancia ("Kraken {n} m"), como la del puerto. Así se lo encuentra desde la otra punta del mapa.
+- **Servidor:** cambió la simulación (`src/juego.js`): hay que republicarlo para que en línea los tritones dejen de morir solos.
+
 ## 2026-11-14 (tierra que no cargaba y tirones en mapas con mucha tierra) — Nicolás + Claude
 
 - **Qué pasaba:** en línea, al bajar al fondo de un mapa con mucha tierra, parte de la tierra quedaba lisa (sin relieve) un rato largo y el juego iba a tirones.

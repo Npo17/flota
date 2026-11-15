@@ -197,6 +197,7 @@ export const TEXTOS = [
   ["ventaja", "advantage", "vantagem", "avantage", "przewaga", "vantaggio", "Vorteil", "üstünlük"],
   ["parejo", "even", "equilibrado", "équilibré", "wyrównane", "alla pari", "ausgeglichen", "dengeli"],
   ["desventaja", "disadvantage", "desvantagem", "désavantage", "słabsza pozycja", "svantaggio", "Nachteil", "dezavantaj"],
+  ["Kraken {n} m", "Kraken {n} m", "Kraken {n} m", "Kraken {n} m", "Kraken {n} m", "Kraken {n} m", "Kraken {n} m", "Kraken {n} m"],
   ["Puerto {n} m", "Port {n} m", "Porto {n} m", "Port {n} m", "Port {n} m", "Porto {n} m", "Hafen {n} m", "Liman {n} m"],
   ["PUERTO", "PORT", "PORTO", "PORT", "PORT", "PORTO", "HAFEN", "LİMAN"],
   ["Tu barco", "Your ship", "Seu navio", "Ton navire", "Twój statek", "La tua nave", "Dein Schiff", "Gemin"],
