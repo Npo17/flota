@@ -303,6 +303,7 @@ export function dibujarKrakenLuz(ctx, j, visible) {
 // La noche con tormenta mientras el Kraken está despierto (en la pantalla, no en el mar): se oscurece, llueve y caen relámpagos.
 // fuerza va de 0 a 1 (la pantalla la sube y la baja despacio, para que anochezca y amanezca de a poco).
 let rayo = -9, proxRayo = 3;
+const lluviaVa = { t: null, vx: null, x: 0, y: 0, c: 0 }; // la lluvia: lo que lleva recorrido y su inclinación de ahora
 export function dibujarTormenta(ctx, j, ancho, alto, fuerza, o = {}) {
   if (fuerza <= 0.01) return;
   x = ctx; t = j.t;
@@ -314,24 +315,31 @@ export function dibujarTormenta(ctx, j, ancho, alto, fuerza, o = {}) {
   }
   // La lluvia. No es una sola tanda de rayas pegadas a la pantalla: son tres capas a distinta altura (las de abajo, chicas,
   // muchas y lentas; las de arriba, pocas, largas y rápidas) que se corren distinto cuando el barco avanza, así se sienten
-  // en el aire y no en el vidrio. Caen inclinadas según el viento.
+  // en el aire y no en el vidrio. Caen inclinadas hacia donde va el viento.
+  // Antes la posición de cada gota era "dirección del viento × tiempo": cuando el viento giraba, toda la lluvia saltaba de
+  // costado de a tramos (Nicolás, 15/11/2026). Ahora lo recorrido se va sumando cuadro a cuadro y la inclinación sigue al
+  // viento despacio, así un cambio de viento solo tuerce la lluvia de a poco.
   const zoom = o.zoom || 1, camX = (o.camX || 0) * zoom, camY = (o.camY || 0) * zoom, lento = o.calma ? 0.45 : 1;
-  const vx = Math.cos(o.viento ?? -0.6) * 0.42, largoDir = Math.hypot(vx, 1), dx = vx / largoDir, dy = 1 / largoDir;
+  const dtL = lluviaVa.t == null ? 0 : Math.max(0, Math.min(0.1, t - lluviaVa.t)); lluviaVa.t = t;
+  const vxQuiere = Math.cos(o.viento ?? -0.6) * 0.42;
+  lluviaVa.vx = lluviaVa.vx == null ? vxQuiere : lluviaVa.vx + (vxQuiere - lluviaVa.vx) * Math.min(1, dtL * 0.6);
+  const vx = lluviaVa.vx, largoDir = Math.hypot(vx, 1), dx = vx / largoDir, dy = 1 / largoDir;
+  lluviaVa.x += dx * dtL; lluviaVa.y += dy * dtL; lluviaVa.c += vx * dtL / 0.42; // lo recorrido (por unidad de velocidad)
   const base = Math.min(620, ancho * alto / 3200) * (o.calma ? 0.5 : 1);
   for (const [cuantas, largo, grosor, alfa, vel, par, sem] of [[0.62, 8, 1.1, 0.30, 430, 0.9, 300], [0.30, 15, 1.4, 0.36, 720, 1.2, 900], [0.08, 30, 2.4, 0.17, 1080, 1.6, 1700]]) {
     const W = ancho + 80, H = alto + 80, n = Math.round(base * cuantas);
     ctx.strokeStyle = `rgba(200, 222, 244, ${alfa})`; ctx.lineWidth = grosor; ctx.lineCap = 'round'; ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const v = vel * (0.8 + 0.4 * azar(i + sem + 7)) * lento, l = largo * (0.7 + 0.6 * azar(i + sem + 11));
-      let px = (azar(i + sem) * W + dx * t * v - camX * par) % W, py = (azar(i + sem + 500) * H + dy * t * v - camY * par) % H;
+      let px = (azar(i + sem) * W + lluviaVa.x * v - camX * par) % W, py = (azar(i + sem + 500) * H + lluviaVa.y * v - camY * par) % H;
       if (px < 0) px += W; if (py < 0) py += H;
       ctx.moveTo(px - 40, py - 40); ctx.lineTo(px - 40 + dx * l, py - 40 + dy * l);
     }
     ctx.stroke();
   }
-  // cortinas: franjas anchas donde llueve más tupido, que cruzan la pantalla con el viento
+  // cortinas: franjas anchas donde llueve más tupido, que cruzan la pantalla con el viento (también sumando de a poco)
   for (let q = 0; q < 2; q++) {
-    const anchoF = ancho * (0.26 + 0.1 * q), paso = ancho + anchoF * 2, pos = ((t * (95 + q * 60) * lento * (dx >= 0 ? 1 : -1) + q * paso * 0.55 - camX * 0.4) % paso + paso) % paso - anchoF;
+    const anchoF = ancho * (0.26 + 0.1 * q), paso = ancho + anchoF * 2, pos = ((lluviaVa.c * (95 + q * 60) * lento + q * paso * 0.55 - camX * 0.4) % paso + paso) % paso - anchoF;
     const g = ctx.createLinearGradient(pos, 0, pos + anchoF, 0);
     g.addColorStop(0, 'rgba(176, 198, 220, 0)'); g.addColorStop(0.5, `rgba(176, 198, 220, ${0.075 - q * 0.02})`); g.addColorStop(1, 'rgba(176, 198, 220, 0)');
     ctx.save(); ctx.transform(1, 0, dx * 0.5, 1, 0, 0); ctx.fillStyle = g; ctx.fillRect(pos - alto, 0, anchoF + alto * 2, alto); ctx.restore();

@@ -3,6 +3,11 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (la lluvia ya no se desliza de a tramos) — Nicolás + Claude
+
+- La lluvia sigue inclinada hacia donde va el viento, pero cuando el viento giraba toda la lluvia se corría de costado de golpe, "como deslizando imágenes". Causa: la posición de cada gota era dirección del viento × tiempo de partida, así que un giro chico movía todo cientos de píxeles. Ahora lo recorrido se suma cuadro a cuadro y la inclinación sigue al viento despacio (`src/kraken-dibujo.js`, `lluviaVa`).
+- Medido con un giro de viento de golpe: antes saltaban las 300 gotas medidas en un mismo cuadro; ahora, solo las que vuelven a entrar por el borde, como en cualquier cuadro.
+
 ## 2026-11-15 (nombre de capitán a mano) — Nicolás + Claude
 
 - Un campo **Nombre de capitán** (en la app: en "Listo para zarpar", arriba de los botones de jugar; en la web: al lado de "Entrar con Google") (hasta 16 letras, guardado en `aon-nombre`). Sirve sobre todo en la app de escritorio, donde no hay ingreso con Google hasta que llegue Steam: antes el nombre era "Capitán" y un número al azar.
