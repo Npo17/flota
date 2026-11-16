@@ -8,9 +8,9 @@ Sirve para que el Claude del otro socio tenga el contexto al día.
 - **Medido** con `scripts/probar-carga.mjs` (nuevo): 24 jugadores con 6 barcos de flota cada uno, unos 175 barcos. El servidor tarda 3–6 ms por paso (tiene 50), así que el procesamiento sobra; lo pesado eran los datos: cada jugador recibía el mar entero 20 veces por segundo, ~200 KB/s (1,6 Mbit/s), mucho para una conexión floja o un celular.
 - **Fotos parciales:** ahora a cada jugador le llegan 20 veces por segundo solo los barcos a la vista (y su flota) y el mar entero 2,5 veces por segundo (para el minimapa). Baja a la mitad: ~100 KB/s. Lo que es igual para todos se arma una sola vez por paso. Los navegadores anteriores siguen recibiendo todo (no se rompen). Probado contra el servidor local (wrangler dev) con la app: ve todos los barcos todo el tiempo, sin errores.
 - **Defensas:** cupo de mensajes por conexión (40/s; una inundación de 3000 mensajes corta esa conexión y los demás siguen jugando), mensajes de hasta 4 KB, hasta 4 conexiones por IP, tope de conexiones por mar, `entrar` cada 1,5 s. **Se cerró un agujero:** desde afuera se podían meter salas falsas en la lista de salas públicas (POST a `/salas` con el encabezado `x-sala: interno`); ahora da 405.
-- **Tabla de mejores saqueos:** cualquiera con cuenta podía mandar un saqueo de hasta 1.000.000 sin jugar. Topes nuevos en la base de datos (migración `20261116000000_topes_saqueo.sql`, ver `CLAUDE.md`). **Falta aplicarla en Supabase.**
+- **Tabla de mejores saqueos:** cualquiera con cuenta podía mandar un saqueo de hasta 1.000.000 sin jugar. Topes nuevos en la base de datos (migración `20261116000000_topes_saqueo.sql`, ver `CLAUDE.md`). **Aplicada en Supabase el 16/11.** Probada dentro de una transacción deshecha: una cuenta que manda 999.999 de golpe se queda con lo que le daba su cupo (7.736, a unos 30 s de aplicada); la tabla quedó igual.
 - Revisado y sin problemas: los nombres de jugadores y salas se muestran escapados (no se puede meter código), el servidor valida los diseños y las compras, la base de datos no deja escribir directo.
-- **Publicar:** web y servidor (cambiaron `servidor/worker.js` y `src/red.js`), y aplicar la migración.
+- **Publicar:** web (subida) y servidor (cambiaron `servidor/worker.js` y `src/red.js`; lo republica Nicolás).
 
 ## 2026-11-15 (el mar, 20 % más grande) — Nicolás + Claude
 
