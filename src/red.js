@@ -52,7 +52,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
 
   try { ws = new WebSocket(WS + (sala ? '?sala=' + encodeURIComponent(sala.codigo) : '')); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
   if (ws) {
-    ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno, ...(sala && sala.crear ? { crear: sala.crear } : {}) })); };
+    ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno, cv: 2, ...(sala && sala.crear ? { crear: sala.crear } : {}) })); }; // cv: 2 = entiende fotos parciales
     ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } recibir(m); };
     ws.onclose = () => { if (!cerradaAProposito) alCerrar(t(miId ? 'Se cortó la conexión con el mar.' : 'No se pudo conectar con el mar. Probá de nuevo en un rato.')); };
     ws.onerror = () => {};
@@ -125,7 +125,10 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       } else { b.cap = null; b.bando = 'enemigo'; b.bandera = b.banderaBot; b.esJugador = false; b.nombre = b.nombreBot; }
       lista.push(b);
     }
-    for (const id of porId.keys()) if (!vistos.has(id)) porId.delete(id);
+    // Foto parcial (p: 1): el servidor manda en cada paso solo los barcos cercanos y el mar entero cada tanto. Los que no
+    // vinieron siguen donde estaban (no salieron del mar); en una foto entera, el que no vino ya no está.
+    if (m.p) { for (const b of j.barcos) if (!vistos.has(b.id) && porId.get(b.id) === b) lista.push(b); }
+    else for (const id of porId.keys()) if (!vistos.has(id)) porId.delete(id);
     j.barcos = lista;
 
     const y = m.yo;
@@ -251,7 +254,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       if (!abierta || !ws || ws.readyState !== 1) return false;
       esperandoHola = true; // sin esto, una foto vieja (todavía con el barco hundido) se tomaba como el barco nuevo y el juego quedaba trabado
       j.reportado = null; pulsos = {};
-      ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno }));
+      ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno, cv: 2 }));
       return true;
     },
     cerrar: () => { cerradaAProposito = true; try { ws.close(); } catch {} },

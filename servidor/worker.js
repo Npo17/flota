@@ -12,6 +12,11 @@ const MAX_JUGADORES = 24; // en el mar de todos
 const MAX_SALA = 12; // tope de una sala
 const VIDA_SALA = 70000; // una sala que no avisa en este tiempo sale de la lista de públicas
 const PASO = 50; // milisegundos entre pasos de simulación
+// Defensa: cuánto puede mandar cada conexión. El juego manda unos 15 mensajes por segundo (más los clics); el resto es abuso.
+const LIMITE = { porSegundo: 40, rafaga: 80, largo: 4096, faltas: 400, porIp: 4, sobra: 12, entrarCada: 1500 };
+// Cuánto mar ve cada jugador a su alrededor (mitad del ancho y del alto, con margen para pantallas anchas y el zoom más lejano).
+// Lo de adentro se le manda en cada paso; el mar entero, uno de cada TODO_CADA pasos (para el minimapa y lo que entra en pantalla).
+const VISTA = { x: 3000, y: 2000 }, TODO_CADA = 8;
 const ORIGENES = ['https://ageofnavies.com', 'https://www.ageofnavies.com', 'http://localhost:5180', 'http://127.0.0.1:5180'];
 // (la app de escritorio se presenta con el origen de la web; ver age-of-navies-steam)
 
@@ -34,7 +39,10 @@ const codigoSala = (x) => { const c = String(x || '').toUpperCase().replace(/[^A
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === '/salas') return env.MAR.get(env.MAR.idFromName('salas')).fetch(req);
+    if (url.pathname === '/salas') { // desde afuera solo se lee: los avisos de cada sala llegan por adentro (avisar), sin pasar por acá
+      if (req.method !== 'GET') return new Response('No', { status: 405 });
+      return env.MAR.get(env.MAR.idFromName('salas')).fetch(req);
+    }
     if (url.pathname === '/mar' || url.pathname === '/estado') {
       const sala = codigoSala(url.searchParams.get('sala'));
       return env.MAR.get(env.MAR.idFromName(sala ? 'sala-' + sala : 'mar-1')).fetch(req);
@@ -81,10 +89,14 @@ export class Mar {
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('Se esperaba un WebSocket', { status: 426 });
     const origen = req.headers.get('Origin');
     if (origen && !ORIGENES.includes(origen)) return new Response('Origen no permitido', { status: 403 });
+    // topes: conexiones por mar (los que juegan más unos de sobra para los que están eligiendo barco) y por IP
+    const ip = req.headers.get('CF-Connecting-IP') || '';
+    if (this.clientes.size >= (this.sala ? MAX_SALA : MAX_JUGADORES) + LIMITE.sobra) return new Response('El mar está lleno', { status: 503 });
+    if (ip) { let n = 0; for (const c of this.clientes.values()) if (c.ip === ip) n++; if (n >= LIMITE.porIp) return new Response('Demasiadas conexiones', { status: 429 }); }
     const par = new WebSocketPair();
     const [cliente, servidor] = Object.values(par);
     servidor.accept();
-    this.atender(servidor);
+    this.atender(servidor, ip);
     return new Response(null, { status: 101, webSocket: cliente });
   }
 
@@ -94,12 +106,24 @@ export class Mar {
     return n;
   }
 
-  atender(ws) {
-    const c = { cap: null, entrada: {}, conocidos: new Map(), finEn: 0 };
+  atender(ws, ip) {
+    const c = { cap: null, entrada: {}, conocidos: new Map(), finEn: 0, ip, fichas: LIMITE.rafaga, recarga: Date.now(), faltas: 0, entro: 0, parcial: false };
     this.clientes.set(ws, c);
     ws.addEventListener('message', (ev) => {
+      // cada conexión tiene fichas que se recargan solas (40 por segundo, hasta 80 juntas); sin fichas, el mensaje se tira.
+      // Mensajes enormes o de otro tipo también. Muchas faltas seguidas: se corta la conexión.
+      const ahora = Date.now();
+      c.fichas = Math.min(LIMITE.rafaga, c.fichas + (ahora - c.recarga) * LIMITE.porSegundo / 1000);
+      c.recarga = ahora;
+      if (typeof ev.data !== 'string' || ev.data.length > LIMITE.largo || c.fichas < 1) {
+        if (++c.faltas > LIMITE.faltas) { try { ws.close(1008, 'Demasiados mensajes'); } catch {} this.desconectar(ws); }
+        return;
+      }
+      c.fichas -= 1;
+      if (c.faltas > 0) c.faltas -= 0.05; // se van perdonando de a poco
       let m;
       try { m = JSON.parse(ev.data); } catch { return; }
+      if (!m || typeof m !== 'object') return;
       try { this.mensaje(ws, c, m); } catch (e) { console.log('error en mensaje', e && e.stack); }
     });
     const chau = () => this.desconectar(ws);
@@ -158,6 +182,10 @@ export class Mar {
 
   entrar(ws, c, m) {
     if (c.cap && !c.cap.fin) return;
+    const ahora = Date.now();
+    if (ahora - c.entro < LIMITE.entrarCada) return;
+    c.entro = ahora;
+    c.parcial = m.cv >= 2; // cv: 2 = el navegador entiende las fotos parciales (p: 1); uno anterior recibe siempre el mar entero
     const d = m.diseno || {};
     const diseno = { faccion: d.faccion, casco: d.casco, velas: d.velas, canones: d.canones | 0, municion: d.municion, trip: d.trip, habilidad: HABILIDADES[d.habilidad] ? d.habilidad : 'andanada' };
     const valido = enJuego(diseno.faccion) && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
@@ -234,6 +262,13 @@ export class Mar {
     const kraken = k ? [r(k.x), r(k.y), r(k.a * 100), Math.max(0, r(k.vida)), k.vidaMax, r(k.emerge * 100), k.muerte ? Math.max(1, r(k.muerte * 10)) : 0, k.sumerge ? Math.max(1, r(k.sumerge * 10)) : 0, k.furia ? 1 : 0, k.zonas.flatMap((z) => [z.id, z.x, z.y, r(z.t * 100), r(z.aviso * 100)]),
       ataquesAFoto(k), k.mirada ? [k.mirada.id, r(k.mirada.t * 100)] : 0, k.zonas.map((z) => z.r || KRAKEN.radio), k.buceo ? Math.max(1, r(k.buceo * 10)) : 0] : null; // 10 a 13: los ataques nuevos (un navegador anterior no los lee)
 
+    // Lo que es igual para todos se pasa a texto una sola vez por paso (antes, una vez por jugador). Cada barco es una fila.
+    const filas = barcos.map((x) => JSON.stringify(x));
+    const comun = JSON.stringify({ c: cofres, tr: tritones, g: ganchos, caps, ...(kraken ? { kr: kraken } : {}), ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}) }).slice(1, -1); // vf: las curvas del viento y cuántas veces cambió de rumbo
+    this.tic = (this.tic || 0) + 1;
+    const todo = this.tic % TODO_CADA === 0;
+    let todas = null;
+
     for (const [ws, c] of this.clientes) {
       const cap = c.cap;
       if (!cap) continue;
@@ -247,18 +282,26 @@ export class Mar {
       }
       if (c.conocidos.size > j.barcos.length + 60) for (const id of c.conocidos.keys()) if (!j.barcos.some((b) => b.id === id)) c.conocidos.delete(id);
       const bq = cap.barco;
-      const msg = {
-        t: 's', b: barcos, c: cofres, tr: tritones, g: ganchos, caps, ...(kraken ? { kr: kraken } : {}), ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}), // vf: las curvas del viento y cuántas veces cambió de rumbo
-        ev: comunes.concat(j.eventos.filter((e) => e.p === cap.id)),
-        yo: {
-          hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],
-          b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota, fo: cap.formacion || 0,
-          rec: [+bq.recarga['-1'].toFixed(2), +bq.recarga['1'].toFixed(2)], recT: bq.recargaTotal ? [bq.recargaTotal['-1'] || 0, bq.recargaTotal['1'] || 0] : null,
-          av: cap.avisos.map((a) => (a.p ? [a.texto, a.tipo, a.p] : [a.texto, a.tipo])), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,
-        },
+      // los barcos: a quien entiende fotos parciales, solo los que están a la vista (y su flota), salvo cada TODO_CADA pasos
+      let b;
+      if (c.parcial && !todo) {
+        const sel = [];
+        for (let i = 0; i < j.barcos.length; i++) {
+          const o = j.barcos[i];
+          if (o.cap === cap || (Math.abs(o.x - bq.x) < VISTA.x && Math.abs(o.y - bq.y) < VISTA.y)) sel.push(filas[i]);
+        }
+        b = sel.join(',');
+      } else b = todas || (todas = filas.join(','));
+      const yo = {
+        hb: [+cap.cdHabilidad.toFixed(1), cap.habilidad ? cap.habilidad.id : 0],
+        b: bq.id, ob: cap.oroBodega, op: cap.oroPuerto, em: cap.escoltasMax, st: cap.stats, cd: +cap.cdAbordaje.toFixed(1), of: cap.ordenFlota, fo: cap.formacion || 0,
+        rec: [+bq.recarga['-1'].toFixed(2), +bq.recarga['1'].toFixed(2)], recT: bq.recargaTotal ? [bq.recargaTotal['-1'] || 0, bq.recargaTotal['1'] || 0] : null,
+        av: cap.avisos.map((a) => (a.p ? [a.texto, a.tipo, a.p] : [a.texto, a.tipo])), sac: +cap.sacudon.toFixed(1), rep: bq.reparando ? 1 : 0, fin: cap.fin ? 1 : 0, causa: cap.causa || null,
       };
-      if (alta.length) msg.alta = alta;
-      try { ws.send(JSON.stringify(msg)); } catch { /* se cerró: lo limpia el evento close */ }
+      const ev = comunes.concat(j.eventos.filter((e) => e.p === cap.id));
+      const msg = '{"t":"s","b":[' + b + '],' + comun + ',"ev":' + JSON.stringify(ev) + ',"yo":' + JSON.stringify(yo)
+        + (alta.length ? ',"alta":' + JSON.stringify(alta) : '') + (c.parcial && !todo ? ',"p":1' : '') + '}';
+      try { ws.send(msg); } catch { /* se cerró: lo limpia el evento close */ }
       // a los 6 segundos de hundido, el capitán sale del mar (el jugador sigue conectado hasta que vuelve a diseñar)
       if (cap.fin) {
         if (!c.finEn) c.finEn = ahora;
