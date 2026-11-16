@@ -3,6 +3,13 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-15 (el mar, 20 % más grande) — Nicolás + Claude
+
+- El mar pasa de 6400 × 6400 a **7000 × 7000** (+20 % de superficie), para que haya lugar cuando juegue mucha gente. Pedido de Nicolás.
+- Las costas de cada mapa se agrandan en la misma proporción y las islas sueltas, escollos, icebergs y remolinos aumentan con la superficie (Lepanto: 6 → 7 remolinos; Venecia: 31 → 37 islas), así cada mapa se ve igual pero con más mar. La cantidad de bots no cambió.
+- `crearMundo(id, { tam })`: el lado del mar; sin decirlo, el de ahora. El servidor dice `v: 5`; con un servidor anterior (`v: 4`) el navegador arma el mar de 6400, idéntico al de antes (comprobado en los 20 mapas).
+- **Publicar la web y el servidor juntos** (cambió `src/mundo.js`, `src/config.js` y `servidor/worker.js`). Quien tenga la página abierta desde antes ve el mapa viejo contra el servidor nuevo hasta que la recargue. La app de escritorio también hay que rearmarla.
+
 ## 2026-11-15 (ya no se queda atrapado en un remolino) — Nicolás + Claude
 
 - Nicolás quedó girando en el centro de un remolino sin poder salir (con 44.000 de oro), con la balandra japonesa y el viento a favor. Causa: el remolino tiraba hacia el centro con una fuerza fija de 95. En el centro mata marineros y rompe el casco, y las dos cosas frenan al barco (poca gente: −35 %; casco roto: hasta −50 %): al rato hasta una balandra anda a 65 y ya no sale nunca. Un galeón cargado de cañones (82) no salía ni sano. Con el casco al nivel 20 tampoco se hundía rápido: quedaba ahí para siempre.

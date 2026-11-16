@@ -5,11 +5,15 @@ import { MAPAS } from './mapas.js';
 
 // opciones.callejones: deja los islotes pegados como en la primera versión (para jugar en línea contra un servidor anterior)
 // opciones.relleno: false deja las tierras grandes como círculos sueltos; 1 une solo las que se tocan (para un servidor anterior); sin decir nada, une también las que dejan un paso angosto
+// opciones.tam: el lado del mar (por defecto MUNDO.ancho; 6400 para un servidor anterior al 15/11/2026). Las costas de mapas.js
+// están dibujadas sobre MUNDO.base y se escalan; las islas sueltas, escollos, icebergs y remolinos se suman en proporción a la superficie.
 export function crearMundo(idMapa, opciones = {}) {
   if (!MAPAS[idMapa]) idMapa = Object.keys(MAPAS)[0];
   const mapa = MAPAS[idMapa];
   const rng = crearRng(mapa.semilla);
-  const puerto = { x: MUNDO.ancho / 2, y: MUNDO.alto / 2, radio: 240 };
+  const W = opciones.tam || MUNDO.ancho, H = W, k = W / MUNDO.base;
+  const cuantas = (n) => Math.round((n || 0) * k * k); // misma densidad que en el mapa original
+  const puerto = { x: W / 2, y: H / 2, radio: 240 };
   const islas = [];
 
   // Isla del puerto: el muelle queda en su borde sur
@@ -17,7 +21,7 @@ export function crearMundo(idMapa, opciones = {}) {
   puerto.y = puerto.y + 40;
 
   // Tierras grandes del mapa (continentes, penínsulas, islas mayores)
-  for (const [x, y, r] of mapa.masas) islas.push(crearIsla(rng, x, y, r, 'tierra'));
+  for (const [x, y, r] of mapa.masas) islas.push(crearIsla(rng, x * k, y * k, r * k, 'tierra'));
 
   // Un solo cuerpo: las tierras grandes son círculos, y entre dos vecinas quedaba un rincón en punta (si se tocan) o un
   // paso angosto (si casi se tocan) en el que los barcos, sobre todo los bots, se metían y quedaban trabados.
@@ -49,7 +53,7 @@ export function crearMundo(idMapa, opciones = {}) {
     // después los pasos angostos: se cierran solo si el mar sigue siendo uno solo
     const angostos = pares.filter((p) => p.hueco > 80);
     if (angostos.length) {
-      const C = 80, N = Math.ceil(MUNDO.ancho / C), M = Math.ceil(MUNDO.alto / C);
+      const C = 80, N = Math.ceil(W / C), M = Math.ceil(H / C);
       const alcanzable = (tierras) => { // cuántas celdas de mar se alcanzan navegando desde el puerto
         const libre = new Uint8Array(N * M);
         for (let cy = 0; cy < M; cy++) for (let cx = 0; cx < N; cx++) {
@@ -88,11 +92,11 @@ export function crearMundo(idMapa, opciones = {}) {
   // Islas sueltas
   const [rMin, rMax] = mapa.radio;
   let intentos = 0, puestas = 0;
-  while (puestas < mapa.islas && intentos < 4000) {
+  while (puestas < cuantas(mapa.islas) && intentos < 4000) {
     intentos++;
     const r = rng.rango(rMin, rMax);
-    const x = rng.rango(300, MUNDO.ancho - 300);
-    const y = rng.rango(300, MUNDO.alto - 300);
+    const x = rng.rango(300, W - 300);
+    const y = rng.rango(300, H - 300);
     if (Math.hypot(x - puerto.x, y - puerto.y) < 650 + r) continue;
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 240)) continue;
     islas.push(crearIsla(rng, x, y, r, 'isla'));
@@ -101,11 +105,11 @@ export function crearMundo(idMapa, opciones = {}) {
 
   // Icebergs: chicos, filosos y por todos lados
   intentos = 0; puestas = 0;
-  while (puestas < (mapa.icebergs || 0) && intentos < 6000) {
+  while (puestas < cuantas(mapa.icebergs) && intentos < 6000) {
     intentos++;
     const r = rng.rango(22, 58);
-    const x = rng.rango(200, MUNDO.ancho - 200);
-    const y = rng.rango(200, MUNDO.alto - 200);
+    const x = rng.rango(200, W - 200);
+    const y = rng.rango(200, H - 200);
     if (Math.hypot(x - puerto.x, y - puerto.y) < 520 + r) continue;
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 130)) continue;
     islas.push(crearIsla(rng, x, y, r, 'iceberg'));
@@ -114,11 +118,11 @@ export function crearMundo(idMapa, opciones = {}) {
 
   // Arrecifes y bancos de arena: escollos chicos donde se encalla
   intentos = 0; puestas = 0;
-  while (puestas < (mapa.arrecifes || 0) && intentos < 6000) {
+  while (puestas < cuantas(mapa.arrecifes) && intentos < 6000) {
     intentos++;
     const r = rng.rango(20, 42);
-    const x = rng.rango(250, MUNDO.ancho - 250);
-    const y = rng.rango(250, MUNDO.alto - 250);
+    const x = rng.rango(250, W - 250);
+    const y = rng.rango(250, H - 250);
     if (Math.hypot(x - puerto.x, y - puerto.y) < 560 + r) continue;
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r + 110)) continue;
     islas.push(crearIsla(rng, x, y, r, 'arrecife'));
@@ -139,17 +143,17 @@ export function crearMundo(idMapa, opciones = {}) {
 
   const remolinos = [];
   intentos = 0;
-  while (remolinos.length < mapa.remolinos && intentos < 4000) {
+  while (remolinos.length < cuantas(mapa.remolinos) && intentos < 4000) {
     intentos++;
-    const x = rng.rango(500, MUNDO.ancho - 500);
-    const y = rng.rango(500, MUNDO.alto - 500);
+    const x = rng.rango(500, W - 500);
+    const y = rng.rango(500, H - 500);
     if (Math.hypot(x - puerto.x, y - puerto.y) < 1500) continue;
     if (islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + 320)) continue;
     if (remolinos.some((w) => Math.hypot(w.x - x, w.y - y) < 900)) continue;
     remolinos.push({ x, y, radio: rng.rango(150, 210), giro: rng.next() < 0.5 ? 1 : -1 });
   }
 
-  return { id: idMapa, nombre: mapa.nombre, lugar: mapa.lugar, tema: mapa.tema, reglas: mapa.reglas || {}, puerto, islas, remolinos, ancho: MUNDO.ancho, alto: MUNDO.alto };
+  return { id: idMapa, nombre: mapa.nombre, lugar: mapa.lugar, tema: mapa.tema, reglas: mapa.reglas || {}, puerto, islas, remolinos, ancho: W, alto: H };
 }
 
 function crearIsla(rng, x, y, r, tipo) {

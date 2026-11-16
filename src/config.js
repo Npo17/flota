@@ -160,7 +160,9 @@ export const HABILIDADES = {
   trapo: { nombre: 'Remos y trapo', desc: 'Velocidad: durante 5 segundos vas 60 % más rápido, sople como sople el viento.', espera: 35, dura: 5 },
 };
 
-export const MUNDO = { ancho: 6400, alto: 6400 };
+// El mar mide 7000 x 7000 desde el 15/11/2026 (era 6400: con muchos jugadores hacía falta más lugar; +20 % de superficie).
+// base: el tamaño sobre el que están dibujadas las costas de cada mapa (mapas.js); crearMundo las escala al tamaño de ahora.
+export const MUNDO = { ancho: 7000, alto: 7000, base: 6400 };
 
 // Viento. "rinde" dice cuánto anda el barco según el ángulo entre su rumbo y hacia dónde sopla el viento:
 // 0° = viento de popa, 45° = de aleta, 90° = de través, 135° = ciñendo, 180° = de proa. De proa se pierde como mucho un tercio:
