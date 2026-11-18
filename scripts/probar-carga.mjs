@@ -16,6 +16,7 @@ for (let i = 0; i < N; i++) {
   mar.entrar(ws, c, { t: 'entrar', cv: +(process.env.CV || 2), nombre: 'Cap' + i, diseno: { faccion: civs[i % civs.length], casco: 'bergantin', velas: 'latinas', canones: 6, municion: 'redonda', trip: 'moderada', habilidad: 'andanada' } });
   socks.push([ws, c]);
 }
+await new Promise((r) => setTimeout(r, 30)); // entrar espera la verificación de la sesión
 clearInterval(mar.reloj);
 const j = mar.j;
 let semilla = 7; const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;

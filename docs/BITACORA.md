@@ -3,6 +3,13 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-18 (etapa 1: el servidor sabe quién juega e informa el oro) — Nicolás + Claude
+
+- Al entrar online, el juego manda la sesión de Supabase (`tk` en `entrar`). El servidor la verifica una vez por conexión (`quienEs` en `servidor/worker.js`, contra `/auth/v1/user`) y, con cuenta, el capitán usa el nombre de su cuenta: nadie puede hacerse pasar por otro. Sin cuenta, o con una sesión falsa, se juega igual que antes.
+- Lo hecho en el mar por los capitanes con cuenta lo informa el servidor (cada minuto, al hundirse y al irse) con `servidor_progreso` (migración `20261118000000_servidor_informa.sql`, aplicada). El servidor se autentica con la clave `SERVIDOR_CLAVE`: en la base de datos está solo su hash; la clave está en `servidor/.dev.vars` (no se sube) y hay que cargarla como secreto en Cloudflare. El oro suma al clan del jugador (`_sumar_oro`, origen "online"). Con eso, el navegador ya no informa en línea (`servidorInforma`).
+- Probado: la función en una transacción deshecha (clave falsa rechazada; con la buena suma perfil, clan y `oro_eventos`), el servidor local con y sin sesión falsa, y todas las pruebas del juego.
+- **Al publicar:** cargar el secreto en Cloudflare (`SERVIDOR_CLAVE`) y republicar el servidor.
+
 ## 2026-11-17 (clanes, amigos y chat: base de datos, insignias, emblemas y pantallas) — Nicolás + Claude
 
 - Plan completo en `docs/PROPUESTA-CLANES.md` (clanes, guerras, tres clasificatorias, evento de fin de semana, temporadas; decisiones de Nicolás en la sección 10). Esto es la parte de clanes, amigos y chat.

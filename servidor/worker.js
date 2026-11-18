@@ -17,6 +17,10 @@ const LIMITE = { porSegundo: 40, rafaga: 80, largo: 4096, faltas: 400, porIp: 4,
 // Cuánto mar ve cada jugador a su alrededor (mitad del ancho y del alto, con margen para pantallas anchas y el zoom más lejano).
 // Lo de adentro se le manda en cada paso; el mar entero, uno de cada TODO_CADA pasos (para el minimapa y lo que entra en pantalla).
 const VISTA = { x: 3000, y: 2000 }, TODO_CADA = 8;
+// Supabase: para saber quién juega (se verifica la sesión que manda el navegador) y para informar lo que pasa en las partidas.
+// La clave pública puede ir en el código; la del servidor (SERVIDOR_CLAVE) es un secreto de Cloudflare.
+const SB_URL = 'https://iaglglmtemuohfhcingu.supabase.co', SB_PUBLICA = 'sb_publishable_xfHdoqpl4fo92C4I8vk-Wg_mU1nSwxA';
+const INFORMAR_CADA = 60000; // cada cuánto se manda a la base de datos lo hecho por cada capitán con cuenta
 const ORIGENES = ['https://ageofnavies.com', 'https://www.ageofnavies.com', 'http://localhost:5180', 'http://127.0.0.1:5180'];
 // (la app de escritorio se presenta con el origen de la web; ver age-of-navies-steam)
 
@@ -135,7 +139,7 @@ export class Mar {
     const c = this.clientes.get(ws);
     if (!c) return;
     this.clientes.delete(ws);
-    if (c.cap && this.j) quitarCapitan(this.j, c.cap);
+    if (c.cap && this.j) { this.informar([c.cap], true); quitarCapitan(this.j, c.cap); }
     try { ws.close(); } catch {}
     if (this.clientes.size === 0) { // mar vacío: se apaga hasta que entre alguien (una sala vacía deja de existir)
       clearInterval(this.reloj);
@@ -157,7 +161,7 @@ export class Mar {
   }
 
   mensaje(ws, c, m) {
-    if (m.t === 'entrar') return this.entrar(ws, c, m);
+    if (m.t === 'entrar') { this.entrar(ws, c, m).catch((e) => console.log('error al entrar', e && e.stack)); return; }
     const cap = c.cap;
     if (!cap || cap.fin || !this.j) return;
     if (m.t === 'e') {
@@ -180,11 +184,51 @@ export class Mar {
     }
   }
 
-  entrar(ws, c, m) {
+  // Quién juega: el navegador manda su sesión de Supabase (tk) y se verifica una sola vez por conexión. Con cuenta, el
+  // capitán usa el nombre de su cuenta (nadie puede hacerse pasar por otro) y lo que hace se informa a su perfil.
+  async quienEs(c, tk) {
+    if (c.usuario !== undefined) return c.usuario;
+    c.usuario = null;
+    if (typeof tk !== 'string' || tk.length < 20 || tk.length > 4000) return null;
+    try {
+      const r = await fetch(SB_URL + '/auth/v1/user', { headers: { apikey: SB_PUBLICA, Authorization: 'Bearer ' + tk } });
+      if (!r.ok) return null;
+      const u = await r.json();
+      if (!u || !u.id) return null;
+      const p = await fetch(SB_URL + '/rest/v1/perfiles?select=nombre&id=eq.' + encodeURIComponent(u.id), { headers: { apikey: SB_PUBLICA } });
+      const filas = p.ok ? await p.json() : [];
+      c.usuario = { id: u.id, nombre: filas[0] ? filas[0].nombre : null };
+    } catch (e) { console.log('no se pudo verificar la sesión', e && e.message); }
+    return c.usuario;
+  }
+
+  // Manda a la base de datos lo que hicieron los capitanes con cuenta desde el último informe (fin: terminó su partida)
+  informar(caps, fin) {
+    const clave = this.env && this.env.SERVIDOR_CLAVE;
+    if (!clave) return;
+    const datos = [];
+    for (const cap of caps) {
+      if (!cap || !cap.usuarioId) continue;
+      const st = cap.stats, r = cap.informado || { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 };
+      const d = { u: cap.usuarioId, hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, eliminados: (st.eliminados || 0) - (r.eliminados || 0),
+        oro: Math.round(st.saqueado - r.saqueado), segundos: Math.round(st.tiempo - r.tiempo), saqueo: Math.round(st.saqueado), fin: !!fin };
+      cap.informado = { hundidos: st.hundidos, capturados: st.capturados, eliminados: st.eliminados || 0, saqueado: st.saqueado, tiempo: st.tiempo };
+      if (d.hundidos || d.capturados || d.eliminados || d.oro || d.segundos >= 5 || fin) datos.push(d);
+    }
+    if (!datos.length) return;
+    this.informes = (this.informes || 0) + 1;
+    return fetch(SB_URL + '/rest/v1/rpc/servidor_progreso', { method: 'POST', headers: { apikey: SB_PUBLICA, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_clave: clave, p_datos: datos }) })
+      .then((r) => { if (!r.ok) r.text().then((x) => console.log('informe rechazado', r.status, x.slice(0, 200))); })
+      .catch((e) => console.log('no se pudo informar', e && e.message));
+  }
+
+  async entrar(ws, c, m) {
     if (c.cap && !c.cap.fin) return;
     const ahora = Date.now();
     if (ahora - c.entro < LIMITE.entrarCada) return;
     c.entro = ahora;
+    const cuenta = await this.quienEs(c, m.tk);
+    if (!this.clientes.has(ws)) return; // se fue mientras se verificaba
     c.parcial = m.cv >= 2; // cv: 2 = el navegador entiende las fotos parciales (p: 1); uno anterior recibe siempre el mar entero
     const d = m.diseno || {};
     const diseno = { faccion: d.faccion, casco: d.casco, velas: d.velas, canones: d.canones | 0, municion: d.municion, trip: d.trip, habilidad: HABILIDADES[d.habilidad] ? d.habilidad : 'andanada' };
@@ -209,15 +253,16 @@ export class Mar {
       this.j = crearMar(crearMundo(this.mapa), { servidor: true, enemigos: this.cfg ? 14 : 22, reglas: this.cfg ? this.cfg.reglas : null });
       this.n = 0;
     }
-    if (c.cap) quitarCapitan(this.j, c.cap);
-    let nombre = String(m.nombre || '').replace(/[<>&"']/g, '').trim().slice(0, 16) || 'Capitán';
+    if (c.cap) { this.informar([c.cap], true); quitarCapitan(this.j, c.cap); }
+    let nombre = (cuenta && cuenta.nombre) || String(m.nombre || '').replace(/[<>&"']/g, '').trim().slice(0, 16) || 'Capitán';
     const usados = new Set(this.j.capitanes.map((x) => x.nombre));
     for (let k = 2; usados.has(nombre); k++) nombre = `${nombre.replace(/ \d+$/, '')} ${k}`.slice(0, 18);
     c.cap = agregarCapitan(this.j, { id: 'c' + (++this.n), nombre, diseno, oro: PRESUPUESTO - costoDiseno(diseno) });
+    if (cuenta) c.cap.usuarioId = cuenta.id;
     c.entrada = {};
     c.conocidos = new Map();
     c.finEn = 0;
-    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 5, sala: this.sala || null, reglas: this.j.reglas })); // v: 2 = mundo sin callejones; v: 3 = tierras de un solo cuerpo; v: 4 = sin pasos angostos entre tierras; v: 5 = mar de 7000 (era 6400)
+    ws.send(JSON.stringify({ t: 'hola', id: c.cap.id, nombre, mapa: this.mapa, v: 5, sala: this.sala || null, reglas: this.j.reglas, informa: !!(cuenta && this.env && this.env.SERVIDOR_CLAVE) })); // v: 2 = mundo sin callejones; v: 3 = tierras de un solo cuerpo; v: 4 = sin pasos angostos entre tierras; v: 5 = mar de 7000 (era 6400)
     this.avisar();
     if (!this.reloj) {
       this.ultimo = Date.now();
@@ -256,6 +301,7 @@ export class Mar {
     const rachas = []; // x, y, radio, rumbo en centésimas, décimas de segundo que le quedan
     if (viento) for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
     if (ahora - this.avisado > 20000) this.avisar(); // para que la sala no se caiga de la lista
+    if (ahora - (this.informado || 0) > INFORMAR_CADA) { this.informado = ahora; this.informar(j.capitanes.filter((x) => !x.fin), false); }
     // el Kraken: x, y, rumbo, vida, vida máxima, cuánto emergió (%), segundos de muerte y de hundirse (en décimas), furia,
     // y sus zonas marcadas (id, x, y, tiempo y aviso en centésimas). Lo decide todo el servidor: los jugadores solo lo dibujan.
     const k = j.kraken;
@@ -305,7 +351,7 @@ export class Mar {
       // a los 6 segundos de hundido, el capitán sale del mar (el jugador sigue conectado hasta que vuelve a diseñar)
       if (cap.fin) {
         if (!c.finEn) c.finEn = ahora;
-        else if (ahora - c.finEn > 6000) { quitarCapitan(j, cap); c.cap = null; }
+        else if (ahora - c.finEn > 6000) { this.informar([cap], true); quitarCapitan(j, cap); c.cap = null; }
       }
     }
   }

@@ -6,3 +6,4 @@ node_modules/
 supabase/.temp/
 .wrangler/
 servidor/node_modules/
+servidor/.dev.vars

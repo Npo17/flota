@@ -1036,6 +1036,7 @@ $('per-cambiar').onclick = () => abrirNombre();
 // Manda al perfil lo hecho desde el último reporte (al entrar al puerto y al terminar la partida)
 function reportar(fin) {
   if (!partida || !cuenta.perfil || partida.practica) return; // la práctica no suma a las estadísticas
+  if (partida.servidorInforma) return; // en línea y con cuenta, lo informa el servidor (no se puede inventar)
   const st = partida.stats, r = partida.reportado || (partida.reportado = { hundidos: 0, capturados: 0, eliminados: 0, saqueado: 0, tiempo: 0 });
   const d = {
     hundidos: st.hundidos - r.hundidos, capturados: st.capturados - r.capturados, eliminados: (st.eliminados || 0) - (r.eliminados || 0), oro: Math.round(st.saqueado - r.saqueado),

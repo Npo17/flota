@@ -26,7 +26,7 @@ const j = red.partida;
 await new Promise((r) => setTimeout(r, 10));
 const ws = [...mar.clientes.keys()][0];
 const entregar = () => { while (pendientes.length) mar.mensaje(ws, mar.clientes.get(ws), JSON.parse(pendientes.shift())); };
-entregar(); clearInterval(mar.reloj);
+entregar(); await new Promise((r) => setTimeout(r, 20)); clearInterval(mar.reloj); // entrar espera la verificación de la sesión (sin sesión, enseguida)
 mar.paso();
 ok(j.jugador && !j.kraken, 'arrancó con un Kraken en el mar');
 

@@ -6,6 +6,7 @@ import { crearBarco, statsDe } from './barcos.js';
 import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto, vientoEn } from './juego.js';
 import { KRAKEN, VIENTO } from './config.js';
 import { t } from './idioma.js';
+import { supa } from './cuenta.js';
 
 // En la compu se usa el servidor publicado, salvo que la dirección lleve ?mar=local (servidor de prueba con wrangler dev)
 const LOCAL = new URLSearchParams(location.search).get('mar') === 'local';
@@ -31,6 +32,11 @@ export async function salasPublicas() {
 
 // eventos: alEntrar(partida), alCerrar(motivo), alPuerto(ok)
 // sala: { codigo, crear } para jugar en una sala en vez del mar de todos; crear = { mapa, max, publica, viento, abordajes } si la arma este jugador
+// La sesión de Supabase del jugador (si entró con su cuenta), para mandarla al servidor
+async function sesion() {
+  try { const sb = supa(); if (!sb) return null; const { data } = await sb.auth.getSession(); return data && data.session ? data.session.access_token : null; } catch { return null; }
+}
+
 export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto }) {
   let ws = null, miId = null, abierta = false, cerradaAProposito = false;
   let pulsos = {}, objetivo = null, quieto = false, ultimoEnvio = 0;
@@ -52,7 +58,8 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
 
   try { ws = new WebSocket(WS + (sala ? '?sala=' + encodeURIComponent(sala.codigo) : '')); } catch { setTimeout(() => alCerrar(t('No se pudo conectar con el mar.')), 0); }
   if (ws) {
-    ws.onopen = () => { abierta = true; ws.send(JSON.stringify({ t: 'entrar', nombre, diseno, cv: 2, ...(sala && sala.crear ? { crear: sala.crear } : {}) })); }; // cv: 2 = entiende fotos parciales
+    // cv: 2 = entiende fotos parciales; tk: la sesión de Supabase, para que el servidor sepa quién juega (sin cuenta se juega igual)
+    ws.onopen = async () => { abierta = true; const tk = await sesion(); if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'entrar', nombre, diseno, cv: 2, ...(tk ? { tk } : {}), ...(sala && sala.crear ? { crear: sala.crear } : {}) })); };
     ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch { return; } recibir(m); };
     ws.onclose = () => { if (!cerradaAProposito) alCerrar(t(miId ? 'Se cortó la conexión con el mar.' : 'No se pudo conectar con el mar. Probá de nuevo en un rato.')); };
     ws.onerror = () => {};
@@ -72,6 +79,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
         return alCerrar(t('Esa sala no existe o ya se cerró.'));
       }
       j.servidorNuevo = m.v >= 2; j.sala = m.sala || null;
+      j.servidorInforma = !!m.informa; // con cuenta, lo hecho en el mar lo informa el servidor (el navegador ya no)
       if (m.reglas) j.reglas = m.reglas;
     } else if (m.t === 'no') {
       cerradaAProposito = true;
@@ -254,7 +262,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       if (!abierta || !ws || ws.readyState !== 1) return false;
       esperandoHola = true; // sin esto, una foto vieja (todavía con el barco hundido) se tomaba como el barco nuevo y el juego quedaba trabado
       j.reportado = null; pulsos = {};
-      ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno, cv: 2 }));
+      sesion().then((tk) => { if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'entrar', nombre: j.nombreJugador || nombre, diseno, cv: 2, ...(tk ? { tk } : {}) })); });
       return true;
     },
     cerrar: () => { cerradaAProposito = true; try { ws.close(); } catch {} },
