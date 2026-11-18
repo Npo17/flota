@@ -11,6 +11,7 @@ try {
 } catch (e) { console.warn(e); }
 
 export const cuenta = { disponible: !!sb, usuario: null, perfil: null, cargando: !!sb };
+export const supa = () => sb; // el cliente de Supabase, para las pantallas de clanes y amigos (src/clanes.js)
 let alCambiar = () => {};
 
 export function iniciarCuenta(fn) {

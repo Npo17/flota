@@ -317,3 +317,39 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .sala span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sala small { color: var(--suave); font-size: 12px; }
 .sala i { font-style: normal; font-weight: 700; font-size: 12px; color: #2a1c08; background: #ffd166; border-radius: 999px; padding: 5px 10px; }
+
+/* ---------- Clanes y amigos (src/clanes.js) ---------- */
+#pantalla-clan { z-index: 6; }
+.caja.clan { width: min(1040px, 100%); }
+.clan h2 { margin: 4px 0; } .clan h3 { margin: 16px 0 6px; font-size: 15px; color: var(--titulo); } .clan h4 { margin: 12px 0 6px; font-size: 13px; color: var(--rotulo); }
+.clan-pestanas { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.clan-pestanas .chip { padding: 8px 12px; letter-spacing: 0.3px; }
+.chip.elegida, .opcion-mini.elegida, .muestra.elegida { border-color: var(--acento); }
+.clan-aviso { min-height: 16px; } .clan-aviso.malo { color: var(--error); }
+.clan-fila { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; background: var(--tarjeta); margin: 6px 0; }
+.clan-fila-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.clan-acciones { display: flex; gap: 6px; align-items: center; }
+.clan-cabecera { display: flex; gap: 16px; align-items: center; padding: 12px; border-radius: 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--clan) 22%, transparent), transparent); border-left: 4px solid var(--clan); }
+.clan-datos { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; margin-top: 6px; } .clan-datos span { display: inline-flex; align-items: center; gap: 4px; }
+.clan-tabla { display: flex; flex-direction: column; gap: 4px; }
+.clan-tabla-cab, .clan-tabla-fila { display: grid; grid-template-columns: 2fr 1.4fr 1.2fr 1fr 0.8fr; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; }
+.clan-tabla-cab { font-size: 12px; color: var(--suave); } .clan-tabla-fila { background: var(--tarjeta); } .clan-tabla-fila.yo { background: var(--tarjeta-elegida); }
+.clan-tabla-fila span { display: inline-flex; align-items: center; gap: 6px; }
+.campo.mini { font-size: 13px; padding: 4px 6px; width: auto; }
+.chat-lista { height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px; background: var(--campo); border-radius: 10px; }
+.chat-msj { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; } .chat-msj.mio b { color: var(--yo); }
+.chat-msj small { color: var(--suave); font-size: 11px; } .chat-msj.sistema { color: var(--rotulo); font-style: italic; font-size: 13px; }
+.chat-bt { background: none; border: 0; cursor: pointer; opacity: 0.45; padding: 0 2px; } .chat-msj:hover .chat-bt { opacity: 1; }
+.chat-fijado { padding: 8px 10px; border-radius: 10px; background: var(--tarjeta-elegida); margin-bottom: 6px; font-size: 14px; }
+.chat-escribir, .clan-invitar { display: flex; gap: 8px; margin-top: 8px; } .chat-escribir .campo, .clan-invitar .campo { font-size: 15px; padding: 8px 10px; }
+.clan-actividad div { padding: 4px 0; border-bottom: 1px solid var(--borde); font-size: 14px; }
+.clan-editor { display: grid; grid-template-columns: 220px 1fr; gap: 18px; }
+.clan-vista { position: sticky; top: 0; align-self: start; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; background: var(--tarjeta); border-radius: 12px; }
+.clan-vista-chica { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.clan-controles label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin-bottom: 8px; } .clan-controles .campo { font-size: 15px; padding: 8px 10px; }
+.clan-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 5px; }
+.opcion-mini { background: var(--tarjeta); border: 2px solid transparent; border-radius: 8px; padding: 3px; cursor: pointer; display: flex; justify-content: center; }
+.clan-colores { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.muestra { width: 22px; height: 22px; border-radius: 6px; border: 2px solid rgba(0, 0, 0, 0.35); cursor: pointer; padding: 0; }
+.clan-colores .libre { width: 34px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
+@media (max-width: 720px) { .clan-editor { grid-template-columns: 1fr; } .clan-vista { position: static; } .clan-tabla-cab, .clan-tabla-fila { grid-template-columns: 1.6fr 1.2fr 1fr; } .clan-tabla-cab span:nth-child(n+4), .clan-tabla-fila span:nth-child(n+4) { display: none; } }

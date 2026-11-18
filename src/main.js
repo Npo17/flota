@@ -17,6 +17,7 @@ import { TEXTOS_HISTORIA } from './textos-historia.js';
 import * as sonido from './sonido.js';
 import { PASOS, GUIA, crearPractica, avanzarPractica, pasoActual, datosPaso, saltarPaso } from './practica.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
+import { abrirClan, abrirAmigos } from './clanes.js';
 
 const $ = (id) => document.getElementById(id);
 registrarTextos(TEXTOS);
@@ -986,8 +987,10 @@ function pintarCuenta() {
     if (estado === 'astillero') abrirNombre();
     return;
   }
-  caja.innerHTML = `<button id="cta-perfil" class="boton">⚓ ${limpiar(cuenta.perfil.nombre)}</button><button id="cta-salir" class="boton enlace">${t('Salir')}</button>`;
+  caja.innerHTML = `<button id="cta-perfil" class="boton">⚓ ${limpiar(cuenta.perfil.nombre)}</button><button id="cta-clan" class="boton" type="button">🛡 ${t('Clan')}</button><button id="cta-amigos" class="boton" type="button">👥 ${t('Amigos')}</button><button id="cta-salir" class="boton enlace">${t('Salir')}</button>`;
   $('cta-perfil').onclick = () => abrirPerfil();
+  $('cta-clan').onclick = () => abrirClan();
+  $('cta-amigos').onclick = () => abrirAmigos();
   $('cta-salir').onclick = () => salir();
 }
 

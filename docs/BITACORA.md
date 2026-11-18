@@ -3,6 +3,15 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-17 (clanes, amigos y chat: base de datos, insignias, emblemas y pantallas) — Nicolás + Claude
+
+- Plan completo en `docs/PROPUESTA-CLANES.md` (clanes, guerras, tres clasificatorias, evento de fin de semana, temporadas; decisiones de Nicolás en la sección 10). Esto es la parte de clanes, amigos y chat.
+- **Base de datos** (`supabase/migrations/20261117000000_clanes.sql`, **aplicada** con la herramienta de Supabase de la compu, `npx supabase db query --remote --yes -f …`): amigos, clanes, miembros con cargo (Almirante … Grumete), estadías (el aporte de oro cuenta solo desde que entró; al irse queda en el historial), invitaciones y solicitudes que vencen a los 7 días, chat del clan en tiempo real (Realtime, solo lo leen los miembros), `oro_eventos` y rankings de clanes por oro y de saqueadores por semana o mes. Todo se escribe solo con funciones que controlan el cargo. Probada antes en una transacción deshecha: 21 comprobaciones (permisos, traspaso de mando, aportes, chat, amistad, disolución).
+- **Insignias** (`src/insignias.js`): 13 rangos navales y 6 cargos de clan, en SVG. **Emblemas** (`src/emblemas.js`): por capas, 17 formas, 23 patrones, 42 símbolos, color libre en cada capa y borde.
+- **Pantallas** (`src/clanes.js`, botones Clan y Amigos en la caja de la cuenta): buscar, crear (editor con vista previa), miembros, chat, reclutar, actividad, ajustes y amigos. Todo en 8 idiomas, incluidos los errores de la base de datos.
+- **Falta:** el perfil público de otro jugador, los rankings de clanes en la pantalla de perfil, la identidad en el servidor del online y el oro informado por el servidor (etapa 0), y todo lo de guerras y clasificatorias.
+- **Sin publicar la web todavía:** los jugadores no ven nada de esto hasta que se suba.
+
 ## 2026-11-16 (preparados para mucha gente: menos datos por jugador y defensas) — Nicolás + Claude
 
 - **Medido** con `scripts/probar-carga.mjs` (nuevo): 24 jugadores con 6 barcos de flota cada uno, unos 175 barcos. El servidor tarda 3–6 ms por paso (tiene 50), así que el procesamiento sobra; lo pesado eran los datos: cada jugador recibía el mar entero 20 veces por segundo, ~200 KB/s (1,6 Mbit/s), mucho para una conexión floja o un celular.
