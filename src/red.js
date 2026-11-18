@@ -3,7 +3,7 @@
 // El servidor decide posiciones, daño y oro; acá solo se suaviza el movimiento y se dibujan los efectos.
 import { crearMundo } from './mundo.js';
 import { crearBarco, statsDe } from './barcos.js';
-import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto, vientoEn } from './juego.js';
+import { efecto, estela, actualizarParticulas, dentroDelCasco, difAng, ataquesDeFoto, vientoEn, guerraDeFoto } from './juego.js';
 import { KRAKEN, VIENTO } from './config.js';
 import { t } from './idioma.js';
 import { supa } from './cuenta.js';
@@ -72,7 +72,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       // porque la pantalla lo usa en cada cuadro (cámara, cursor) y sin barco se cortaba el dibujo y el juego quedaba congelado.
       j.fin = false; j.finEn = 0; j.causa = null; j.gancho = null; barcoNuevo = true;
       miId = m.id; yo.id = m.id; yo.nombre = m.nombre; j.nombreJugador = m.nombre;
-      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 4 ? 2 : m.v >= 3 ? 1 : false, tam: m.v >= 5 ? undefined : 6400 }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
+      j.mundo = crearMundo(m.mapa, { callejones: !(m.v >= 2), relleno: m.v >= 4 ? 2 : m.v >= 3 ? 1 : false, tam: m.v >= 5 ? undefined : 6400, bandos: m.reglas && m.reglas.modo ? 2 : 0 }); // el mundo tiene que ser el mismo que armó el servidor, según su versión
       if (sala && m.sala !== sala.codigo) { // un servidor anterior no tiene salas y mete a todos en el mar de todos: mejor no entrar
         cerradaAProposito = true;
         try { ws.close(); } catch {}
@@ -107,6 +107,9 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
       j.viento = { a: m.vi[0] / 100, rafagas, rachas, curvo: !!m.vf, f1: m.vf ? m.vf[0] / 100 : 0, f2: m.vf ? m.vf[1] / 100 : 0, cambios: m.vf ? m.vf[2] : 0 }; // sin vf: servidor anterior, un solo rumbo
     }
     for (const [id, nom] of m.caps) nombres.set(id, nom);
+    const rachas = new Map(m.caps.map((c) => [c[0], c[4] || 0])), bandos = new Map(m.caps.map((c) => [c[0], c[5] || null]));
+    j.guerra = m.gu ? guerraDeFoto(m.gu, j.t) : null;
+    if (j.guerra) j.miBando = bandos.get(miId) || null;
     j.jugadores = m.caps;
     if (m.alta) for (const a of m.alta) {
       let b = porId.get(a.id);
@@ -131,6 +134,7 @@ export function conectar({ nombre, diseno, sala, alEntrar, alCerrar, alPuerto })
         b.cap = { id: capId }; b.bando = 'enemigo'; b.bandera = RIVAL; b.esJugador = true;
         b.nombre = tipo === 'j' ? (nombres.get(capId) || t('Capitán')) : t('Flota de {nombre}', { nombre: nombres.get(capId) || t('otro capitán') });
       } else { b.cap = null; b.bando = 'enemigo'; b.bandera = b.banderaBot; b.esJugador = false; b.nombre = b.nombreBot; }
+      b.racha = capId ? rachas.get(capId) || 0 : 0; b.bandoGuerra = capId ? bandos.get(capId) : null;
       lista.push(b);
     }
     // Foto parcial (p: 1): el servidor manda en cada paso solo los barcos cercanos y el mar entero cada tanto. Los que no

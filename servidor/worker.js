@@ -2,7 +2,7 @@
 // Corre la misma simulación que el modo solo (src/juego.js) y manda el estado a todos 20 veces por segundo.
 // El servidor decide todo lo que importa (posiciones, daño, oro): el navegador solo manda a dónde apunta y qué dispara.
 import { crearMundo } from '../src/mundo.js';
-import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe, ataquesAFoto } from '../src/juego.js';
+import { crearMar, agregarCapitan, quitarCapitan, avanzar, atracar, equipoDe, ataquesAFoto, guerraAFoto } from '../src/juego.js';
 import { comprar } from '../src/puerto.js';
 import { costoDiseno } from '../src/barcos.js';
 import { PRESUPUESTO, FACCIONES, CASCOS, VELAS, MUNICIONES, TRIPULACIONES, HABILIDADES, KRAKEN, enJuego } from '../src/config.js';
@@ -37,6 +37,16 @@ function cabeceras(req) {
 
 // El código de una sala: 4 a 6 letras o números, en mayúsculas
 const codigoSala = (x) => { const c = String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); return c.length >= 4 ? c : ''; };
+
+// Una sala puede ser de guerra: modo (versus, oro o zonas) y los dos bandos (nombre, etiqueta, color y emblema).
+function reglasDeGuerra(k) {
+  if (!['versus', 'oro', 'zonas'].includes(k.modo)) return {};
+  const color = (v, otro) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : otro);
+  const limpio = (v, n) => String(v || '').replace(/[<>&"']/g, '').trim().slice(0, n);
+  const emblema = (e) => (e && typeof e === 'object' && JSON.stringify(e).length < 400 ? e : null);
+  const bandos = [0, 1].map((i) => { const b = (Array.isArray(k.bandos) && k.bandos[i]) || {}; return { nombre: limpio(b.nombre, 24) || (i ? 'Bando B' : 'Bando A'), tag: limpio(b.tag, 5).toUpperCase() || (i ? 'B' : 'A'), color: color(b.color, i ? '#e63946' : '#3f8fc0'), emblema: emblema(b.emblema) }; });
+  return { modo: k.modo, bandos, kraken: false };
+}
 
 // Cada mar es un Durable Object aparte: 'mar-1' es el de todos, 'sala-XXXX' es una sala (con amigos o pública)
 // y 'salas' lleva la lista de salas públicas abiertas.
@@ -222,6 +232,15 @@ export class Mar {
       .catch((e) => console.log('no se pudo informar', e && e.message));
   }
 
+  // En guerra: el bando que pidió (si tiene lugar) o el que tiene menos gente. La etapa de guerras de clanes lo decide por el clan.
+  bandoPara(c, m) {
+    const cuantos = { A: 0, B: 0 };
+    for (const x of this.clientes.values()) if (x !== c && x.cap && !x.cap.fin && (x.cap.equipo === 'A' || x.cap.equipo === 'B')) cuantos[x.cap.equipo]++;
+    const tope = Math.ceil((this.cfg ? this.cfg.max : MAX_JUGADORES) / 2);
+    if ((m.bando === 'A' || m.bando === 'B') && cuantos[m.bando] < tope) return m.bando;
+    return cuantos.A <= cuantos.B ? 'A' : 'B';
+  }
+
   async entrar(ws, c, m) {
     if (c.cap && !c.cap.fin) return;
     const ahora = Date.now();
@@ -243,21 +262,23 @@ export class Mar {
         mapa: MAPAS[k.mapa] ? k.mapa : mapaDelDia(),
         max: Math.max(2, Math.min(MAX_SALA, k.max | 0 || 6)),
         publica: !!k.publica,
-        reglas: { viento: k.viento !== false, abordajes: k.abordajes !== false },
+        reglas: { viento: k.viento !== false, abordajes: k.abordajes !== false, ...reglasDeGuerra(k) },
       };
     }
     if (this.jugando() >= (this.cfg ? this.cfg.max : MAX_JUGADORES)) return ws.send(JSON.stringify({ t: 'no', motivo: this.cfg ? 'La sala está llena.' : 'El mar está lleno. Probá de nuevo en un rato.' }));
 
     if (!this.j) {
       this.mapa = this.cfg ? this.cfg.mapa : mapaDelDia();
-      this.j = crearMar(crearMundo(this.mapa), { servidor: true, enemigos: this.cfg ? 14 : 22, reglas: this.cfg ? this.cfg.reglas : null });
+      const guerra = this.cfg && this.cfg.reglas.modo;
+      this.j = crearMar(crearMundo(this.mapa, guerra ? { bandos: 2 } : {}), { servidor: true, enemigos: this.cfg ? 14 : 22, reglas: this.cfg ? this.cfg.reglas : null });
       this.n = 0;
     }
     if (c.cap) { this.informar([c.cap], true); quitarCapitan(this.j, c.cap); }
     let nombre = (cuenta && cuenta.nombre) || String(m.nombre || '').replace(/[<>&"']/g, '').trim().slice(0, 16) || 'Capitán';
     const usados = new Set(this.j.capitanes.map((x) => x.nombre));
     for (let k = 2; usados.has(nombre); k++) nombre = `${nombre.replace(/ \d+$/, '')} ${k}`.slice(0, 18);
-    c.cap = agregarCapitan(this.j, { id: 'c' + (++this.n), nombre, diseno, oro: PRESUPUESTO - costoDiseno(diseno) });
+    const bando = this.j.guerra ? this.bandoPara(c, m) : undefined; // en guerra, cada uno a su bando (y a su puerto)
+    c.cap = agregarCapitan(this.j, { id: 'c' + (++this.n), nombre, diseno, oro: PRESUPUESTO - costoDiseno(diseno), equipo: bando });
     if (cuenta) c.cap.usuarioId = cuenta.id;
     c.entrada = {};
     c.conocidos = new Map();
@@ -291,7 +312,7 @@ export class Mar {
     const barcos = j.barcos.map((b) => [b.id, r(b.x), r(b.y), r(b.a * 100), r(b.v), b.velas, r(b.vida), b.trip, b.cap ? b.cap.id : 0, b.bando === 'jugador' ? 'j' : b.bando === 'escolta' ? 'e' : 'b', b.hundiendo ? 1 : 0]);
     const cofres = j.cofres.map((x) => [x.id, r(x.x), r(x.y)]);
     const tritones = j.tritones.map((x) => [r(x.x), r(x.y), r(x.a * 100)]);
-    const caps = j.capitanes.filter((x) => !x.fin).map((x) => [x.id, x.nombre, r(x.stats.saqueado), x.marcasTesoro || 0]); // la 4.ª: monedas del tesoro maldito
+    const caps = j.capitanes.filter((x) => !x.fin).map((x) => [x.id, x.nombre, r(x.stats.saqueado), x.marcasTesoro || 0, x.racha || 0, j.guerra ? x.equipo : 0]); // 4.ª: monedas del tesoro maldito; 5.ª y 6.ª, en guerra: racha y bando
     const ganchos = [];
     for (const cap of j.capitanes) if (cap.gancho) ganchos.push([cap.id, cap.gancho.fase === 'vuelo' ? 0 : 1, r(cap.gancho.x), r(cap.gancho.y), cap.gancho.obj ? cap.gancho.obj.id : 0]);
     const comunes = j.eventos.filter((e) => !e.p);
@@ -310,7 +331,7 @@ export class Mar {
 
     // Lo que es igual para todos se pasa a texto una sola vez por paso (antes, una vez por jugador). Cada barco es una fila.
     const filas = barcos.map((x) => JSON.stringify(x));
-    const comun = JSON.stringify({ c: cofres, tr: tritones, g: ganchos, caps, ...(kraken ? { kr: kraken } : {}), ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}) }).slice(1, -1); // vf: las curvas del viento y cuántas veces cambió de rumbo
+    const comun = JSON.stringify({ c: cofres, tr: tritones, g: ganchos, caps, ...(j.guerra ? { gu: guerraAFoto(j.guerra) } : {}), ...(kraken ? { kr: kraken } : {}), ...(viento ? { vi: viento, rc: rachas, vf: [r(j.viento.f1 * 100), r(j.viento.f2 * 100), j.viento.cambios] } : {}) }).slice(1, -1); // vf: las curvas del viento y cuántas veces cambió de rumbo
     this.tic = (this.tic || 0) + 1;
     const todo = this.tic % TODO_CADA === 0;
     let todas = null;

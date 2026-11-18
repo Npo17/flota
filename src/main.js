@@ -18,6 +18,7 @@ import * as sonido from './sonido.js';
 import { PASOS, GUIA, crearPractica, avanzarPractica, pasoActual, datosPaso, saltarPaso } from './practica.js';
 import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso } from './cuenta.js';
 import { abrirClan, abrirAmigos, pintarRankings } from './clanes.js';
+import { pintarMarcador } from './marcador.js';
 
 const $ = (id) => document.getElementById(id);
 registrarTextos(TEXTOS);
@@ -244,6 +245,7 @@ $('ast-zarpar').onclick = () => {
 
 // En línea: todos en el mismo mar
 function volverAlAstillero(mensaje) {
+  pintarMarcador(null); // el marcador de guerra se va con la partida
   clearInterval(relojFin);
   if (red) { red.cerrar(); red = null; }
   partida = null;
@@ -337,7 +339,8 @@ async function pintarLinea(mensaje) {
 
 // ---------- Puerto ----------
 function cercaDelPuerto(margen = 0) {
-  const p = mundo.puerto, b = partida.jugador;
+  const bando = partida.miBando || (partida.yo && partida.yo.equipo);
+  const p = (mundo.puertos && bando && mundo.puertos.find((x) => x.bando === bando)) || mundo.puerto, b = partida.jugador; // en guerra, el puerto del bando
   return Math.hypot(b.x - p.x, b.y - p.y) < p.radio + margen;
 }
 // Si apretás la tecla del puerto y no entrás, que se sepa por qué (un amigo de Nicolás tocó la P al lado del muelle, apenas
@@ -842,7 +845,7 @@ function cartel(texto) {
 }
 function pintarEventos(j, b) {
   // el galeón del tesoro: va de mar adentro al puerto; la barra muestra cuánto camino le queda
-  const galeon = j.barcos.find((x) => x.convoy && !x.hundiendo && x.bando === 'enemigo');
+  const galeon = !j.guerra && j.barcos.find((x) => x.convoy && !x.hundiendo && x.bando === 'enemigo'); // en guerra, el galeón tiene su aviso en el marcador
   $('hud-tesoro').classList.toggle('oculto', !galeon);
   if (galeon) {
     const p = j.mundo.puerto, falta = Math.max(0, Math.hypot(galeon.x - p.x, galeon.y - p.y) - p.radio - 470);
@@ -941,7 +944,7 @@ function cuadro(ahora) {
     }
     dibujarEscena(ctx, partida, vista);
     if (partida.rayo) sonido.trueno(); // la tormenta del Kraken: cada relámpago trae su trueno
-    if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); }
+    if (estado === 'mar' && ++cuadros % 6 === 0) { pintarHud(); dibujarMinimapa(mini, partida, 240); pintarMarcador(partida); }
   }
   // sonido: en el astillero, la música; en el mar, las olas y el viento (más fuerte dentro de una ráfaga y con el barco lanzado)
   if (estado === 'astillero' || !partida) { sonido.ambiente('lobby'); sonido.abordaje('nada'); }
@@ -1190,4 +1193,15 @@ requestAnimationFrame(cuadro);
 document.documentElement.classList.remove('cargando'); // ya está todo pintado: se va la pantalla de carga (index.html)
 
 // Para probar desde la consola
-window.flota = { sonido, get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; }, get practica() { return practica; }, cuadro };
+// Una guerra de prueba en la compu (sin servidor): el jugador en el bando A, con los bots del mapa. Para probar el marcador,
+// los puertos de bando y los modos desde la consola: flota.guerraDePrueba('versus' | 'oro' | 'zonas').
+function guerraDePrueba(modo = 'versus', mapa = 'lepanto') {
+  mundo = crearMundo(mapa, { bandos: 2 });
+  reglasPartida = { viento: true, abordajes: true, modo, bandos: [{ nombre: 'Azules', tag: 'AZU', color: '#3f8fc0' }, { nombre: 'Rojos', tag: 'ROJ', color: '#e63946' }] };
+  partida = crearPartida(mundo, diseno, PRESUPUESTO - costoDiseno(diseno), reglasPartida);
+  partida.nombreJugador = nombrePropio();
+  empezar();
+  return partida;
+}
+
+window.flota = { sonido, get partida() { return partida; }, get mundo() { return mundo; }, get red() { return red; }, get estado() { return estado; }, get practica() { return practica; }, cuadro, guerraDePrueba };

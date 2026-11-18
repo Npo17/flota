@@ -5,6 +5,7 @@ import { MAPAS } from './mapas.js';
 
 // opciones.callejones: deja los islotes pegados como en la primera versión (para jugar en línea contra un servidor anterior)
 // opciones.relleno: false deja las tierras grandes como círculos sueltos; 1 une solo las que se tocan (para un servidor anterior); sin decir nada, une también las que dejan un paso angosto
+// opciones.bandos: mar de guerra, con un puerto por bando (ver más abajo)
 // opciones.tam: el lado del mar (por defecto MUNDO.ancho; 6400 para un servidor anterior al 15/11/2026). Las costas de mapas.js
 // están dibujadas sobre MUNDO.base y se escalan; las islas sueltas, escollos, icebergs y remolinos se suman en proporción a la superficie.
 export function crearMundo(idMapa, opciones = {}) {
@@ -153,7 +154,24 @@ export function crearMundo(idMapa, opciones = {}) {
     remolinos.push({ x, y, radio: rng.rango(150, 210), giro: rng.next() < 0.5 ? 1 : -1 });
   }
 
-  return { id: idMapa, nombre: mapa.nombre, lugar: mapa.lugar, tema: mapa.tema, reglas: mapa.reglas || {}, puerto, islas, remolinos, ancho: W, alto: H };
+  // Guerra (opciones.bandos): un puerto por bando, en lados opuestos del mar (el B, en espejo del A), con su islita y sin
+  // islotes ni remolinos cerca. El puerto del centro queda como zona neutral (ahí sale el galeón del tesoro).
+  let puertos = null;
+  if (opciones.bandos) {
+    const libre = (x, y, r) => !islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + r && i.tipo === 'tierra');
+    let x = W * 0.12;
+    while (x < W * 0.4 && !(libre(x, H / 2, 520) && libre(W - x, H / 2, 520))) x += 60; // se corre hacia el centro hasta que haya agua
+    puertos = [{ x, y: H / 2, radio: 240, bando: 'A' }, { x: W - x, y: H / 2, radio: 240, bando: 'B' }];
+    for (let k = islas.length - 1; k >= 0; k--) {
+      const i = islas[k];
+      if (i.tipo !== 'tierra' && i.tipo !== 'puerto' && puertos.some((p) => Math.hypot(i.x - p.x, i.y - p.y) < i.r + 520)) islas.splice(k, 1);
+    }
+    for (let k = remolinos.length - 1; k >= 0; k--) if (puertos.some((p) => Math.hypot(remolinos[k].x - p.x, remolinos[k].y - p.y) < 1200)) remolinos.splice(k, 1);
+    const rngP = crearRng(mapa.semilla + 31337);
+    for (const p of puertos) islas.push(crearIsla(rngP, p.x + (p.bando === 'A' ? -260 : 260), p.y, 150, 'puerto'));
+  }
+
+  return { id: idMapa, nombre: mapa.nombre, lugar: mapa.lugar, tema: mapa.tema, reglas: mapa.reglas || {}, puerto, puertos, islas, remolinos, ancho: W, alto: H };
 }
 
 function crearIsla(rng, x, y, r, tipo) {

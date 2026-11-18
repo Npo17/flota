@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-18 (etapa 3: motor de guerra y modo Versus) — Nicolás + Claude
+
+- **Simulación** (sección "Guerra" al final de `src/juego.js`, números en `GUERRA`): con `reglas.modo` (versus, oro, zonas) el mar tiene dos bandos, cada uno con su puerto (`crearMundo(id, { bandos: 2 })`: a los costados, en espejo, con agua libre y sin islotes cerca; el del centro queda como zona neutral). Cañones de costa (650 de alcance) castigan a todo el que no es del bando. Al hundirse se reaparece a los 5 s en el puerto propio con el barco y las mejoras, perdiendo el 30 % de la bodega (se la lleva el que lo hundió), con 5 s de escudo que se corta al disparar. Sin Kraken.
+- **Versus:** 1 punto por hundir a un capitán del otro bando; la misma víctima en 2 minutos vale ½ y después 0; con 3 hundidos sin morir hay recompensa por su cabeza (+1 cada 2 de racha) para el que lo hunda. Galeón del tesoro en el centro a los 5 y a los 12 minutos (aviso 60 s antes): el bando que lo hunde gana 2000 de oro y +20 % de daño por 90 s. **Supremacía de Oro** (todo el oro ganado suma al marcador) y **Dominio de Zonas** (5 a 9 zonas; se toman con 10 s sin rivales; desempate por tiempo de control) ya están en la simulación. 15 minutos por partida.
+- **Servidor:** las salas pueden ser de guerra (`crear.modo` y `crear.bandos`), cada jugador va al bando que pide o al que tiene menos gente; la foto lleva `gu` (marcador, tiempo, galeones, zonas) y la racha y el bando de cada capitán.
+- **Pantalla:** marcador estilo LoL arriba al centro (`src/marcador.js`), puertos de bando con su bandera y el alcance de sus cañones, zonas con su dueño y la barra de captura, escudo, moneda de recompensa sobre el que va en racha, nombres en el color del bando, minimapa con puertos y zonas, la flecha lleva a tu puerto y el resultado al final. `flota.guerraDePrueba('versus'|'oro'|'zonas')` arma una guerra local para probar.
+- Probado: `scripts/probar-guerra.mjs` (nuevo: bajas, antiabuso, racha, reaparecer, escudo, fuego amigo, costa, galeón, fin, oro, zonas), una sala de guerra en el servidor local con dos jugadores y capturas de los tres modos.
+
 ## 2026-11-18 (etapa 2: fichas de jugadores y clanes, rankings) — Nicolás + Claude
 
 - Tocar el nombre de un jugador (rankings, miembros, chat, amigos) abre su **ficha**: estadísticas, su clan con emblema y su cargo, y "Agregar de amigo". Tocar un clan abre la **ficha del clan**: miembros con cargo y aporte, y "Pedir entrar" / "Unirme". Cualquier elemento con `data-perfil` o `data-clan` las abre (`src/clanes.js`).

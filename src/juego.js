@@ -40,7 +40,10 @@ export function crearMar(mundo, opciones = {}) {
     // Reglas que se eligen al crear la partida (modo solo o sala): sin viento no hay ráfagas ni rachas; sin abordajes, F no hace nada
     reglas: { viento: !(opciones.reglas && opciones.reglas.viento === false), abordajes: !(opciones.reglas && opciones.reglas.abordajes === false) },
     viento: null,
+    guerra: null,
   };
+  // guerra (reglas.modo): dos bandos, cada uno con su puerto; sin Kraken (ver la sección Guerra, al final)
+  if (opciones.reglas && opciones.reglas.modo && mundo.puertos) { j.reglas.modo = opciones.reglas.modo; j.reglas.kraken = false; j.guerra = crearGuerra(j, opciones.reglas); }
   if (j.reglas.viento) j.viento = crearViento(mundo);
   for (let i = 0; i < j.enemigosVivos; i++) spawnEnemigo(j, true);
   return j;
@@ -114,7 +117,7 @@ export function rindeViento(j, b) {
 }
 
 export function agregarCapitan(j, { id, nombre, diseno, oro = 0, equipo }) {
-  const p = j.mundo.puerto;
+  const p = (equipo && j.mundo.puertos && j.mundo.puertos.find((x) => x.bando === equipo)) || j.mundo.puerto; // en guerra, el de su bando
   const n = j.capitanes.length;
   // cada uno sale de un punto distinto del puerto
   const ang = Math.PI / 2 + (n % 7 - 3) * 0.42, d = 60 + (Math.floor(n / 7) % 3) * 55;
@@ -145,7 +148,7 @@ export function quitarCapitan(j, cap) {
 // (partida.jugador, partida.oroBodega…) para las pantallas.
 export function crearPartida(mundo, diseno, oroInicial, reglas) {
   const j = crearMar(mundo, { reglas });
-  j.yo = agregarCapitan(j, { id: 'yo', nombre: 'Tu barco', diseno, oro: oroInicial });
+  j.yo = agregarCapitan(j, { id: 'yo', nombre: 'Tu barco', diseno, oro: oroInicial, equipo: j.guerra ? 'A' : undefined }); // en una partida sola de guerra, del bando A
   Object.defineProperty(j, 'jugador', { get: () => j.yo.barco, enumerable: true });
   for (const k of ['oroBodega', 'oroPuerto', 'escoltasMax', 'stats', 'cdAbordaje', 'gancho', 'ordenFlota', 'formacion', 'avisos', 'sacudon', 'fin', 'finEn', 'cdHabilidad', 'habilidad']) {
     Object.defineProperty(j, k, { get: () => j.yo[k], set: (v) => { j.yo[k] = v; }, enumerable: true });
@@ -170,7 +173,7 @@ export function equipoDe(b) {
 }
 
 const esInsignia = (b) => !!b.cap && b.cap.barco === b;
-const enPuerto = (j, b) => Math.hypot(b.x - j.mundo.puerto.x, b.y - j.mundo.puerto.y) < j.mundo.puerto.radio;
+const enPuerto = (j, b) => { const p = b.cap ? puertoDe(j, b.cap) : j.mundo.puerto; return Math.hypot(b.x - p.x, b.y - p.y) < p.radio; };
 
 function lejosDeCapitanes(j, x, y, d) {
   return j.capitanes.every((c) => c.fin || Math.hypot(x - c.barco.x, y - c.barco.y) >= d);
@@ -208,6 +211,14 @@ export function efecto(j, ev) {
   }
   else if (ev.k === 't') j.textos.push({ x: ev.x, y: ev.y, texto: ev.s, datos: ev.q, color: ev.c, t: 1.6 });
   else if (ev.k === 'kh') j.krakenHerido = j.t; // le pegaron al Kraken: su piel destella un instante
+  else if (ev.k === 'costa') { // cañones de costa: fogonazo en el puerto y piques alrededor del barco
+    P.push({ tipo: 'fogonazo', x: ev.x, y: ev.y, t: 0, vida: 0.15, r: 14 });
+    for (let k = 0; k < 3; k++) P.push({ tipo: 'salpicon', x: ev.bx + azar.rango(-30, 30), y: ev.by + azar.rango(-30, 30), t: 0, vida: 0.6, r: 7 });
+  } else if (ev.k === 'esc') { const b = j.barcos.find((x) => x.id === ev.b); if (b) b.escudoHasta = j.t + GUERRA.escudo; } // escudo de reaparición
+  else if (ev.k === 'baja') { // una baja en guerra: el punto, bien grande, sobre el que se hundió
+    j.textos.push({ x: ev.x, y: ev.y - 30, texto: '+{n}', datos: { n: ev.p }, color: '#ffd166', t: 2.2, grande: true });
+    j.ultimaBaja = { ...ev, t: j.t };
+  }
   else if (ev.k === 'kg') { // el golpe de un tentáculo: salpicón grande y astillas
     P.push({ tipo: 'salpicon', x: ev.x, y: ev.y, t: 0, vida: 0.9, r: 40 });
     for (let k = 0; k < 10; k++) P.push({ tipo: 'astilla', x: ev.x + azar.rango(-30, 30), y: ev.y + azar.rango(-30, 30), vx: azar.rango(-140, 140), vy: azar.rango(-140, 140), t: 0, vida: 0.8, r: 3 });
@@ -284,6 +295,7 @@ export function disparar(j, b, lado) {
   for (const c of j.capitanes) if (c.gancho && c.gancho.obj === b && (difAng(Math.atan2(c.barco.y - b.y, c.barco.x - b.x), b.a) > 0 ? 1 : -1) === lado) return;
   if (b.hundiendo || b.recarga[lado] > 0 || b.diseno.canones < 2) return false;
   if (b.cap && enPuerto(j, b)) return false; // en el puerto no se pelea
+  if (b.escudoHasta) b.escudoHasta = 0; // en guerra: disparar corta el escudo de reaparición
   const s = b.stats;
   const porLado = b.diseno.canones / 2;
   // con todo el trapo arriba la gente está en las velas y recarga más lento (velas de combate = pocas velas)
@@ -314,7 +326,7 @@ function salirBala(j, { b, lado, off }) {
     const vida = (s.alcance / s.velBala) * azar.rango(0.93, 1.05);
     const bala = {
       x, y, vx: Math.cos(ang) * vel + ca * b.v * 0.5, vy: Math.sin(ang) * vel + sa * b.v * 0.5,
-      vida, vidaTotal: vida, dano: s.dano, tripu: s.tripu, radio: s.radioBala,
+      vida, vidaTotal: vida, dano: s.dano * mejoraDe(j, b), tripu: s.tripu, radio: s.radioBala,
       equipo: equipoDe(b), dueno: b,
     };
     j.balas.push(bala);
@@ -378,9 +390,10 @@ export function avanzar(j, dt, entradas) {
 
   for (const cap of j.capitanes) if (!cap.fin) actualizarGancho(j, cap, dt);
   moverBalas(j, dt);
-  actualizarConvoy(j, dt);
+  if (!j.guerra) actualizarConvoy(j, dt);
   actualizarTritones(j, dt);
-  actualizarKraken(j, dt);
+  if (j.reglas.kraken !== false) actualizarKraken(j, dt);
+  actualizarGuerra(j, dt);
   actualizarCofres(j, dt);
   actualizarHundidos(j, dt);
   if (!j.eventos) actualizarParticulas(j, dt);
@@ -587,6 +600,7 @@ function moverBalas(j, dt) {
 const BAJAS_CASCO = 0.75; // parte de la tripulación de un bot que cae a lo largo de todo su casco (a cero de casco le queda un cuarto)
 
 function golpear(j, b, bl) {
+  if (b.escudoHasta > j.t) { emitir(j, { k: 's', x: Math.round(bl.x), y: Math.round(bl.y), r: 6 }); return; } // escudo de reaparición (guerra)
   // mientras le quede un guardia, el galeón del tesoro no recibe daño: primero hay que hundirlos
   if (b.convoy && b.bando === 'enemigo' && guardiasDe(j, b) > 0) {
     emitir(j, { k: 'g', x: Math.round(bl.x), y: Math.round(bl.y) });
@@ -635,11 +649,14 @@ function hundir(j, b) {
   if (b.bando === 'enemigo') {
     if (agresor) agresor.stats.hundidos++;
     soltarOro(j, b.x, b.y, b.oro, b.convoy ? 110 : 25, b.convoy ? 9 : 0);
-    if (b.convoy) { aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno'); marcaTesoro(j, agresor, b); }
+    if (b.convoy && b.guerra) galeonHundido(j, agresor);
+    else if (b.convoy) { aviso(j, '¡Cayó el galeón del tesoro! El oro quedó flotando por todos lados', 'bueno'); marcaTesoro(j, agresor, b); }
     else if (agresor && b.oro > 0) aviso(agresor, '¡Hundiste un {barco}! Juntá el botín', 'bueno', { barco: b.nombre });
   } else if (!esInsignia(b)) {
     if (agresor) agresor.stats.hundidos++;
     aviso(b.cap, 'Perdiste tu {barco}', 'malo', { barco: b.nombre });
+  } else if (j.guerra && bandoDe(j, b.cap)) {
+    hundidoEnGuerra(j, b.cap, agresor);
   } else {
     perderInsignia(j, b.cap, agresor, true);
   }
@@ -677,6 +694,7 @@ function ganarOro(j, cap, base, x, y) {
   if (oro <= 0) return;
   cap.oroBodega += oro;
   cap.stats.saqueado += oro;
+  if (j.guerra && j.guerra.modo === 'oro' && !j.guerra.fin && bandoDe(j, cap)) j.guerra.marcador[cap.equipo] += oro;
   textoFlotante(j, x, y, '+{n} oro', '#ffd166', cap, { n: oro });
 }
 
@@ -1737,3 +1755,196 @@ export function ataquesDeFoto(q) {
   return out;
 }
 
+// ---------- Guerra: dos bandos (clanes o equipos), modos Versus, Supremacía de Oro y Dominio de Zonas ----------
+// Se activa con reglas.modo. Cada bando tiene su puerto (mundo.puertos), que lo protege con cañones de costa. Al hundirse,
+// el capitán reaparece en su puerto con su barco y sus mejoras (pierde el 30 % del oro de la bodega) y 5 s de escudo, que se
+// corta si dispara. Sin Kraken. En Versus y Oro sale el galeón del tesoro en el centro a los 5 y a los 12 minutos.
+// Todo lo ajustable está en GUERRA.
+export const GUERRA = {
+  duracion: 900,            // segundos de partida
+  reaparecer: 5,            // segundos hasta volver al puerto propio
+  escudo: 5,                // segundos de escudo al reaparecer
+  pierdeOro: 0.3,           // parte del oro en bodega que se pierde al hundirse (se la lleva el que lo hundió)
+  costa: { radio: 650, dano: 32, cada: 1 },   // cañones de costa: alcance desde el puerto y daño por disparo
+  repetida: 120,            // segundos en los que hundir de nuevo a la misma víctima vale menos (1, ½, 0)
+  racha: 3,                 // desde cuántos hundidos seguidos sin morir hay recompensa por su cabeza (+1 cada 2 de racha)
+  galeones: [300, 720],     // cuándo sale el galeón del tesoro (segundos desde el comienzo)
+  avisoGaleon: 60,          // con cuánta anticipación se avisa
+  premioGaleon: 2000,       // oro para el bando que lo hunde (en Supremacía de Oro, además, suma al marcador)
+  mejora: { dano: 1.2, dura: 90 },  // mejora temporal para el bando que lo hunde
+  zonas: { captura: 10, radio: 260 }, // Dominio de Zonas: segundos con barcos adentro (sin rivales) para tomar una zona
+};
+
+function crearGuerra(j, r) {
+  const modo = ['versus', 'oro', 'zonas'].includes(r.modo) ? r.modo : 'versus';
+  const bandos = (Array.isArray(r.bandos) && r.bandos.length === 2 ? r.bandos : [{}, {}]).map((b, i) => ({
+    id: i ? 'B' : 'A', nombre: String(b.nombre || (i ? 'Bando B' : 'Bando A')).slice(0, 24), tag: String(b.tag || (i ? 'B' : 'A')).slice(0, 5),
+    color: /^#[0-9a-f]{6}$/i.test(b.color || '') ? b.color : (i ? '#e63946' : '#3f8fc0'), emblema: b.emblema || null, clan: b.clan || null,
+  }));
+  const g = { modo, bandos, t: 0, duracion: r.duracion || GUERRA.duracion, marcador: { A: 0, B: 0 }, control: { A: 0, B: 0 }, fin: null,
+    bajas: [], mejora: { A: 0, B: 0 }, galeones: modo === 'zonas' ? [] : GUERRA.galeones.map((t) => ({ t, avisado: false, salio: false })), zonas: [] };
+  if (modo === 'zonas') g.zonas = armarZonas(j.mundo);
+  return g;
+}
+
+// Zonas: entre 5 y 9 según cuánta agua libre tenga el mapa, repartidas en espejo entre los dos puertos (una en el centro)
+function armarZonas(m) {
+  const libre = (x, y) => x > 300 && y > 300 && x < m.ancho - 300 && y < m.alto - 300 && !m.islas.some((i) => Math.hypot(i.x - x, i.y - y) < i.r + 300)
+    && !(m.puertos || []).some((p) => Math.hypot(p.x - x, p.y - y) < 1100);
+  const zonas = [];
+  const cx = m.ancho / 2, cy = m.alto / 2;
+  if (libre(cx, cy + 520)) zonas.push({ x: cx, y: cy + 520 }); else zonas.push({ x: cx, y: cy - 520 });
+  const filas = [0.22, 0.5, 0.78], cols = [0.3, 0.42];
+  for (const fy of filas) for (const fx of cols) {
+    const x = m.ancho * fx, y = m.alto * fy;
+    if (libre(x, y) && libre(m.ancho - x, y)) { zonas.push({ x, y }); zonas.push({ x: m.ancho - x, y }); }
+    if (zonas.length >= 9) break;
+  }
+  return zonas.slice(0, 9).map((z, i) => ({ id: i + 1, x: Math.round(z.x), y: Math.round(z.y), duena: null, progreso: 0, quien: null }));
+}
+
+const bandoDe = (j, cap) => (j.guerra && cap && (cap.equipo === 'A' || cap.equipo === 'B') ? cap.equipo : null);
+export const puertoDe = (j, cap) => (j.mundo.puertos && cap && j.mundo.puertos.find((p) => p.bando === cap.equipo)) || j.mundo.puerto;
+
+// Un capitán de un bando hundió a uno del otro: suma al marcador (en Versus), con las reglas contra el abuso
+function bajaDeGuerra(j, victima, agresor) {
+  const g = j.guerra, bv = bandoDe(j, victima), ba = bandoDe(j, agresor);
+  victima.racha = 0;
+  if (!g || g.fin || !bv || !ba || bv === ba) return;
+  const racha = victima.rachaAntes || 0;
+  // la misma víctima, varias veces en poco tiempo: 1, ½ y después nada
+  g.bajas = g.bajas.filter((x) => j.t - x.t < GUERRA.repetida);
+  const antes = g.bajas.filter((x) => x.a === agresor.id && x.v === victima.id).length;
+  g.bajas.push({ a: agresor.id, v: victima.id, t: j.t });
+  let puntos = antes === 0 ? 1 : antes === 1 ? 0.5 : 0;
+  const recompensa = racha >= GUERRA.racha ? Math.floor(racha / 2) : 0; // tenía la cabeza con precio
+  if (g.modo === 'versus') g.marcador[ba] += puntos + recompensa;
+  agresor.racha = (agresor.racha || 0) + 1;
+  emitir(j, { k: 'baja', a: ba, n: agresor.nombre, v: victima.nombre, p: puntos + recompensa, x: Math.round(victima.barco.x), y: Math.round(victima.barco.y) });
+  if (recompensa) avisoLargo(j, '{nombre} cobró la recompensa por {otro}: +{n}', 'bueno', { nombre: agresor.nombre, otro: victima.nombre, n: recompensa });
+  if (agresor.racha === GUERRA.racha) avisoLargo(j, '¡{nombre} va en racha! Su cabeza tiene precio', 'info', { nombre: agresor.nombre });
+}
+
+// El capitán de un bando se hundió: reaparece en su puerto con su barco y sus mejoras (en vez de terminar la partida)
+function hundidoEnGuerra(j, cap, agresor) {
+  const viejo = cap.barco;
+  const pierde = Math.round(cap.oroBodega * GUERRA.pierdeOro);
+  cap.oroBodega -= pierde;
+  if (agresor && pierde > 0) ganarOro(j, agresor, pierde, viejo.x, viejo.y);
+  cap.rachaAntes = cap.racha || 0;
+  if (agresor) { agresor.stats.eliminados++; aviso(agresor, '¡Hundiste a {nombre}!', 'bueno', { nombre: cap.nombre }); }
+  bajaDeGuerra(j, cap, agresor);
+  if (cap.gancho) cap.gancho = null;
+  cap.reaparece = j.t + GUERRA.reaparecer;
+  aviso(cap, '¡Te hundieron! Volvés a tu puerto en {n} segundos', 'malo', { n: GUERRA.reaparecer });
+}
+
+function reaparecerEnGuerra(j, cap) {
+  const p = puertoDe(j, cap), viejo = cap.barco;
+  const nuevo = crearBarco(viejo.diseno, 'jugador', p.x + (cap.equipo === 'A' ? 120 : -120), p.y + azar.rango(-90, 90), { a: cap.equipo === 'A' ? 0 : Math.PI, velas: 0, bandera: VERDE, nombre: viejo.nombre });
+  nuevo.cap = cap;
+  nuevo.escudoHasta = j.t + GUERRA.escudo;
+  j.barcos.push(nuevo);
+  cap.barco = nuevo;
+  cap.reaparece = 0;
+  emitir(j, { k: 'esc', b: nuevo.id });
+}
+
+function galeonDeGuerra(j) {
+  const m = j.mundo, x = m.puerto.x, y = m.puerto.y + 520;
+  const d = disenoEnemigo('tesoro', 2, m.reglas.facciones);
+  d.refuerzo = 160;
+  const tesoro = crearBarco(d, 'enemigo', x, y, { a: 0, velas: 0, bandera: '#c9a227', color: '#f6e7b0', nombre: 'Galeón del tesoro', tipo: 'tesoro', colorVela: '#f3d98b', oro: 0 });
+  tesoro.convoy = true; tesoro.equipo = 'tesoro'; tesoro.guerra = true; tesoro.quieto = true; tesoro.nivel = 2; // quieto: no navega hacia ningún puerto (si llegaba, se iba con el oro)
+  j.barcos.push(tesoro);
+  for (const [dx, dy, tipo] of [[-150, -60, 'corsario'], [150, -60, 'corsario'], [-150, 90, 'balandro'], [150, 90, 'balandro']]) {
+    const gd = crearBarco(disenoEnemigo(tipo, ENEMIGOS[tipo].minNivel, m.reglas.facciones), 'enemigo', x + dx, y + dy, { a: 0, velas: 0, bandera: ENEMIGOS[tipo].color, color: '#e9e1cc', nombre: 'Guardia del tesoro', tipo, oro: 0 });
+    gd.ia.lider = tesoro; gd.ia.lado = dx > 0 ? 1 : -1; gd.ia.atras = dy; gd.equipo = 'tesoro';
+    j.barcos.push(gd);
+  }
+  avisoLargo(j, '¡Salió el galeón del tesoro en el centro del mar! El bando que lo hunda gana {n} de oro y más daño', 'bueno', { n: GUERRA.premioGaleon });
+}
+
+function galeonHundido(j, agresor) {
+  const g = j.guerra, b = bandoDe(j, agresor);
+  if (!b) return;
+  const del = j.capitanes.filter((c) => c.equipo === b && !c.fin);
+  for (const c of del) ganarOro(j, c, Math.round(GUERRA.premioGaleon / Math.max(1, del.length)), c.barco.x, c.barco.y);
+  if (g.modo === 'oro') g.marcador[b] += 0; // el oro ya entra al marcador al ganarlo (ganarOro)
+  g.mejora[b] = j.t + GUERRA.mejora.dura;
+  avisoLargo(j, '¡{bando} hundió el galeón del tesoro! +{n} de oro y más daño por {s} segundos', 'bueno', { bando: g.bandos.find((x) => x.id === b).nombre, n: GUERRA.premioGaleon, s: GUERRA.mejora.dura });
+}
+
+function actualizarGuerra(j, dt) {
+  const g = j.guerra;
+  if (!g || g.fin) return;
+  g.t += dt;
+  // reaparecer
+  for (const cap of j.capitanes) if (cap.reaparece && j.t >= cap.reaparece && !cap.fin) reaparecerEnGuerra(j, cap);
+  // cañones de costa: castigan a todo el que no es del bando, cerca de su puerto
+  g.costa = (g.costa || 0) - dt;
+  if (g.costa <= 0) {
+    g.costa = GUERRA.costa.cada;
+    for (const p of j.mundo.puertos || []) for (const b of j.barcos) {
+      if (b.hundiendo || equipoDe(b) === p.bando) continue;
+      if (Math.hypot(b.x - p.x, b.y - p.y) > GUERRA.costa.radio) continue;
+      if (b.escudoHasta > j.t) continue;
+      b.vida -= GUERRA.costa.dano; b.ultimoGolpe = j.t;
+      emitir(j, { k: 'costa', x: Math.round(p.x), y: Math.round(p.y), bx: Math.round(b.x), by: Math.round(b.y) });
+      if (esInsignia(b) && !b.avisoCosta) { b.avisoCosta = true; aviso(b.cap, '¡Los cañones de costa del puerto rival te están disparando!', 'malo'); }
+      if (b.vida <= 0) hundir(j, b);
+    }
+  }
+  // galeón del tesoro, en horario fijo
+  for (const ga of g.galeones) {
+    if (!ga.avisado && g.t >= ga.t - GUERRA.avisoGaleon) { ga.avisado = true; avisoLargo(j, 'En {n} segundos sale el galeón del tesoro en el centro del mar', 'info', { n: GUERRA.avisoGaleon }); }
+    if (!ga.salio && g.t >= ga.t) { ga.salio = true; galeonDeGuerra(j); }
+  }
+  // dominio de zonas
+  if (g.modo === 'zonas') {
+    for (const z of g.zonas) {
+      const hay = { A: 0, B: 0 };
+      for (const b of j.barcos) {
+        if (b.hundiendo || !b.cap) continue;
+        const e = bandoDe(j, b.cap);
+        if (e && Math.hypot(b.x - z.x, b.y - z.y) < GUERRA.zonas.radio) hay[e]++;
+      }
+      const solo = hay.A && !hay.B ? 'A' : hay.B && !hay.A ? 'B' : null;
+      z.disputa = !!(hay.A && hay.B);
+      if (solo && z.duena !== solo) {
+        if (z.quien !== solo) { z.quien = solo; z.progreso = 0; }
+        z.progreso += dt / GUERRA.zonas.captura;
+        if (z.progreso >= 1) { z.duena = solo; z.progreso = 0; z.quien = null; emitir(j, { k: 'zona', z: z.id, a: solo }); avisoLargo(j, '{bando} tomó la zona {n}', 'info', { bando: g.bandos.find((x) => x.id === solo).nombre, n: z.id }); }
+      } else if (!solo && !z.disputa) z.progreso = Math.max(0, z.progreso - dt / GUERRA.zonas.captura);
+      if (z.duena) g.control[z.duena] += dt;
+    }
+    g.marcador.A = g.zonas.filter((z) => z.duena === 'A').length;
+    g.marcador.B = g.zonas.filter((z) => z.duena === 'B').length;
+  }
+  // fin
+  if (g.t >= g.duracion) {
+    const a = g.marcador.A, b = g.marcador.B;
+    let ganador = a > b ? 'A' : b > a ? 'B' : null;
+    if (!ganador && g.modo === 'zonas') ganador = g.control.A > g.control.B ? 'A' : g.control.B > g.control.A ? 'B' : null; // desempate: tiempo de control
+    g.fin = { ganador, A: a, B: b };
+    avisoLargo(j, ganador ? '¡Ganó {bando}!' : '¡Empate!', 'bueno', ganador ? { bando: g.bandos.find((x) => x.id === ganador).nombre } : {});
+  }
+}
+
+// La foto de la guerra para mandar al navegador (y la que arma el navegador al recibirla)
+export function guerraAFoto(g) {
+  if (!g) return null;
+  return { m: g.modo, b: g.bandos.map((x) => [x.id, x.nombre, x.tag, x.color, x.emblema]), s: [g.marcador.A, g.marcador.B], t: Math.max(0, Math.round(g.duracion - g.t)),
+    f: g.fin ? [g.fin.ganador || '', g.fin.A, g.fin.B] : 0, me: [Math.max(0, Math.round(g.mejora.A)), Math.max(0, Math.round(g.mejora.B))],
+    ga: g.galeones.map((x) => (x.salio ? -1 : Math.round(x.t - g.t))), z: g.zonas.map((z) => [z.id, z.x, z.y, z.duena || '', Math.round(z.progreso * 100), z.quien || '', z.disputa ? 1 : 0]),
+    c: [Math.round(g.control.A), Math.round(g.control.B)] };
+}
+export function guerraDeFoto(f, t) {
+  if (!f) return null;
+  return { modo: f.m, bandos: f.b.map(([id, nombre, tag, color, emblema]) => ({ id, nombre, tag, color, emblema })), marcador: { A: f.s[0], B: f.s[1] }, resta: f.t,
+    fin: f.f ? { ganador: f.f[0] || null, A: f.f[1], B: f.f[2] } : null, mejora: { A: f.me[0], B: f.me[1] }, galeones: f.ga,
+    zonas: f.z.map(([id, x, y, duena, progreso, quien, disputa]) => ({ id, x, y, duena: duena || null, progreso: progreso / 100, quien: quien || null, disputa: !!disputa })),
+    control: { A: f.c[0], B: f.c[1] }, t };
+}
+
+const mejoraDe = (j, b) => (j.guerra && b.cap && bandoDe(j, b.cap) && j.guerra.mejora[b.cap.equipo] > j.t ? GUERRA.mejora.dano : 1);
