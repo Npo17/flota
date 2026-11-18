@@ -353,3 +353,14 @@ h3 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spac
 .muestra { width: 22px; height: 22px; border-radius: 6px; border: 2px solid rgba(0, 0, 0, 0.35); cursor: pointer; padding: 0; }
 .clan-colores .libre { width: 34px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
 @media (max-width: 720px) { .clan-editor { grid-template-columns: 1fr; } .clan-vista { position: static; } .clan-tabla-cab, .clan-tabla-fila { grid-template-columns: 1.6fr 1.2fr 1fr; } .clan-tabla-cab span:nth-child(n+4), .clan-tabla-fila span:nth-child(n+4) { display: none; } }
+
+/* Fichas: perfil público de un jugador y ficha de un clan (src/clanes.js) */
+#pantalla-ficha { z-index: 8; }
+.caja.ficha { width: min(680px, 100%); }
+.enlace-ficha { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
+.enlace-ficha:hover { color: var(--acento); text-decoration: underline; }
+.ficha-clan { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; background: var(--tarjeta); margin: 8px 0; }
+.ficha-fila { grid-template-columns: 2fr 1.4fr 1.2fr; }
+.ficha-rangos { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0; }
+.rank-pestanas .chip { font-size: 12px; padding: 6px 9px; }
+#per-ranking .fila.yo { background: var(--tarjeta-elegida); }

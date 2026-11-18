@@ -712,4 +712,14 @@ export const TEXTOS = [
   ["Ya estás en un clan: dejalo para crear otro.", "You're already in a clan: leave it to create another.", "Você já está em um clã: saia para criar outro.", "Tu es déjà dans un clan : quitte-le pour en créer un autre.", "Jesteś już w klanie: opuść go, aby utworzyć inny.", "Sei già in un clan: lascialo per crearne un altro.", "Du bist schon in einem Clan: verlasse ihn, um einen neuen zu gründen.", "Zaten bir klandasın: başka bir klan kurmak için ayrıl."],
   ["Ya hay un clan con esa etiqueta.", "There's already a clan with that tag.", "Já existe um clã com essa tag.", "Il existe déjà un clan avec ce tag.", "Istnieje już klan z tym tagiem.", "Esiste già un clan con quel tag.", "Es gibt schon einen Clan mit diesem Kürzel.", "Bu etikette bir klan zaten var."],
   ["Ya hay un clan con ese nombre.", "There's already a clan with that name.", "Já existe um clã com esse nome.", "Il existe déjà un clan avec ce nom.", "Istnieje już klan o tej nazwie.", "Esiste già un clan con quel nome.", "Es gibt schon einen Clan mit diesem Namen.", "Bu adda bir klan zaten var."],
+  // Fichas de jugadores y clanes, rankings (18/11/2026)
+  ["Rankings", "Rankings", "Rankings", "Classements", "Rankingi", "Classifiche", "Ranglisten", "Sıralamalar"],
+  ["No está en ningún clan.", "Not in a clan.", "Não está em nenhum clã.", "N'est dans aucun clan.", "Nie jest w żadnym klanie.", "Non è in nessun clan.", "Ist in keinem Clan.", "Hiçbir klanda değil."],
+  ["Agregar de amigo", "Add friend", "Adicionar amigo", "Ajouter en ami", "Dodaj do znajomych", "Aggiungi agli amici", "Als Freund hinzufügen", "Arkadaş ekle"],
+  ["¡Ya sos parte del clan!", "You're in the clan!", "Você já faz parte do clã!", "Tu fais partie du clan !", "Jesteś już w klanie!", "Ora fai parte del clan!", "Du bist jetzt im Clan!", "Artık klandasın!"],
+  ["Saqueadores de la semana", "Top raiders this week", "Saqueadores da semana", "Pillards de la semaine", "Łupieżcy tygodnia", "Predoni della settimana", "Plünderer der Woche", "Haftanın yağmacıları"],
+  ["Saqueadores del mes", "Top raiders this month", "Saqueadores do mês", "Pillards du mois", "Łupieżcy miesiąca", "Predoni del mese", "Plünderer des Monats", "Ayın yağmacıları"],
+  ["Clanes más saqueadores", "Top raiding clans", "Clãs mais saqueadores", "Clans les plus pillards", "Klany najwięcej łupiące", "Clan più predatori", "Clans mit der meisten Beute", "En çok yağmalayan klanlar"],
+  ["Clanes de la semana", "Clans of the week", "Clãs da semana", "Clans de la semaine", "Klany tygodnia", "Clan della settimana", "Clans der Woche", "Haftanın klanları"],
+  ["Clanes del mes", "Clans of the month", "Clãs do mês", "Clans du mois", "Klany miesiąca", "Clan del mese", "Clans des Monats", "Ayın klanları"],
 ];

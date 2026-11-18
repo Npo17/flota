@@ -16,8 +16,8 @@ import { TEXTOS } from './textos.js';
 import { TEXTOS_HISTORIA } from './textos-historia.js';
 import * as sonido from './sonido.js';
 import { PASOS, GUIA, crearPractica, avanzarPractica, pasoActual, datosPaso, saltarPaso } from './practica.js';
-import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso, ranking } from './cuenta.js';
-import { abrirClan, abrirAmigos } from './clanes.js';
+import { cuenta, iniciarCuenta, entrarConGoogle, salir, elegirNombre, registrarProgreso } from './cuenta.js';
+import { abrirClan, abrirAmigos, pintarRankings } from './clanes.js';
 
 const $ = (id) => document.getElementById(id);
 registrarTextos(TEXTOS);
@@ -1025,10 +1025,7 @@ async function abrirPerfil() {
     + dato(t('Mejor saqueo'), p.mejor_saqueo) + dato(t('Partidas'), p.partidas) + dato(t('Tiempo en el mar'), `${h} h ${m} min`);
   $('per-ranking').innerHTML = `<p class="suave">${t('Cargando…')}</p>`;
   $('pantalla-perfil').classList.remove('oculto');
-  const top = await ranking();
-  $('per-ranking').innerHTML = top.length
-    ? top.map((r, i) => `<div class="fila${r.nombre === p.nombre ? ' yo' : ''}"><span>${i + 1}. ${limpiar(r.nombre)}</span><b class="oro">${r.mejor_saqueo}</b></div>`).join('')
-    : `<p class="suave">${t('Todavía no hay nadie en la tabla.')}</p>`;
+  pintarRankings($('per-ranking'), p.nombre); // saqueadores, clanes y (con las clasificatorias) sus rankings
 }
 $('per-cerrar').onclick = () => $('pantalla-perfil').classList.add('oculto');
 $('per-cambiar').onclick = () => abrirNombre();

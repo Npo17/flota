@@ -79,7 +79,7 @@ function pintarSinClan(cual) {
   else panelMisInvitaciones();
 }
 
-const filaClan = (c, extra = '') => `<div class="clan-fila">${emblemaSVG(c.emblema, 44, c.nombre)}<div class="clan-fila-txt"><b style="color:${limpiar(c.color)}">[${limpiar(c.tag)}]</b> ${limpiar(c.nombre)}<span class="suave">${t('{n} miembros', { n: c.miembros })} · ${t('{n} de oro', { n: fmt(c.oro ?? c.oro_total) })}${c.ingreso ? ' · ' + t({ abierto: 'Abierto', solicitud: 'Por solicitud', cerrado: 'Cerrado' }[c.ingreso]) : ''}</span></div>${extra}</div>`;
+const filaClan = (c, extra = '') => `<div class="clan-fila"><button type="button" class="enlace-ficha" data-clan="${c.id}">${emblemaSVG(c.emblema, 44, c.nombre)}</button><div class="clan-fila-txt"><span><b style="color:${limpiar(c.color)}">[${limpiar(c.tag)}]</b> ${limpiar(c.nombre)}</span><span class="suave">${t('{n} miembros', { n: c.miembros })} · ${t('{n} de oro', { n: fmt(c.oro ?? c.oro_total) })}${c.ingreso ? ' · ' + t({ abierto: 'Abierto', solicitud: 'Por solicitud', cerrado: 'Cerrado' }[c.ingreso]) : ''}</span></div>${extra}</div>`;
 
 async function panelBuscar() {
   const panel = $c('.clan-panel');
@@ -217,7 +217,7 @@ function panelMiembros() {
   $c('.clan-panel').innerHTML = `<div class="clan-tabla"><div class="clan-tabla-cab"><span>${t('Miembro')}</span><span>${t('Cargo')}</span><span>${t('Oro aportado')}</span><span>${t('Desde')}</span><span></span></div>`
     + [...miembros].sort((a, b) => a.cargo - b.cargo || b.oro_aportado - a.oro_aportado).map((m) => {
       const ops = m.usuario_id === yo ? [] : opciones(m);
-      return `<div class="clan-tabla-fila${m.usuario_id === yo ? ' yo' : ''}"><span>${cargoSVG(m.cargo, 18)} ${limpiar(m.perfiles?.nombre)}</span>
+      return `<div class="clan-tabla-fila${m.usuario_id === yo ? ' yo' : ''}"><span>${cargoSVG(m.cargo, 18)} ${enlace(m.perfiles?.nombre)}</span>
         <span>${ops.length ? `<select class="campo mini" data-u="${m.usuario_id}">${ops.map((k) => `<option value="${k}"${k === m.cargo ? ' selected' : ''}>${nombreCargo(k)}</option>`).join('')}</select>` : nombreCargo(m.cargo)}</span>
         <span class="oro">${fmt(m.oro_aportado)} <small class="suave">${Math.round(100 * m.oro_aportado / total)} %</small></span><span class="suave">${fecha(m.ingreso)}</span>
         <span>${echar(m) ? `<button type="button" class="boton enlace" data-echar="${m.usuario_id}">${t('Expulsar')}</button>` : ''}</span></div>`;
@@ -264,7 +264,7 @@ async function panelChat() {
     const cg = cargos.get(m.autor);
     const acciones = (mio <= PUEDE.fijar ? `<button type="button" class="chat-bt" data-fijar="${m.id}" title="${t('Fijar')}">📌</button>` : '')
       + (mio <= PUEDE.fijar || m.autor === yo ? `<button type="button" class="chat-bt" data-borrar="${m.id}" title="${t('Borrar')}">🗑</button>` : '');
-    return `<div class="chat-msj${m.autor === yo ? ' mio' : ''}" data-id="${m.id}">${cg ? cargoSVG(cg, 16) : ''}<b>${limpiar(nombres.get(m.autor) || '?')}</b>
+    return `<div class="chat-msj${m.autor === yo ? ' mio' : ''}" data-id="${m.id}">${cg ? cargoSVG(cg, 16) : ''}<b>${enlace(nombres.get(m.autor) || '?')}</b>
       ${m.borrado ? `<i class="suave">${t('Mensaje borrado')}</i>` : limpiar(m.texto)} <small>${new Date(m.creado).toLocaleTimeString()}</small>${m.borrado ? '' : acciones}</div>`;
   };
   const pintarTodo = () => {
@@ -370,8 +370,119 @@ async function pintarAmigos() {
   const pedidos = todos.filter((a) => a.meLoPidio), amigos = todos.filter((a) => a.estado === 'amigos'), esperando = todos.filter((a) => a.estado === 'pedido' && !a.meLoPidio);
   const panel = $c('.clan-panel');
   panel.innerHTML = (pedidos.length ? `<h3>${t('Te quieren agregar')}</h3>` + pedidos.map((a) => `<div class="fila"><span>${limpiar(a.nombre)}</span><span class="clan-acciones"><button type="button" class="boton" data-si="${a.id}">${t('Aceptar')}</button><button type="button" class="boton enlace" data-no="${a.id}">${t('Rechazar')}</button></span></div>`).join('') : '')
-    + `<h3>${t('Tus amigos')} (${amigos.length})</h3>` + (amigos.length ? amigos.map((a) => `<div class="fila"><span>${limpiar(a.nombre)}</span><button type="button" class="boton enlace" data-no="${a.id}">${t('Quitar')}</button></div>`).join('') : `<p class="suave">${t('Todavía no agregaste a nadie. Escribí el nombre de un jugador arriba.')}</p>`)
+    + `<h3>${t('Tus amigos')} (${amigos.length})</h3>` + (amigos.length ? amigos.map((a) => `<div class="fila"><span>${enlace(a.nombre)}</span><button type="button" class="boton enlace" data-no="${a.id}">${t('Quitar')}</button></div>`).join('') : `<p class="suave">${t('Todavía no agregaste a nadie. Escribí el nombre de un jugador arriba.')}</p>`)
     + (esperando.length ? `<h3>${t('Esperando que acepten')}</h3>` + esperando.map((a) => `<div class="fila"><span>${limpiar(a.nombre)}</span><button type="button" class="boton enlace" data-no="${a.id}">${t('Cancelar')}</button></div>`).join('') : '');
   panel.querySelectorAll('[data-si]').forEach((b) => { b.onclick = async () => { if (await llamar('amistad_responder', { p_otro: b.dataset.si, p_aceptar: true })) pintarAmigos(); }; });
   panel.querySelectorAll('[data-no]').forEach((b) => { b.onclick = async () => { if (await llamar('amistad_responder', { p_otro: b.dataset.no, p_aceptar: false })) pintarAmigos(); }; });
+}
+
+// ---------- Fichas: el perfil público de un jugador y la ficha de un clan (etapa 2) ----------
+// Cualquier elemento con data-perfil="nombre" o data-clan="id" las abre (rankings, miembros, chat, amigos).
+let ficha = null;
+const enlace = (nombre) => `<button type="button" class="enlace-ficha" data-perfil="${limpiar(nombre)}">${limpiar(nombre)}</button>`;
+const enlaceClan = (c) => `<button type="button" class="enlace-ficha" data-clan="${c.id}">${emblemaSVG(c.emblema, 22)} <b style="color:${limpiar(c.color)}">[${limpiar(c.tag)}]</b> ${limpiar(c.nombre)}</button>`;
+export { enlace as enlaceJugador, enlaceClan };
+
+function armarFicha() {
+  if (ficha) return;
+  ficha = document.createElement('div');
+  ficha.id = 'pantalla-ficha';
+  ficha.className = 'pantalla oculto';
+  ficha.innerHTML = '<div class="caja ficha"><div class="ficha-cuerpo"></div><div class="botones"><button type="button" class="boton principal ficha-cerrar"></button></div></div>';
+  document.body.appendChild(ficha);
+  ficha.querySelector('.ficha-cerrar').onclick = () => ficha.classList.add('oculto');
+  ficha.onclick = (e) => { if (e.target === ficha) ficha.classList.add('oculto'); };
+}
+function mostrarFicha(html) {
+  armarFicha();
+  ficha.querySelector('.ficha-cerrar').textContent = t('Cerrar');
+  ficha.querySelector('.ficha-cuerpo').innerHTML = html;
+  ficha.classList.remove('oculto');
+  return ficha.querySelector('.ficha-cuerpo');
+}
+
+// Las clasificatorias (etapa 5) suman sus rangos a las fichas con estas dos
+let rangosDe = null, rangosClanDe = null;
+export const ponerRangos = (fn) => { rangosDe = fn; };
+export const ponerRangosClan = (fn) => { rangosClanDe = fn; };
+
+export async function abrirPerfilDe(nombre) {
+  const sb = supa();
+  if (!sb) return;
+  const cuerpo = mostrarFicha(`<p class="suave">${t('Cargando…')}</p>`);
+  const { data: p } = await sb.from('perfiles').select('id, nombre, partidas, barcos_hundidos, barcos_capturados, jugadores_eliminados, oro_saqueado, mejor_saqueo, segundos_jugados').eq('nombre', nombre).maybeSingle();
+  if (!p) { cuerpo.innerHTML = `<p>${t('No hay ningún jugador con ese nombre.')}</p>`; return; }
+  const { data: m } = await sb.from('clan_miembros').select('cargo, ingreso, oro_aportado, clanes(id, nombre, tag, emblema, color, miembros, oro_total)').eq('usuario_id', p.id).maybeSingle();
+  const h = Math.floor(p.segundos_jugados / 3600), min = Math.floor((p.segundos_jugados % 3600) / 60);
+  const dato = (tt, v) => `<div class="dato"><b>${v}</b><span>${tt}</span></div>`;
+  const yoSoy = cuenta.usuario && cuenta.usuario.id === p.id;
+  cuerpo.innerHTML = `<h2>⚓ ${limpiar(p.nombre)}</h2><div class="ficha-rangos"></div>
+    ${m && m.clanes ? `<div class="ficha-clan">${enlaceClan(m.clanes)}<span>${cargoSVG(m.cargo, 18)} ${nombreCargo(m.cargo)}</span><span class="suave">${t('Oro aportado')}: ${fmt(m.oro_aportado)}</span></div>` : `<p class="suave">${t('No está en ningún clan.')}</p>`}
+    <div class="datos">${dato(t('Mejor saqueo'), fmt(p.mejor_saqueo))}${dato(t('Oro saqueado'), fmt(p.oro_saqueado))}${dato(t('Barcos hundidos'), fmt(p.barcos_hundidos))}${dato(t('Barcos capturados'), fmt(p.barcos_capturados))}${dato(t('Jugadores eliminados'), fmt(p.jugadores_eliminados))}${dato(t('Partidas'), fmt(p.partidas))}${dato(t('Tiempo en el mar'), `${h} h ${min} min`)}</div>
+    <div class="ficha-temporadas"></div>
+    ${cuenta.perfil && !yoSoy ? `<button type="button" class="boton ficha-amigo">👥 ${t('Agregar de amigo')}</button><p class="clan-aviso suave"></p>` : ''}`;
+  const bt = cuerpo.querySelector('.ficha-amigo');
+  if (bt) bt.onclick = async () => {
+    const { data, error } = await sb.rpc('amistad_pedir', { p_nombre: p.nombre });
+    cuerpo.querySelector('.clan-aviso').textContent = error ? t(error.message) : data === 'amigos' ? t('¡Ahora son amigos!') : t('Pedido de amistad enviado.');
+  };
+  if (rangosDe) rangosDe(p.id, cuerpo.querySelector('.ficha-rangos'), cuerpo.querySelector('.ficha-temporadas'));
+}
+
+export async function abrirClanDe(id) {
+  const sb = supa();
+  if (!sb) return;
+  const cuerpo = mostrarFicha(`<p class="suave">${t('Cargando…')}</p>`);
+  const [{ data: c }, { data: ms }] = await Promise.all([
+    sb.from('clanes').select('*').eq('id', id).maybeSingle(),
+    sb.from('clan_miembros').select('usuario_id, cargo, ingreso, oro_aportado, perfiles(nombre)').eq('clan_id', id).order('cargo').order('ingreso'),
+  ]);
+  if (!c) { cuerpo.innerHTML = `<p>${t('Ese clan ya no existe.')}</p>`; return; }
+  const yaEstoy = cuenta.usuario && (ms || []).some((m) => m.usuario_id === cuenta.usuario.id);
+  cuerpo.innerHTML = `<div class="clan-cabecera" style="--clan:${limpiar(c.color)}">${emblemaSVG(c.emblema, 84, c.nombre)}<div>
+    <h2><span style="color:${limpiar(c.color)}">[${limpiar(c.tag)}]</span> ${limpiar(c.nombre)}</h2><p class="suave">${limpiar(c.descripcion)}</p>
+    <div class="clan-datos"><span>👥 ${c.miembros} / ${c.max_miembros}</span><span>💰 ${fmt(c.oro_total)}</span><span>${t({ abierto: 'Abierto', solicitud: 'Por solicitud', cerrado: 'Cerrado' }[c.ingreso])}</span></div><div class="ficha-rangos"></div></div></div>
+    <h3>${t('Miembros')}</h3><div class="clan-tabla">${(ms || []).map((m) => `<div class="clan-tabla-fila ficha-fila"><span>${cargoSVG(m.cargo, 18)} ${enlace(m.perfiles?.nombre)}</span><span>${nombreCargo(m.cargo)}</span><span class="oro">${fmt(m.oro_aportado)}</span></div>`).join('')}</div>
+    <div class="ficha-temporadas"></div>
+    ${cuenta.perfil && !yaEstoy && c.ingreso !== 'cerrado' ? `<button type="button" class="boton ficha-pedir">${t(c.ingreso === 'abierto' ? 'Unirme' : 'Pedir entrar')}</button>` : ''}<p class="clan-aviso suave"></p>`;
+  const bt = cuerpo.querySelector('.ficha-pedir');
+  if (bt) bt.onclick = async () => {
+    const { data, error } = await sb.rpc('clan_solicitar', { p_clan: c.id });
+    cuerpo.querySelector('.clan-aviso').textContent = error ? t(error.message) : data === 'adentro' ? t('¡Ya sos parte del clan!') : t('Pedido enviado');
+    if (!error) bt.disabled = true;
+  };
+  if (rangosClanDe) rangosClanDe(c.id, cuerpo.querySelector('.ficha-rangos'), cuerpo.querySelector('.ficha-temporadas'));
+}
+
+document.addEventListener('click', (e) => {
+  const p = e.target.closest && e.target.closest('[data-perfil]');
+  if (p) { e.preventDefault(); abrirPerfilDe(p.dataset.perfil); return; }
+  const c = e.target.closest && e.target.closest('[data-clan]');
+  if (c) { e.preventDefault(); abrirClanDe(+c.dataset.clan); }
+});
+
+// ---------- Rankings (en la pantalla de perfil) ----------
+// Saqueadores (mejor saqueo de siempre, de la semana y del mes) y clanes más saqueadores (total, semana, mes).
+// Las clasificatorias (etapa 5) suman las suyas con sumarRanking.
+const RANKINGS = [
+  { id: 'saqueo', nombre: () => t('Mejores saqueos'), cargar: async () => { const { data } = await supa().from('perfiles').select('nombre, mejor_saqueo').order('mejor_saqueo', { ascending: false }).limit(20); return (data || []).map((r) => ({ jugador: r.nombre, valor: fmt(r.mejor_saqueo) })); } },
+  { id: 'semana', nombre: () => t('Saqueadores de la semana'), cargar: async () => { const { data } = await supa().rpc('ranking_saqueadores', { p_dias: 7 }); return (data || []).map((r) => ({ jugador: r.nombre, valor: fmt(r.oro) })); } },
+  { id: 'mes', nombre: () => t('Saqueadores del mes'), cargar: async () => { const { data } = await supa().rpc('ranking_saqueadores', { p_dias: 30 }); return (data || []).map((r) => ({ jugador: r.nombre, valor: fmt(r.oro) })); } },
+  { id: 'clanes', nombre: () => t('Clanes más saqueadores'), cargar: async () => { const { data } = await supa().rpc('ranking_clanes_oro', { p_dias: null }); return (data || []).map((c) => ({ clan: c, valor: fmt(c.oro) })); } },
+  { id: 'clanes7', nombre: () => t('Clanes de la semana'), cargar: async () => { const { data } = await supa().rpc('ranking_clanes_oro', { p_dias: 7 }); return (data || []).filter((c) => c.oro > 0).map((c) => ({ clan: c, valor: fmt(c.oro) })); } },
+  { id: 'clanes30', nombre: () => t('Clanes del mes'), cargar: async () => { const { data } = await supa().rpc('ranking_clanes_oro', { p_dias: 30 }); return (data || []).filter((c) => c.oro > 0).map((c) => ({ clan: c, valor: fmt(c.oro) })); } },
+];
+export const sumarRanking = (r, antesDe) => {
+  if (RANKINGS.some((x) => x.id === r.id)) return;
+  const i = antesDe ? RANKINGS.findIndex((x) => x.id === antesDe) : -1;
+  if (i >= 0) RANKINGS.splice(i, 0, r); else RANKINGS.push(r);
+};
+
+export async function pintarRankings(cont, miNombre, cual = 'saqueo') {
+  if (!supa()) return;
+  cont.innerHTML = `<div class="clan-pestanas rank-pestanas">${RANKINGS.map((r) => `<button type="button" class="chip${r.id === cual ? ' elegida' : ''}" data-r="${r.id}">${r.nombre()}</button>`).join('')}</div><div class="rank-lista"><p class="suave">${t('Cargando…')}</p></div>`;
+  cont.querySelectorAll('[data-r]').forEach((b) => { b.onclick = () => pintarRankings(cont, miNombre, b.dataset.r); });
+  const filas = await RANKINGS.find((r) => r.id === cual).cargar();
+  cont.querySelector('.rank-lista').innerHTML = filas.length ? filas.map((f, i) => `<div class="fila${f.jugador && f.jugador === miNombre ? ' yo' : ''}"><span>${i + 1}. ${f.insignia || ''}${f.jugador ? enlace(f.jugador) : enlaceClan(f.clan)}</span><b class="oro">${f.valor}</b></div>`).join('')
+    : `<p class="suave">${t('Todavía no hay nadie en la tabla.')}</p>`;
 }

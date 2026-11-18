@@ -3,6 +3,12 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-18 (etapa 2: fichas de jugadores y clanes, rankings) — Nicolás + Claude
+
+- Tocar el nombre de un jugador (rankings, miembros, chat, amigos) abre su **ficha**: estadísticas, su clan con emblema y su cargo, y "Agregar de amigo". Tocar un clan abre la **ficha del clan**: miembros con cargo y aporte, y "Pedir entrar" / "Unirme". Cualquier elemento con `data-perfil` o `data-clan` las abre (`src/clanes.js`).
+- El perfil tiene ahora **rankings** con pestañas: mejores saqueos (el de siempre), saqueadores de la semana y del mes, clanes más saqueadores (total, semana, mes). Las clasificatorias suman sus pestañas con `sumarRanking`, y sus rangos en las fichas con `ponerRangos` / `ponerRangosClan`.
+- Probado contra la base de datos real (lecturas públicas).
+
 ## 2026-11-18 (etapa 1: el servidor sabe quién juega e informa el oro) — Nicolás + Claude
 
 - Al entrar online, el juego manda la sesión de Supabase (`tk` en `entrar`). El servidor la verifica una vez por conexión (`quienEs` en `servidor/worker.js`, contra `/auth/v1/user`) y, con cuenta, el capitán usa el nombre de su cuenta: nadie puede hacerse pasar por otro. Sin cuenta, o con una sesión falsa, se juega igual que antes.
