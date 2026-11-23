@@ -3,6 +3,14 @@
 Lo más nuevo va arriba. Cada entrada: fecha, quién (socio y su Claude), qué cambió, por qué y qué quedó pendiente.
 Sirve para que el Claude del otro socio tenga el contexto al día.
 
+## 2026-11-23 (etapa 4, parte de base de datos y servidor; Supabase despierto) — Nicolás + Claude
+
+- **Guerras de clanes en la base de datos** (`supabase/migrations/20261119000000_guerras.sql`, **aplicada**): desafíos directos entre clanes (eligen modo y 3 contra 3 o 5 contra 5; amistosas, sin ELO), evento de fin de semana (sábado 15:00 a domingo 21:00, modo que rota cada semana, inscripción con alineación y "Buscar guerra"), ELO de clanes por temporada (K 40 las primeras 10, después 24) y avisos en el chat del clan. El servidor carga y cierra cada guerra con su clave (`servidor_guerra`, `servidor_guerra_fin`). Probada en una transacción deshecha (17 comprobaciones).
+- **Servidor:** la sala `G` + número (base 36, 4 cifras) es la de una guerra: solo entran los de las alineaciones, con su cuenta; el bando sale de la alineación; el reloj arranca cuando hay gente de los dos clanes (`g.espera`) y al terminar informa el resultado una sola vez.
+- **Falta de la etapa 4:** la pestaña "Guerras" en la pantalla del clan (evento, desafíos, alineación, entrar a la guerra, historial). Hasta entonces, nada de esto se ve en el juego.
+- **Supabase se pausó** el 23/11 por 7 días sin uso (plan gratis): se reactivó desde el panel. Para que no vuelva a pasar, el servidor le hace una consulta chica todos los días a las 9:00 de Argentina (`scheduled` en `worker.js` y `[triggers]` en `wrangler.toml`); corre desde que se publica el servidor.
+- `scripts/probar-reaparecer.mjs` ya fallaba en la versión publicada (la prueba quedó vieja respecto del servidor): pendiente arreglarla.
+
 ## 2026-11-18 (etapa 3: motor de guerra y modo Versus) — Nicolás + Claude
 
 - **Simulación** (sección "Guerra" al final de `src/juego.js`, números en `GUERRA`): con `reglas.modo` (versus, oro, zonas) el mar tiene dos bandos, cada uno con su puerto (`crearMundo(id, { bandos: 2 })`: a los costados, en espejo, con agua libre y sin islotes cerca; el del centro queda como zona neutral). Cañones de costa (650 de alcance) castigan a todo el que no es del bando. Al hundirse se reaparece a los 5 s en el puerto propio con el barco y las mejoras, perdiendo el 30 % de la bodega (se la lleva el que lo hundió), con 5 s de escudo que se corta al disparar. Sin Kraken.

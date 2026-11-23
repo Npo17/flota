@@ -1784,6 +1784,7 @@ function crearGuerra(j, r) {
   const g = { modo, bandos, t: 0, duracion: r.duracion || GUERRA.duracion, marcador: { A: 0, B: 0 }, control: { A: 0, B: 0 }, fin: null,
     bajas: [], mejora: { A: 0, B: 0 }, galeones: modo === 'zonas' ? [] : GUERRA.galeones.map((t) => ({ t, avisado: false, salio: false })), zonas: [] };
   if (modo === 'zonas') g.zonas = armarZonas(j.mundo);
+  g.espera = !!r.esperarBandos; // guerra de clanes: el reloj arranca cuando hay gente de los dos clanes (lo decide el servidor)
   return g;
 }
 
@@ -1810,7 +1811,8 @@ export const puertoDe = (j, cap) => (j.mundo.puertos && cap && j.mundo.puertos.f
 function bajaDeGuerra(j, victima, agresor) {
   const g = j.guerra, bv = bandoDe(j, victima), ba = bandoDe(j, agresor);
   victima.racha = 0;
-  if (!g || g.fin || !bv || !ba || bv === ba) return;
+  victima.hundidoGuerra = (victima.hundidoGuerra || 0) + 1;
+  if (!g || g.fin || g.espera || !bv || !ba || bv === ba) return;
   const racha = victima.rachaAntes || 0;
   // la misma víctima, varias veces en poco tiempo: 1, ½ y después nada
   g.bajas = g.bajas.filter((x) => j.t - x.t < GUERRA.repetida);
@@ -1819,6 +1821,7 @@ function bajaDeGuerra(j, victima, agresor) {
   let puntos = antes === 0 ? 1 : antes === 1 ? 0.5 : 0;
   const recompensa = racha >= GUERRA.racha ? Math.floor(racha / 2) : 0; // tenía la cabeza con precio
   if (g.modo === 'versus') g.marcador[ba] += puntos + recompensa;
+  agresor.bajasGuerra = (agresor.bajasGuerra || 0) + puntos + recompensa;
   agresor.racha = (agresor.racha || 0) + 1;
   emitir(j, { k: 'baja', a: ba, n: agresor.nombre, v: victima.nombre, p: puntos + recompensa, x: Math.round(victima.barco.x), y: Math.round(victima.barco.y) });
   if (recompensa) avisoLargo(j, '{nombre} cobró la recompensa por {otro}: +{n}', 'bueno', { nombre: agresor.nombre, otro: victima.nombre, n: recompensa });
@@ -1881,6 +1884,7 @@ function actualizarGuerra(j, dt) {
   g.t += dt;
   // reaparecer
   for (const cap of j.capitanes) if (cap.reaparece && j.t >= cap.reaparece && !cap.fin) reaparecerEnGuerra(j, cap);
+  if (g.espera) return; // todavía no llegó el otro clan: no corre el reloj
   // cañones de costa: castigan a todo el que no es del bando, cerca de su puerto
   g.costa = (g.costa || 0) - dt;
   if (g.costa <= 0) {

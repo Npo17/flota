@@ -38,7 +38,7 @@ for (const archivo of ['src/main.js', 'src/puerto.js', 'src/red.js', 'src/juego.
   const codigo = readFileSync(archivo, 'utf8').split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/ .*$/, '')).join('\n');
   for (const m of codigo.matchAll(/'((?:[^'\\\n]|\\.)*)'/g)) if (pareceTexto(m[1])) usados.add(m[1]);
 }
-const sinTraducir = new Set(['{mapa} · {lugar}', 'Age of Navies: servidor del mar', 'Se esperaba un WebSocket', 'Origen no permitido', 'El mar está lleno', 'Demasiadas conexiones', 'Demasiados mensajes', 'CF-Connecting-IP', 'Bearer ', 'no se pudo verificar la sesión', 'no se pudo informar', 'informe rechazado', 'error al entrar']); // respuestas del servidor que el jugador no ve (y un encabezado)
+const sinTraducir = new Set(['{mapa} · {lugar}', 'Age of Navies: servidor del mar', 'Se esperaba un WebSocket', 'Origen no permitido', 'El mar está lleno', 'Demasiadas conexiones', 'Demasiados mensajes', 'CF-Connecting-IP', 'Bearer ', 'no se pudo verificar la sesión', 'no se pudo informar', 'informe rechazado', 'error al entrar', 'Supabase despierto:', 'Supabase no respondió']); // respuestas del servidor que el jugador no ve (y un encabezado)
 for (const u of usados) if (!claves.has(u) && !sinTraducir.has(u)) mal(`sin traducción: ${u}`);
 
 console.log(`${filas.length} textos × ${COLUMNAS.length - 1} idiomas, ${usados.size} usados por el juego`);

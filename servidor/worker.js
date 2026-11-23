@@ -51,6 +51,12 @@ function reglasDeGuerra(k) {
 // Cada mar es un Durable Object aparte: 'mar-1' es el de todos, 'sala-XXXX' es una sala (con amigos o pública)
 // y 'salas' lleva la lista de salas públicas abiertas.
 export default {
+  // Una vez por día (reloj de Cloudflare, ver wrangler.toml): una consulta chica a Supabase para que el proyecto gratis no
+  // se pause por "inactividad" (lo pausa a los 7 días sin uso; pasó el 23/11/2026 y se cayeron cuentas, tabla y clanes).
+  async scheduled(evento, env, ctx) {
+    ctx.waitUntil(fetch(SB_URL + '/rest/v1/perfiles?select=id&limit=1', { headers: { apikey: SB_PUBLICA } })
+      .then((r) => console.log('Supabase despierto:', r.status)).catch((e) => console.log('Supabase no respondió', e && e.message)));
+  },
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/salas') { // desde afuera solo se lee: los avisos de cada sala llegan por adentro (avisar), sin pasar por acá
@@ -212,6 +218,45 @@ export class Mar {
     return c.usuario;
   }
 
+  // Guerra de clanes: pide a la base de datos los clanes, el modo y las alineaciones (con la clave del servidor)
+  async cargarGuerra(id) {
+    const clave = this.env && this.env.SERVIDOR_CLAVE;
+    if (!clave || !Number.isFinite(id)) return null;
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/rpc/servidor_guerra', { method: 'POST', headers: { apikey: SB_PUBLICA, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_clave: clave, p_guerra: id }) });
+      const d = r.ok ? await r.json() : null;
+      if (!d || !d.id) return null;
+      if (this.cfg) return this.cfg; // otro llegó primero mientras se esperaba
+      this.cfg = {
+        nombre: 'Guerra', mapa: MAPAS[d.mapa] ? d.mapa : mapaDelDia(), max: d.por_bando * 2, publica: false,
+        reglas: { viento: true, abordajes: true, modo: d.modo, kraken: false, duracion: d.duracion, esperarBandos: true,
+          bandos: d.bandos.map((b) => ({ nombre: b.nombre, tag: b.tag, color: b.color, emblema: b.emblema, clan: b.clan })) },
+        guerra: { id: d.id, tipo: d.tipo, alineacion: { A: d.bandos[0].alineacion || [], B: d.bandos[1].alineacion || [] }, informada: false },
+      };
+      return this.cfg;
+    } catch (e) { console.log('no se pudo cargar la guerra', e && e.message); return null; }
+  }
+
+  // Guerra de clanes en curso: arranca cuando hay gente de los dos clanes; al terminar, informa el resultado (una sola vez)
+  seguirGuerra(j) {
+    const g = j.guerra, cg = this.cfg.guerra;
+    if (g.espera) {
+      const hay = { A: 0, B: 0 };
+      for (const cap of j.capitanes) if (!cap.fin && (cap.equipo === 'A' || cap.equipo === 'B')) hay[cap.equipo]++;
+      if (hay.A && hay.B) g.espera = false;
+    }
+    if (g.fin && !cg.informada) {
+      cg.informada = true;
+      const clave = this.env && this.env.SERVIDOR_CLAVE;
+      if (!clave) return;
+      const jugadores = j.capitanes.filter((x) => x.usuarioId).map((x) => ({ u: x.usuarioId, bando: x.equipo, bajas: x.bajasGuerra || 0, hundido: x.hundidoGuerra || 0, oro: Math.round(x.stats.saqueado) }));
+      const datos = { ganador: g.fin.ganador, marcador: { A: g.fin.A, B: g.fin.B }, control: { A: Math.round(g.control.A), B: Math.round(g.control.B) }, jugadores };
+      fetch(SB_URL + '/rest/v1/rpc/servidor_guerra_fin', { method: 'POST', headers: { apikey: SB_PUBLICA, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_clave: clave, p_guerra: cg.id, p_datos: datos }) })
+        .then((r) => { if (!r.ok) r.text().then((x) => console.log('resultado rechazado', r.status, x.slice(0, 200))); })
+        .catch((e) => console.log('no se pudo informar la guerra', e && e.message));
+    }
+  }
+
   // Manda a la base de datos lo que hicieron los capitanes con cuenta desde el último informe (fin: terminó su partida)
   informar(caps, fin) {
     const clave = this.env && this.env.SERVIDOR_CLAVE;
@@ -234,6 +279,7 @@ export class Mar {
 
   // En guerra: el bando que pidió (si tiene lugar) o el que tiene menos gente. La etapa de guerras de clanes lo decide por el clan.
   bandoPara(c, m) {
+    if (this.cfg && this.cfg.guerra && c.usuario) return this.cfg.guerra.alineacion.A.includes(c.usuario.id) ? 'A' : 'B';
     const cuantos = { A: 0, B: 0 };
     for (const x of this.clientes.values()) if (x !== c && x.cap && !x.cap.fin && (x.cap.equipo === 'A' || x.cap.equipo === 'B')) cuantos[x.cap.equipo]++;
     const tope = Math.ceil((this.cfg ? this.cfg.max : MAX_JUGADORES) / 2);
@@ -254,6 +300,15 @@ export class Mar {
     const valido = enJuego(diseno.faccion) && CASCOS[diseno.casco] && VELAS[diseno.velas] && MUNICIONES[diseno.municion] && TRIPULACIONES[diseno.trip]
       && diseno.canones >= 2 && diseno.canones % 2 === 0 && diseno.canones <= CASCOS[diseno.casco].maxCanones && costoDiseno(diseno) <= PRESUPUESTO;
     if (!valido) return ws.send(JSON.stringify({ t: 'no', motivo: 'Ese diseño de barco no es válido.' }));
+    if (this.sala && /^G[0-9A-Z]{4}$/.test(this.sala) && !this.cfg) { // la sala de una guerra de clanes (G + número): se arma con lo que dice la base de datos
+      const g = await this.cargarGuerra(parseInt(this.sala.slice(1), 36));
+      if (!this.clientes.has(ws)) return;
+      if (!g) return ws.send(JSON.stringify({ t: 'no', motivo: 'Esa guerra no existe o ya terminó.' }));
+    }
+    if (this.cfg && this.cfg.guerra) { // solo entran los de las alineaciones, con su cuenta
+      if (!cuenta) return ws.send(JSON.stringify({ t: 'no', motivo: 'Para jugar una guerra de clanes tenés que entrar con tu cuenta.' }));
+      if (!this.cfg.guerra.alineacion.A.includes(cuenta.id) && !this.cfg.guerra.alineacion.B.includes(cuenta.id)) return ws.send(JSON.stringify({ t: 'no', motivo: 'No estás en la alineación de esta guerra.' }));
+    }
     if (this.sala && !this.cfg) { // una sala existe mientras tenga gente: la arma el primero que entra con "crear"
       const k = m.crear;
       if (!k) return ws.send(JSON.stringify({ t: 'no', motivo: 'Esa sala no existe o ya se cerró.' }));
@@ -322,6 +377,7 @@ export class Mar {
     const rachas = []; // x, y, radio, rumbo en centésimas, décimas de segundo que le quedan
     if (viento) for (const k of j.viento.rachas) rachas.push(r(k.x), r(k.y), r(k.r), r(k.a * 100), r(k.t * 10));
     if (ahora - this.avisado > 20000) this.avisar(); // para que la sala no se caiga de la lista
+    if (this.cfg && this.cfg.guerra && j.guerra) this.seguirGuerra(j);
     if (ahora - (this.informado || 0) > INFORMAR_CADA) { this.informado = ahora; this.informar(j.capitanes.filter((x) => !x.fin), false); }
     // el Kraken: x, y, rumbo, vida, vida máxima, cuánto emergió (%), segundos de muerte y de hundirse (en décimas), furia,
     // y sus zonas marcadas (id, x, y, tiempo y aviso en centésimas). Lo decide todo el servidor: los jugadores solo lo dibujan.

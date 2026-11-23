@@ -11,3 +11,7 @@ class_name = "Mar"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Mar"]
+
+# Una vez por día, a las 9:00 de Argentina: mantiene despierto a Supabase (ver scheduled en worker.js)
+[triggers]
+crons = ["0 12 * * *"]

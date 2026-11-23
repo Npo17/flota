@@ -745,4 +745,8 @@ export const TEXTOS = [
   ["más daño", "more damage", "mais dano", "plus de dégâts", "większe obrażenia", "più danno", "mehr Schaden", "daha fazla hasar"],
   ["¡Victoria!", "Victory!", "Vitória!", "Victoire !", "Zwycięstwo!", "Vittoria!", "Sieg!", "Zafer!"],
   ["Derrota", "Defeat", "Derrota", "Défaite", "Porażka", "Sconfitta", "Niederlage", "Yenilgi"],
+  ["Guerra", "War", "Guerra", "Guerre", "Wojna", "Guerra", "Krieg", "Savaş"],
+  ["Esa guerra no existe o ya terminó.", "That war doesn't exist or is already over.", "Essa guerra não existe ou já terminou.", "Cette guerre n'existe pas ou est déjà terminée.", "Ta wojna nie istnieje albo już się skończyła.", "Quella guerra non esiste o è già finita.", "Diesen Krieg gibt es nicht oder er ist schon vorbei.", "Bu savaş yok ya da çoktan bitti."],
+  ["Para jugar una guerra de clanes tenés que entrar con tu cuenta.", "To play a clan war you need to sign in with your account.", "Para jogar uma guerra de clãs você precisa entrar com sua conta.", "Pour jouer une guerre de clans, tu dois te connecter avec ton compte.", "Aby zagrać w wojnie klanów, musisz zalogować się na swoje konto.", "Per giocare una guerra tra clan devi accedere con il tuo account.", "Für einen Clankrieg musst du dich mit deinem Konto anmelden.", "Klan savaşı oynamak için hesabınla giriş yapmalısın."],
+  ["No estás en la alineación de esta guerra.", "You're not in this war's lineup.", "Você não está na escalação desta guerra.", "Tu ne fais pas partie de l'équipe de cette guerre.", "Nie ma cię w składzie na tę wojnę.", "Non sei nella formazione di questa guerra.", "Du bist nicht in der Aufstellung für diesen Krieg.", "Bu savaşın kadrosunda değilsin."],
 ];
